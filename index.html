@@ -3,227 +3,449 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Farm Climate Analysis Tool</title>
+  <title>Farm Climate Analysis</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
+    :root {
+      --primary: #2e7d32;
+      --primary-light: #4caf50;
+      --primary-dark: #1b5e20;
+      --secondary: #388e3c;
+      --accent: #f57c00;
+      --accent-dark: #e65100;
+      --light: #f5f9f5;
+      --light-gray: #f8f9fa;
+      --dark: #2d3748;
+      --text: #333333;
+      --border: #e0e0e0;
+      --success: #4caf50;
+      --warning: #ff9800;
+      --danger: #f44336;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      --frost-blue: #1e88e5;
+      --frost-light: #bbdefb;
+    }
+    
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Poppins', sans-serif;
     }
     
     body {
-      background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-      color: #2e7d32;
+      background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
+      color: var(--text);
       min-height: 100vh;
-      padding: 20px;
+      padding: 10px;
+      line-height: 1.6;
+      overflow-x: hidden;
     }
     
     .container {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 20px;
+      padding: 0 15px;
     }
     
-    @media (min-width: 992px) {
-      .container {
-        grid-template-columns: 7fr 5fr;
+    .app-container {
+      display: grid;
+      grid-template-columns: 65% 35%;
+      gap: 15px;
+      margin-bottom: 15px;
+      height: calc(100vh - 30px);
+    }
+    
+    @media (max-width: 992px) {
+      .app-container {
+        grid-template-columns: 1fr;
+        height: auto;
       }
     }
     
-    header {
-      text-align: center;
-      padding: 20px 0;
-      grid-column: 1 / -1;
-    }
-    
-    .logo {
-      font-size: 2.5rem;
-      color: #1b5e20;
-      margin-bottom: 10px;
-    }
-    
-    h1 {
-      font-size: 2.2rem;
-      margin-bottom: 10px;
-      color: #2e7d32;
-    }
-    
-    .subtitle {
-      color: #388e3c;
-      max-width: 700px;
-      margin: 0 auto 15px;
-    }
-    
-    .card {
+    .map-section, .report-section {
       background: white;
-      border-radius: 15px;
-      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
-      padding: 25px;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(0, 0, 0, 0.05);
     }
     
-    .map-container {
-      position: relative;
-      height: 500px;
-      border-radius: 12px;
+    .map-section {
       overflow: hidden;
-      background: #e8f5e9;
+      height: 100%;
+      position: relative;
     }
     
     #map {
       height: 100%;
-      width: 100%;
+      z-index: 1;
     }
     
     .search-box {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: 15px;
+      left: 15px;
       z-index: 1000;
       background: rgba(255, 255, 255, 0.95);
       padding: 15px;
       border-radius: 12px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-      width: 300px;
+      width: 280px;
+      max-width: 90%;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
     }
     
-    .input-group {
-      margin-bottom: 15px;
+    .search-box h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      padding-bottom: 8px;
     }
     
-    input {
-      width: 100%;
-      padding: 12px 15px;
-      border: 1px solid #c8e6c9;
+    .search-box h2::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 20px;
+      height: 2px;
+      background: var(--accent);
+    }
+    
+    .data-availability {
+      background: #e8f5e9;
+      padding: 8px 12px;
       border-radius: 8px;
-      font-size: 1rem;
-      transition: all 0.3s;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
-    input:focus {
+    .data-availability.warning {
+      background: #fff8e1;
+    }
+    
+    .data-availability.error {
+      background: #ffebee;
+    }
+    
+    .data-availability i {
+      color: var(--success);
+    }
+    
+    .data-availability.warning i {
+      color: var(--warning);
+    }
+    
+    .data-availability.error i {
+      color: var(--danger);
+    }
+    
+    .form-group {
+      margin-bottom: 12px;
+      position: relative;
+    }
+    
+    .input-with-icon {
+      position: relative;
+    }
+    
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary);
+      font-size: 0.95rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 10px 12px 10px 35px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+      background: var(--light-gray);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    
+    .form-control:focus {
       outline: none;
-      border-color: #4caf50;
-      box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+      background: white;
     }
     
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 12px 20px;
-      background: linear-gradient(to right, #2e7d32, #4caf50);
-      color: white;
+      padding: 8px 15px;
       border: none;
       border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 0.9rem;
+      font-weight: 500;
       cursor: pointer;
       transition: all 0.3s;
-      width: 100%;
-      margin-top: 5px;
+      gap: 8px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
     }
     
-    .btn:hover {
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(46, 125, 50, 0.3);
-    }
-    
-    .btn i {
-      margin-right: 8px;
+      box-shadow: 0 5px 12px rgba(46, 125, 50, 0.25);
     }
     
     .btn-outline {
       background: transparent;
-      border: 2px solid #2e7d32;
-      color: #2e7d32;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    
+    .btn-outline:hover {
+      background: rgba(46, 125, 50, 0.08);
+    }
+    
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+    
+    .btn-block {
+      width: 100%;
+    }
+    
+    .map-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .map-actions .btn {
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    .report-section {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
     }
     
     .report-header {
       text-align: center;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #e8f5e9;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .report-header h2 {
+      font-size: 1.4rem;
+      color: var(--primary-dark);
+      margin-bottom: 5px;
+    }
+    
+    .report-header p {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    
+    .report-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 3px;
+    }
+    
+    .report-card {
+      background: var(--light-gray);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-left: 3px solid var(--primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+    
+    .report-card h3 {
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+      color: var(--dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-bottom: 25px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+    
+    @media (max-width: 1200px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
     }
     
     .stat-card {
-      background: #f1f8e9;
-      border-radius: 12px;
-      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      padding: 12px;
       text-align: center;
-      border-left: 4px solid #4caf50;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+      transition: transform 0.3s, box-shadow 0.3s;
+      border-top: 2px solid var(--primary-light);
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .stat-icon {
+      font-size: 1.3rem;
+      color: var(--primary);
+      margin-bottom: 6px;
     }
     
     .stat-value {
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: 700;
-      color: #1b5e20;
-      margin: 10px 0;
+      color: var(--primary-dark);
+      margin: 6px 0;
     }
     
     .stat-label {
-      color: #558b2f;
-      font-size: 0.95rem;
+      color: #666;
+      font-size: 0.8rem;
     }
     
-    .chart-container {
-      height: 300px;
-      margin: 25px 0;
+    .chart-container, .monthly-chart-container {
       position: relative;
+      height: 200px;
+      margin: 10px 0 15px;
     }
     
     .drought-summary {
       background: #fff8e1;
-      border-radius: 12px;
-      padding: 20px;
-      margin: 25px 0;
-      border-left: 4px solid #ff9800;
+      border-radius: 10px;
+      padding: 12px;
+      border-left: 3px solid var(--warning);
+      margin: 12px 0;
+    }
+    
+    .drought-summary h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: #e65100;
+      font-size: 1rem;
     }
     
     .drought-years {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 15px;
+      gap: 6px;
+      margin-top: 10px;
     }
     
     .drought-year {
       background: #ffecb3;
-      padding: 6px 15px;
-      border-radius: 20px;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
       font-weight: 500;
+    }
+    
+    .monthly-analysis {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    @media (max-width: 768px) {
+      .monthly-analysis {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .monthly-card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+      border-top: 3px solid var(--primary-light);
+    }
+    
+    .monthly-card h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+      color: var(--dark);
+      font-size: 1rem;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .hidden {
+      display: none;
     }
     
     .loading {
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 40px;
-      text-align: center;
+      flex-direction: column;
+      gap: 15px;
     }
     
     .spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid rgba(76, 175, 80, 0.2);
-      border-top: 5px solid #4caf50;
+      width: 35px;
+      height: 35px;
+      border: 4px solid rgba(46, 125, 50, 0.2);
+      border-top: 4px solid var(--primary);
       border-radius: 50%;
       animation: spin 1.2s linear infinite;
-      margin-bottom: 20px;
+    }
+    
+    .loading-text {
+      font-size: 1rem;
+      color: var(--dark);
+      text-align: center;
+      font-weight: 500;
     }
     
     @keyframes spin {
@@ -231,192 +453,659 @@
       100% { transform: rotate(360deg); }
     }
     
-    .progress-container {
-      width: 100%;
-      background: #e0e0e0;
-      border-radius: 4px;
-      height: 8px;
-      overflow: hidden;
+    footer {
+      text-align: center;
+      padding: 10px;
+      color: #666;
+      font-size: 0.85rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    
+    .notification {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateX(200%);
+      transition: transform 0.4s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+    
+    .notification.success {
+      background: var(--success);
+    }
+    
+    .notification.error {
+      background: var(--danger);
+    }
+    
+    .notification.info {
+      background: var(--primary);
+    }
+    
+    .error-message {
+      background: #ffebee;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      border-left: 4px solid var(--danger);
+      margin: 20px 0;
+    }
+    
+    .explanation {
+      background: #e8f5e9;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid var(--primary);
+    }
+    
+    .explanation h3 {
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .explanation ul {
+      padding-left: 20px;
       margin: 15px 0;
     }
     
-    .progress-bar {
-      height: 100%;
-      background: #4caf50;
-      width: 0%;
-      transition: width 0.4s;
+    .explanation li {
+      margin-bottom: 10px;
+      line-height: 1.5;
     }
     
-    .optimized-badge {
-      display: inline-block;
-      background: #1b5e20;
+    .info-icon {
+      background: var(--primary);
       color: white;
-      padding: 5px 15px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+    }
+    
+    .data-marker {
+      background: var(--success);
+      border-radius: 50%;
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+      margin-right: 5px;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+    }
+    
+    .data-marker.no-data {
+      background: var(--danger);
+    }
+    
+    .data-marker.limited-data {
+      background: var(--warning);
+    }
+    
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      font-size: 0.85rem;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    
+    .legend-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .month-selector {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin: 10px 0 15px;
+      flex-wrap: wrap;
+    }
+    
+    .month-btn {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
       border-radius: 20px;
+      background: white;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .month-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    .completeness-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
       font-size: 0.9rem;
-      margin-top: 10px;
+    }
+    
+    .completeness-bar {
+      flex-grow: 1;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .completeness-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+    }
+    
+    /* Progress bar styles */
+    .progress-container {
+      width: 100%;
+      margin: 15px 0;
+    }
+    
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 0.85rem;
+      color: var(--dark);
+    }
+    
+    .progress-bar {
+      height: 12px;
+      background: #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 6px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    
+    .progress-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 0.7rem;
       font-weight: 500;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
     }
     
-    .performance-info {
-      background: #e8f5e9;
-      border-radius: 12px;
-      padding: 20px;
-      margin-top: 20px;
+    /* Performance metrics */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 10px;
     }
     
-    .performance-info h3 {
-      margin-bottom: 15px;
+    .metric-card {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 5px 0;
+    }
+    
+    .metric-label {
+      font-size: 0.8rem;
+      color: #666;
+    }
+    
+    /* Status messages */
+    .status-message {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 3px solid var(--primary);
       display: flex;
       align-items: center;
       gap: 10px;
     }
     
-    .perf-item {
+    .status-message i {
+      color: var(--primary);
+    }
+    
+    .status-message.warning {
+      border-left-color: var(--warning);
+    }
+    
+    .status-message.warning i {
+      color: var(--warning);
+    }
+    
+    .status-message.error {
+      border-left-color: var(--danger);
+    }
+    
+    .status-message.error i {
+      color: var(--danger);
+    }
+    
+    .status-message.success {
+      border-left-color: var(--success);
+    }
+    
+    .status-message.success i {
+      color: var(--success);
+    }
+    
+    .search-type-toggle {
       display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #c8e6c9;
+      background: var(--light-gray);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 10px;
     }
     
-    .perf-value {
-      font-weight: 700;
-      color: #1b5e20;
-    }
-    
-    footer {
+    .search-type-btn {
+      flex: 1;
+      padding: 6px;
       text-align: center;
-      padding: 25px;
-      color: #388e3c;
-      margin-top: 30px;
-      grid-column: 1 / -1;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    
+    .search-type-btn.active {
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-weight: 500;
+      color: var(--primary-dark);
+    }
+    
+    .suggestions-box {
+      position: absolute;
+      width: calc(100% - 30px);
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1001;
+      margin-top: 5px;
+      display: none;
+    }
+    
+    .suggestion-item {
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    
+    .suggestion-item:hover {
+      background: var(--light);
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <div class="logo">
-        <i class="fas fa-seedling"></i>
-      </div>
-      <h1>Farm Climate Analysis Tool</h1>
-      <p class="subtitle">Analyze precipitation patterns, freezing days, and drought years for optimal farm planning</p>
-      <div class="optimized-badge">
-        <i class="fas fa-bolt"></i> Optimized for Fast Reporting
-      </div>
-    </header>
-    
-    <div class="card">
-      <div class="map-container">
+    <div class="app-container">
+      <div class="map-section">
         <div class="search-box">
-          <h2><i class="fas fa-map-marker-alt"></i> Farm Location</h2>
-          <div class="input-group">
-            <input type="text" id="gpsInput" placeholder="Enter coordinates (e.g., 40.7128, -74.0060)">
+          <h2>
+            <i class="fas fa-map-marker-alt"></i>
+            Farm Location
+          </h2>
+          
+          <div class="search-type-toggle">
+            <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
+            <div class="search-type-btn" id="locationToggle">Location Name</div>
           </div>
-          <button class="btn" onclick="searchGPS()">
-            <i class="fas fa-search-location"></i> Search Location
-          </button>
-          <button class="btn btn-outline" onclick="resetMap()" style="margin-top:10px">
-            <i class="fas fa-trash-alt"></i> Clear Map
-          </button>
-          <div class="progress-container" style="margin-top:15px">
-            <div class="progress-bar" id="progress-bar"></div>
+          
+          <div class="form-group">
+            <div class="input-with-icon">
+              <i class="fas fa-search input-icon"></i>
+              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. 40.7128, -74.0060" />
+              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. New York City" />
+            </div>
           </div>
-          <div id="progress-text" style="text-align:center;font-size:0.9rem;margin-top:5px">Ready</div>
+          
+          <div id="suggestions" class="suggestions-box"></div>
+          
+          <div id="data-availability" class="data-availability">
+            <i class="fas fa-info-circle"></i>
+            <span>Data availability: Select a location</span>
+          </div>
+          
+          <button class="btn btn-primary" onclick="searchLocation()">
+            <i class="fas fa-search-location btn-icon"></i> Search
+          </button>
+          
+          <div class="map-actions">
+            <button class="btn btn-outline" onclick="resetMap()">
+              <i class="fas fa-trash-alt btn-icon"></i> Clear Map
+            </button>
+            <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
+              <i class="fas fa-chart-line btn-icon"></i> Analyze
+            </button>
+            <button class="btn btn-outline btn-sm" id="dropPinBtn" onclick="activatePinMode()">
+              <i class="fas fa-map-pin"></i> Drop Pin
+            </button>
+          </div>
+          
+          <!-- Data Fetching Progress Bar -->
+          <div class="progress-container">
+            <div class="progress-header">
+              <span>Data Retrieval</span>
+              <span id="progress-percentage">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+              <div class="progress-label" id="progress-label">Starting</div>
+            </div>
+          </div>
         </div>
         <div id="map"></div>
-      </div>
-    </div>
-    
-    <div class="card">
-      <div class="report-header">
-        <h2><i class="fas fa-chart-bar"></i> Climate Analysis Report</h2>
-        <p>Detailed insights for your selected farm location</p>
+        <div class="legend">
+          <div class="legend-item">
+            <span class="data-marker"></span> Reliable data available
+          </div>
+          <div class="legend-item">
+            <span class="data-marker no-data"></span> No data available
+          </div>
+          <div class="legend-item">
+            <span class="data-marker limited-data"></span> Limited data available
+          </div>
+        </div>
       </div>
       
-      <div id="report-content">
-        <div class="loading" id="loading">
-          <div class="spinner"></div>
-          <h3>Analyzing Climate Data</h3>
-          <p id="loading-text">Select a location to generate report</p>
-          <div class="progress-container">
-            <div class="progress-bar" id="loading-progress-bar"></div>
-          </div>
-          <p id="loading-progress-text">0%</p>
+      <div class="report-section">
+        <div class="report-header">
+          <h2>Comprehensive Climate Report</h2>
+          <p>Detailed analysis of historical weather patterns with monthly insights</p>
         </div>
         
-        <div id="analysis-content" class="hidden">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div><i class="fas fa-calendar-alt fa-2x"></i></div>
-              <div class="stat-value" id="years-count">0</div>
-              <div class="stat-label">Years Analyzed</div>
-            </div>
-            <div class="stat-card">
-              <div><i class="fas fa-cloud-rain fa-2x"></i></div>
-              <div class="stat-value" id="avg-rain">0</div>
-              <div class="stat-label">Avg. Rainfall (mm)</div>
-            </div>
-            <div class="stat-card">
-              <div><i class="fas fa-temperature-low fa-2x"></i></div>
-              <div class="stat-value" id="max-frost">0</div>
-              <div class="stat-label">Max Freezing Days</div>
-            </div>
-            <div class="stat-card">
-              <div><i class="fas fa-tint-slash fa-2x"></i></div>
-              <div class="stat-value" id="drought-count">0</div>
-              <div class="stat-label">Drought Years</div>
+        <div class="report-content">
+          <div id="report-placeholder">
+            <div class="report-card">
+              <h3>
+                <i class="fas fa-file-alt"></i>
+                Report Preview
+              </h3>
+              <p>Draw your farm boundaries on the map or search for a location to generate a comprehensive climate report using real historical data.</p>
+              <p>The enhanced report includes:</p>
+              <ul style="margin: 12px 0 12px 22px; font-size: 0.9rem;">
+                <li>Annual rainfall and frost day analysis</li>
+                <li>Monthly climate patterns visualization</li>
+                <li>Freezing days analysis (temperatures below 0°C)</li>
+                <li>Drought year identification</li>
+                <li>Detailed seasonal insights</li>
+                <li>Performance metrics and progress tracking</li>
+              </ul>
+              <div style="text-align: center; margin: 20px 0 12px;">
+                <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
+                  <i class="fas fa-snowflake"></i>
+                </div>
+                <p style="color: #888; font-size: 0.9rem;">Your detailed climate analysis will appear here</p>
+              </div>
             </div>
           </div>
           
-          <h3><i class="fas fa-cloud-showers-heavy"></i> Annual Rainfall</h3>
-          <div class="chart-container">
-            <canvas id="rainChart"></canvas>
-          </div>
-          
-          <h3><i class="fas fa-snowflake"></i> Freezing Days Analysis</h3>
-          <div class="chart-container">
-            <canvas id="frostChart"></canvas>
-          </div>
-          
-          <div class="drought-summary">
-            <h3><i class="fas fa-exclamation-triangle"></i> Drought Analysis</h3>
-            <p>Years with annual rainfall below 400mm</p>
-            <div class="drought-years" id="drought-years"></div>
-          </div>
-          
-          <div class="performance-info">
-            <h3><i class="fas fa-tachometer-alt"></i> Performance Metrics</h3>
-            <div class="perf-item">
-              <span>Data Processing Time:</span>
-              <span class="perf-value" id="processing-time">0.5s</span>
+          <div id="report" class="hidden">
+            <div class="report-card">
+              <h3>
+                <i class="fas fa-map-marked-alt"></i>
+                Location Details
+              </h3>
+              <p id="location-text"></p>
+              <p id="data-status" style="margin-top: 8px; font-size: 0.9rem;"></p>
+              
+              <div class="completeness-indicator" id="completeness-container">
+                <span>Data Completeness:</span>
+                <div class="completeness-bar">
+                  <div class="completeness-fill" id="completeness-bar"></div>
+                </div>
+                <span id="completeness-value">0%</span>
+              </div>
             </div>
-            <div class="perf-item">
-              <span>Data Points Processed:</span>
-              <span class="perf-value" id="data-points">12,500</span>
+            
+            <div id="error-message" class="hidden error-message">
+              <h3>
+                <i class="fas fa-exclamation-circle"></i>
+                Data Not Available
+              </h3>
+              <p>We couldn't find climate data for the selected location.</p>
+              <p>Please try a location on land with reliable weather station coverage.</p>
             </div>
-            <div class="perf-item">
-              <span>Data Compression:</span>
-              <span class="perf-value" id="compression">78%</span>
+            
+            <div class="explanation">
+              <h3>
+                <i class="fas fa-info-circle"></i>
+                Enhanced Climate Analysis
+              </h3>
+              <p>This report provides detailed insights into your farm's climate patterns:</p>
+              <ul>
+                <li><span class="info-icon">1</span> <strong>Freezing days</strong>: Days with temperatures below 0°C</li>
+                <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
+                <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
+                <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 20 plus years of data</li>
+                <li><span class="info-icon">5</span> <strong>Performance metrics</strong>: Optimization and efficiency data</li>
+              </ul>
+            </div>
+            
+            <div id="analysis-content">
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                  </div>
+                  <div class="stat-value" id="years-count">19</div>
+                  <div class="stat-label">Years Analyzed</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-cloud-rain"></i>
+                  </div>
+                  <div class="stat-value" id="avg-rain">0</div>
+                  <div class="stat-label">Avg. Rainfall (mm)</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-temperature-low"></i>
+                  </div>
+                  <div class="stat-value" id="max-frost">0</div>
+                  <div class="stat-label">Max Freezing Days</div>
+                </div>
+              </div>
+              
+              <!-- Performance Metrics Card -->
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-tachometer-alt"></i>
+                  Performance Metrics
+                </h3>
+                <div class="metrics-grid">
+                  <div class="metric-card">
+                    <div class="metric-value" id="fetch-time">0ms</div>
+                    <div class="metric-label">Data Fetch Time</div>
+                  </div>
+                  <div class="metric-card">
+                    <div class="metric-value" id="process-time">0ms</div>
+                    <div class="metric-label">Processing Time</div>
+                  </div>
+                  <div class="metric-card">
+                    <div class="metric-value" id="optimization">0%</div>
+                    <div class="metric-label">Optimization Gain</div>
+                  </div>
+                  <div class="metric-card">
+                    <div class="metric-value" id="data-points">0</div>
+                    <div class="metric-label">Data Points</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-cloud-showers-heavy"></i>
+                  Annual Rainfall (mm)
+                </h3>
+                <div class="chart-container">
+                  <canvas id="rainChart"></canvas>
+                </div>
+              </div>
+              
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-snowflake"></i>
+                  Freezing Days (temperature &lt; 0°C)
+                </h3>
+                <div class="chart-container">
+                  <canvas id="frostChart"></canvas>
+                </div>
+              </div>
+              
+              <div class="drought-summary">
+                <h4>
+                  <i class="fas fa-exclamation-triangle"></i>
+                  Drought Analysis
+                </h4>
+                <p id="drought-summary"></p>
+                <div class="drought-years" id="drought-years"></div>
+              </div>
+              
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-calendar-alt"></i>
+                  Monthly Climate Patterns
+                </h3>
+                
+                <div class="month-selector" id="month-selector"></div>
+                
+                <div class="monthly-analysis">
+                  <div class="monthly-card">
+                    <h4>
+                      <i class="fas fa-cloud-rain"></i>
+                      Monthly Rainfall
+                    </h4>
+                    <div class="monthly-chart-container">
+                      <canvas id="monthlyRainChart"></canvas>
+                    </div>
+                  </div>
+                  
+                  <div class="monthly-card">
+                    <h4>
+                      <i class="fas fa-snowflake"></i>
+                      Monthly Freezing Days
+                    </h4>
+                    <div class="monthly-chart-container">
+                      <canvas id="monthlyFrostChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing climate patterns...</div>
+            
+            <!-- Processing Progress Bar -->
+            <div class="progress-container" style="width: 80%;">
+              <div class="progress-header">
+                <span>Processing Data</span>
+                <span id="processing-percentage">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="processing-fill"></div>
+                <div class="progress-label" id="processing-label">Starting</div>
+              </div>
+            </div>
+            
+            <div class="status-message">
+              <i class="fas fa-info-circle"></i>
+              <span>Processing data: This may take a few moments for large datasets</span>
             </div>
           </div>
         </div>
-      </div>
-      
-      <div style="margin-top: auto; padding-top: 20px;">
-        <button class="btn" id="generateBtn" onclick="generateReport()">
-          <i class="fas fa-chart-line"></i> Generate Climate Report
-        </button>
+        
+        <div class="actions">
+          <button class="btn btn-outline" onclick="resetReport()">
+            <i class="fas fa-sync-alt btn-icon"></i> Reset
+          </button>
+          <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
+            <i class="fas fa-download btn-icon"></i> Download Report
+          </button>
+        </div>
       </div>
     </div>
     
     <footer>
       <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
-      <p style="margin-top: 10px;">Optimized for agricultural planning | Response time under 2 seconds</p>
+      <p style="margin-top: 8px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro:076-623-2221</p>
     </footer>
   </div>
+  
+  <div id="notification" class="notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="notification-text">Notification message</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script>
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
     // Initialize map
     const map = L.map('map').setView([0, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -424,179 +1113,627 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Initialize layers and controls
+    let drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    let lastPolygonCenter = null;
     let currentMarker = null;
-    let reportGenerated = false;
+    let dataAvailable = false;
+    let monthlyData = null;
+    let selectedMonth = 0;
+    let pinModeActive = false;
+    let geocodeTimeout = null;
     
-    // Search GPS location
-    function searchGPS() {
-      const input = document.getElementById("gpsInput").value;
-      const parts = input.split(',');
-      if (parts.length === 2) {
-        const lat = parseFloat(parts[0].trim());
-        const lng = parseFloat(parts[1].trim());
-        if (!isNaN(lat) && !isNaN(lng)) {
-          map.setView([lat, lng], 13);
-          
-          if (currentMarker) map.removeLayer(currentMarker);
-          
-          currentMarker = L.marker([lat, lng]).addTo(map)
-            .bindPopup("Selected Location: " + lat + ", " + lng).openPopup();
-          
-          document.getElementById("loading-text").textContent = "Location set. Click 'Generate Report' to analyze climate data";
-          updateProgress(30, "Location set successfully");
-        } else {
-          showNotification("Invalid coordinates. Please enter in 'latitude, longitude' format.", 'error');
-        }
-      } else {
-        showNotification("Enter coordinates in 'lat, lng' format.", 'error');
+    const dataAvailabilityLayer = L.layerGroup().addTo(map);
+
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#2e7d32' } },
+        polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false
+      },
+      edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
+
+    // Update progress bar function
+    function updateProgress(barId, percentage, text) {
+      const fill = document.getElementById(`${barId}-fill`);
+      const label = document.getElementById(`${barId}-label`);
+      const percentageDisplay = document.getElementById(`${barId}-percentage`);
+      
+      if (fill) fill.style.width = `${percentage}%`;
+      if (label) label.textContent = text;
+      if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
+    }
+    
+    // Update status message
+    function updateStatus(message, type = 'info') {
+      const statusEl = document.createElement('div');
+      statusEl.className = `status-message ${type}`;
+      statusEl.innerHTML = `
+        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
+                         type === 'warning' ? 'exclamation-circle' : 
+                         type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+      `;
+      
+      const reportContent = document.querySelector('.report-content');
+      if (reportContent) {
+        reportContent.appendChild(statusEl);
+        
+        // Auto-scroll to new message
+        statusEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
+    }
+
+    // Event handlers
+    map.on(L.Draw.Event.CREATED, function (e) {
+      if (e.layerType === 'polygon') {
+        const layer = e.layer;
+        const latlngs = layer.getLatLngs()[0];
+        
+        if (latlngs.length < 3) {
+          showNotification("Please draw a valid polygon with at least 3 points", "error");
+          return;
+        }
+        
+        drawnItems.clearLayers();
+        drawnItems.addLayer(layer);
+
+        const latSum = latlngs.reduce((sum, pt) => sum + pt.lat, 0);
+        const lngSum = latlngs.reduce((sum, pt) => sum + pt.lng, 0);
+        const center = {
+          lat: latSum / latlngs.length,
+          lng: lngSum / latlngs.length
+        };
+        lastPolygonCenter = center;
+        showNotification(`Farm boundary drawn at ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, 'success');
+        
+        checkDataAvailability(center.lat, center.lng);
+      }
+    });
+    
+    // Function to check data availability
+    function checkDataAvailability(lat, lng) {
+      const availabilityEl = document.getElementById('data-availability');
+      availabilityEl.innerHTML = '<i class="fas fa-sync fa-spin"></i> Checking data availability...';
+      availabilityEl.className = 'data-availability';
+      
+      // Simulate progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        updateProgress('progress', progress, `Checking data availability... ${progress}%`);
+        
+        if (progress >= 100) {
+          clearInterval(interval);
+          
+          const isLand = !(lat < -60 || lat > 60 || Math.abs(lng) > 170);
+          const isRemote = Math.abs(lat) > 55 || Math.abs(lng) > 140;
+          
+          if (!isLand) {
+            availabilityEl.innerHTML = '<i class="fas fa-times-circle"></i> No data available (ocean location)';
+            availabilityEl.className = 'data-availability error';
+            dataAvailable = false;
+          } else if (isRemote) {
+            availabilityEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Limited data available (remote area)';
+            availabilityEl.className = 'data-availability warning';
+            dataAvailable = true;
+          } else {
+            availabilityEl.innerHTML = '<i class="fas fa-check-circle"></i> Reliable data available';
+            availabilityEl.className = 'data-availability';
+            dataAvailable = true;
+          }
+        }
+      }, 200);
+    }
+
+    // Activate pin drop mode
+    function activatePinMode() {
+      pinModeActive = true;
+      document.getElementById('dropPinBtn').classList.add('btn-primary');
+      document.getElementById('dropPinBtn').classList.remove('btn-outline');
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Click on Map';
+      
+      // Add event listener for map click
+      map.on('click', handleMapClick);
+      
+      showNotification("Click on the map to drop a pin", 'info');
+    }
+    
+    // Handle map click for pin drop
+    function handleMapClick(e) {
+      if (!pinModeActive) return;
+      
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      
+      // Clear any existing markers
+      if (currentMarker) map.removeLayer(currentMarker);
+      
+      // Add new marker
+      currentMarker = L.marker([lat, lng]).addTo(map)
+        .bindPopup("Dropped Pin: " + lat.toFixed(4) + ", " + lng.toFixed(4))
+        .openPopup();
+      
+      // Update GPS input
+      document.getElementById("gpsInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      lastPolygonCenter = { lat, lng };
+      
+      // Check data availability
+      checkDataAvailability(lat, lng);
+      
+      // Deactivate pin mode
+      pinModeActive = false;
+      document.getElementById('dropPinBtn').classList.remove('btn-primary');
+      document.getElementById('dropPinBtn').classList.add('btn-outline');
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      
+      // Remove event listener
+      map.off('click', handleMapClick);
+      
+      showNotification(`Pin dropped at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
+    }
+    
+    // Toggle search type
+    document.getElementById('gpsToggle').addEventListener('click', () => {
+      document.getElementById('gpsToggle').classList.add('active');
+      document.getElementById('locationToggle').classList.remove('active');
+      document.getElementById('gpsInput').classList.remove('hidden');
+      document.getElementById('locationInput').classList.add('hidden');
+    });
+    
+    document.getElementById('locationToggle').addEventListener('click', () => {
+      document.getElementById('locationToggle').classList.add('active');
+      document.getElementById('gpsToggle').classList.remove('active');
+      document.getElementById('locationInput').classList.remove('hidden');
+      document.getElementById('gpsInput').classList.add('hidden');
+    });
+    
+    // Location input suggestions
+    document.getElementById('locationInput').addEventListener('input', function(e) {
+      const query = e.target.value;
+      if (query.length < 3) {
+        document.getElementById('suggestions').style.display = 'none';
+        return;
+      }
+      
+      // Clear any existing timeout
+      if (geocodeTimeout) clearTimeout(geocodeTimeout);
+      
+      // Set timeout to avoid too many requests
+      geocodeTimeout = setTimeout(() => {
+        geocodeLocation(query, true);
+      }, 500);
+    });
+    
+    // Search location by text or coordinates
+    function searchLocation() {
+      if (document.getElementById('gpsInput').classList.contains('hidden')) {
+        // Search by location name
+        const query = document.getElementById('locationInput').value;
+        if (!query) {
+          showNotification("Enter a location name to search", 'error');
+          return;
+        }
+        geocodeLocation(query);
+      } else {
+        // Search by coordinates
+        const input = document.getElementById("gpsInput").value;
+        const parts = input.split(',');
+        if (parts.length === 2) {
+          const lat = parseFloat(parts[0].trim());
+          const lng = parseFloat(parts[1].trim());
+          if (!isNaN(lat) && !isNaN(lng)) {
+            map.setView([lat, lng], 13);
+            
+            if (currentMarker) map.removeLayer(currentMarker);
+            
+            currentMarker = L.marker([lat, lng]).addTo(map)
+              .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
+            lastPolygonCenter = { lat, lng };
+            showNotification(`Location set to: ${lat}, ${lng}`, 'success');
+            
+            checkDataAvailability(lat, lng);
+          } else {
+            showNotification("Invalid coordinates. Please enter in 'latitude, longitude' format.", 'error');
+          }
+        } else {
+          showNotification("Enter coordinates in 'lat, lng' format.", 'error');
+        }
+      }
+    }
+    
+    // Geocode location using Nominatim
+    function geocodeLocation(query, forSuggestions = false) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`;
+      
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (forSuggestions) {
+            // Show suggestions
+            const suggestions = document.getElementById('suggestions');
+            suggestions.innerHTML = '';
+            
+            if (data.length === 0) {
+              suggestions.style.display = 'none';
+              return;
+            }
+            
+            data.forEach(item => {
+              const suggestion = document.createElement('div');
+              suggestion.className = 'suggestion-item';
+              suggestion.textContent = item.display_name;
+              suggestion.onclick = () => {
+                document.getElementById('locationInput').value = item.display_name;
+                suggestions.style.display = 'none';
+                
+                // Set the location on the map
+                const lat = parseFloat(item.lat);
+                const lon = parseFloat(item.lon);
+                map.setView([lat, lon], 13);
+                
+                if (currentMarker) map.removeLayer(currentMarker);
+                currentMarker = L.marker([lat, lon]).addTo(map)
+                  .bindPopup(item.display_name)
+                  .openPopup();
+                
+                lastPolygonCenter = { lat, lng: lon };
+                checkDataAvailability(lat, lon);
+                
+                showNotification(`Location set to: ${item.display_name}`, 'success');
+              };
+              suggestions.appendChild(suggestion);
+            });
+            
+            suggestions.style.display = 'block';
+          } else {
+            // Process actual search
+            if (data.length === 0) {
+              showNotification("Location not found. Please try a different name.", 'error');
+              return;
+            }
+            
+            const item = data[0];
+            const lat = parseFloat(item.lat);
+            const lon = parseFloat(item.lon);
+            
+            map.setView([lat, lon], 13);
+            
+            if (currentMarker) map.removeLayer(currentMarker);
+            currentMarker = L.marker([lat, lon]).addTo(map)
+              .bindPopup(item.display_name)
+              .openPopup();
+            
+            lastPolygonCenter = { lat, lng: lon };
+            checkDataAvailability(lat, lon);
+            
+            showNotification(`Location set to: ${item.display_name}`, 'success');
+          }
+        })
+        .catch(error => {
+          console.error('Geocoding error:', error);
+          if (!forSuggestions) {
+            showNotification("Error finding location. Please try again.", 'error');
+          }
+        });
     }
 
     // Reset map
     function resetMap() {
+      drawnItems.clearLayers();
+      lastPolygonCenter = null;
       if (currentMarker) {
         map.removeLayer(currentMarker);
         currentMarker = null;
       }
       map.setView([0, 0], 2);
       document.getElementById("gpsInput").value = "";
-      document.getElementById("loading-text").textContent = "Select a location to generate report";
-      document.getElementById("analysis-content").classList.add("hidden");
-      document.getElementById("loading").classList.remove("hidden");
-      updateProgress(0, "Ready");
+      document.getElementById("locationInput").value = "";
+      document.getElementById('suggestions').style.display = 'none';
+      
+      const availabilityEl = document.getElementById('data-availability');
+      availabilityEl.innerHTML = '<i class="fas fa-info-circle"></i> Data availability: Select a location';
+      availabilityEl.className = 'data-availability';
+      
+      showNotification("Map has been reset", 'info');
+      
+      // Reset progress bar
+      updateProgress('progress', 0, 'Ready');
+      
+      // Reset pin mode if active
+      if (pinModeActive) {
+        pinModeActive = false;
+        map.off('click', handleMapClick);
+        document.getElementById('dropPinBtn').classList.remove('btn-primary');
+        document.getElementById('dropPinBtn').classList.add('btn-outline');
+        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      }
     }
 
-    // Update progress indicators
-    function updateProgress(percent, message) {
-      document.getElementById('progress-bar').style.width = `${percent}%`;
-      document.getElementById('progress-text').textContent = message;
-      
-      document.getElementById('loading-progress-bar').style.width = `${percent}%`;
-      document.getElementById('loading-progress-text').textContent = `${percent}% - ${message}`;
-    }
-    
-    // Show notification
-    function showNotification(message, type) {
-      alert(`${type.toUpperCase()}: ${message}`);
-    }
-    
-    // Generate report with optimized data processing
+    // Generate report with real climate data
     async function generateReport() {
-      if (!currentMarker) {
-        showNotification("Please select a location first.", 'error');
+      if (!lastPolygonCenter) {
+        showNotification("Draw a farm boundary or search a location first.", 'error');
         return;
       }
       
-      const lat = currentMarker.getLatLng().lat.toFixed(4);
-      const lng = currentMarker.getLatLng().lng.toFixed(4);
+      if (!dataAvailable) {
+        showNotification("No data available for this location. Please choose another location.", 'error');
+        return;
+      }
+
+      // Show loading indicator
+      document.getElementById('report-placeholder').classList.add('hidden');
+      document.getElementById('report').classList.add('hidden');
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('generateBtn').disabled = true;
       
-      document.getElementById("loading-text").textContent = "Fetching and processing climate data";
-      document.getElementById("analysis-content").classList.add("hidden");
-      document.getElementById("loading").classList.remove("hidden");
-      updateProgress(10, "Starting analysis...");
+      const lat = lastPolygonCenter.lat.toFixed(4);
+      const lon = lastPolygonCenter.lng.toFixed(4);
       
-      // Simulate optimized data processing
-      simulateDataProcessing();
-    }
-    
-    // Simulate optimized data processing flow
-    function simulateDataProcessing() {
-      updateProgress(20, "Connecting to weather API...");
+      // API request parameters
+      const startDate = "2000-01-01";
+      const endDate = "2024-12-31";
+      const apiUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&timezone=auto`;
       
-      setTimeout(() => {
-        updateProgress(40, "Fetching historical data...");
+      // Performance tracking
+      const startTime = performance.now();
+      let fetchTime, processTime, chartTime;
+      
+      try {
+        // Step 1: Fetch data
+        updateStatus("Starting data retrieval from weather API...");
+        const fetchStart = performance.now();
         
-        setTimeout(() => {
-          updateProgress(60, "Processing rainfall data...");
+        // Simulate progress during fetch
+        let fetchProgress = 0;
+        const fetchInterval = setInterval(() => {
+          if (fetchProgress < 95) {
+            fetchProgress += 5;
+            updateProgress('processing', fetchProgress, `Fetching data... ${fetchProgress}%`);
+          }
+        }, 100);
+        
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+        
+        clearInterval(fetchInterval);
+        updateProgress('processing', 100, "Data fetched!");
+        
+        const data = await response.json();
+        const fetchEnd = performance.now();
+        fetchTime = fetchEnd - fetchStart;
+        
+        updateStatus(`Data fetched successfully in ${fetchTime.toFixed(0)}ms`, 'success');
+        
+        // Process the data
+        updateStatus("Processing weather data...");
+        const processStart = performance.now();
+        const daily = data.daily;
+        
+        if (!daily || !daily.time || daily.time.length === 0) throw new Error('No data available for this location');
+        
+        // Process the data
+        const years = [], rainData = [], frostData = [], droughtYears = [];
+        const monthlyRain = Array(12).fill().map(() => []);
+        const monthlyFrost = Array(12).fill().map(() => []);
+        
+        let totalDays = daily.time.length;
+        let completeDays = 0;
+        const dataByYear = {};
+        
+        // Simulate processing progress
+        let processProgress = 0;
+        const processStep = Math.max(1, Math.floor(totalDays / 20));
+        
+        for (let i = 0; i < daily.time.length; i++) {
+          const date = new Date(daily.time[i]);
+          const year = date.getFullYear();
+          const month = date.getMonth();
           
-          setTimeout(() => {
-            updateProgress(80, "Analyzing temperature patterns...");
-            
-            setTimeout(() => {
-              updateProgress(95, "Finalizing report...");
-              
-              setTimeout(() => {
-                // Update with sample data
-                document.getElementById("years-count").textContent = "15";
-                document.getElementById("avg-rain").textContent = "625";
-                document.getElementById("max-frost").textContent = "42";
-                document.getElementById("drought-count").textContent = "3";
-                
-                // Create sample drought years
-                const droughtYears = ["2005", "2012", "2018"];
-                const container = document.getElementById("drought-years");
-                container.innerHTML = '';
-                droughtYears.forEach(year => {
-                  const el = document.createElement('div');
-                  el.className = 'drought-year';
-                  el.textContent = year;
-                  container.appendChild(el);
-                });
-                
-                // Create sample charts
-                createSampleCharts();
-                
-                // Update performance metrics
-                document.getElementById("processing-time").textContent = "1.2s";
-                document.getElementById("data-points").textContent = "9,850";
-                document.getElementById("compression").textContent = "82%";
-                
-                // Show report
-                document.getElementById("loading").classList.add("hidden");
-                document.getElementById("analysis-content").classList.remove("hidden");
-                updateProgress(100, "Report complete!");
-                
-                showNotification("Climate report generated successfully!", 'success');
-              }, 400);
-            }, 500);
-          }, 500);
-        }, 500);
-      }, 500);
+          if (!dataByYear[year]) dataByYear[year] = { precipitation: 0, frostDays: 0 };
+          
+          const hasPrecipitation = daily.precipitation_sum[i] !== null;
+          const hasTemperature = daily.temperature_2m_min[i] !== null;
+          
+          if (hasPrecipitation && hasTemperature) completeDays++;
+          
+          if (hasPrecipitation) {
+            dataByYear[year].precipitation += daily.precipitation_sum[i];
+            monthlyRain[month].push(daily.precipitation_sum[i]);
+          }
+          
+          if (hasTemperature && daily.temperature_2m_min[i] < 0) {
+            dataByYear[year].frostDays += 1;
+            monthlyFrost[month].push(1);
+          } else if (hasTemperature) {
+            monthlyFrost[month].push(0);
+          }
+          
+          // Update progress periodically
+          if (i % processStep === 0) {
+            processProgress = Math.min(95, Math.round((i / totalDays) * 100));
+            updateProgress('processing', processProgress, `Processing data: ${i}/${totalDays} days`);
+          }
+        }
+        
+        // Complete processing
+        updateProgress('processing', 100, "Data processed!");
+        const processEnd = performance.now();
+        processTime = processEnd - processStart;
+        
+        updateStatus(`Data processed in ${processTime.toFixed(0)}ms`, 'success');
+        
+        // Calculate data completeness
+        const completeness = Math.round((completeDays / totalDays) * 100);
+        document.getElementById('completeness-bar').style.width = `${completeness}%`;
+        document.getElementById('completeness-value').textContent = `${completeness}%`;
+        
+        // Extract data for each year
+        const yearsArray = Object.keys(dataByYear).sort();
+        for (const year of yearsArray) {
+          years.push(year);
+          rainData.push(Math.round(dataByYear[year].precipitation * 10) / 10);
+          frostData.push(dataByYear[year].frostDays);
+          
+          if (dataByYear[year].precipitation < 400) droughtYears.push(year);
+        }
+        
+        // Calculate stats
+        const totalYears = years.length;
+        const avgRain = (rainData.reduce((a, b) => a + b, 0) / totalYears).toFixed(1);
+        const maxFrost = Math.max(...frostData);
+        
+        // Calculate monthly averages
+        const avgMonthlyRain = monthlyRain.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
+        const avgMonthlyFrost = monthlyFrost.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
+        
+        // Store monthly data
+        monthlyData = { rain: avgMonthlyRain, frost: avgMonthlyFrost };
+        
+        // Update report content
+        document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
+        document.getElementById("data-status").innerText = "Reliable data available for this location";
+        document.getElementById("data-status").style.color = "var(--success)";
+        
+        const droughtText = droughtYears.length ? 
+          `${droughtYears.length} drought years detected (rainfall < 400mm)` : 
+          "No significant drought years detected";
+          
+        document.getElementById("drought-summary").innerText = droughtText;
+        
+        // Add drought years
+        const droughtYearsContainer = document.getElementById("drought-years");
+        droughtYearsContainer.innerHTML = '';
+        droughtYears.forEach(year => {
+          const el = document.createElement('div');
+          el.className = 'drought-year';
+          el.innerText = year;
+          droughtYearsContainer.appendChild(el);
+        });
+        
+        // Update stats
+        document.getElementById("years-count").innerText = totalYears;
+        document.getElementById("avg-rain").innerText = avgRain;
+        document.getElementById("max-frost").innerText = maxFrost;
+        
+        // Create charts
+        updateStatus("Generating visualizations...");
+        const chartStart = performance.now();
+        createRainChart(years, rainData);
+        createFrostChart(years, frostData);
+        createMonthlyCharts();
+        createMonthSelector();
+        const chartEnd = performance.now();
+        chartTime = chartEnd - chartStart;
+        
+        updateStatus(`Visualizations generated in ${chartTime.toFixed(0)}ms`, 'success');
+        
+        // Update performance metrics
+        const totalTime = performance.now() - startTime;
+        const optimization = Math.max(0, Math.min(100, Math.round((1 - (processTime / totalTime)) * 100)));
+        
+        document.getElementById('fetch-time').textContent = `${fetchTime.toFixed(0)}ms`;
+        document.getElementById('process-time').textContent = `${processTime.toFixed(0)}ms`;
+        document.getElementById('optimization').textContent = `${optimization}%`;
+        document.getElementById('data-points').textContent = totalDays.toLocaleString();
+        
+        // Hide error message and show analysis content
+        document.getElementById('error-message').classList.add('hidden');
+        document.getElementById('analysis-content').style.display = 'block';
+        
+        // Show report and enable download
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('report').classList.remove('hidden');
+        document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('generateBtn').disabled = false;
+        
+        showNotification("Report generated successfully!", 'success');
+      } catch (err) {
+        console.error('Error generating report:', err);
+        
+        // Show error message
+        document.getElementById('error-message').classList.remove('hidden');
+        document.getElementById('analysis-content').style.display = 'none';
+        
+        // Update location text
+        document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
+        document.getElementById("data-status").innerText = "No data available for this location";
+        document.getElementById("data-status").style.color = "var(--danger)";
+        
+        // Hide completeness indicator
+        document.getElementById('completeness-container').style.display = 'none';
+        
+        // Show report with error
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('report').classList.remove('hidden');
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('downloadBtn').disabled = false;
+        
+        updateStatus(`Error: ${err.message}`, 'error');
+        showNotification("Couldn't fetch data for this location", 'error');
+      }
     }
-    
-    // Create sample charts
-    function createSampleCharts() {
-      // Sample data for rainfall chart
-      const rainCtx = document.getElementById('rainChart').getContext('2d');
-      new Chart(rainCtx, {
+
+    // Create rainfall chart
+    function createRainChart(labels, data) {
+      const ctx = document.getElementById('rainChart').getContext('2d');
+      if (window.rainChartInstance) window.rainChartInstance.destroy();
+      
+      window.rainChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023'],
+          labels: labels,
           datasets: [{
             label: 'Rainfall (mm)',
-            data: [650, 720, 380, 690, 710, 680, 730, 710, 390, 700, 680, 720, 690, 710],
-            backgroundColor: 'rgba(76, 175, 80, 0.7)',
-            borderColor: 'rgba(56, 142, 60, 1)',
-            borderWidth: 1
+            data: data,
+            backgroundColor: 'rgba(46, 125, 50, 0.7)',
+            borderColor: 'rgba(46, 125, 50, 1)',
+            borderWidth: 1,
+            borderRadius: 5
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: context => `Rainfall: ${context.parsed.y} mm` }
+            }
           },
           scales: {
             y: {
               beginAtZero: true,
-              title: { display: true, text: 'Rainfall (mm)' }
-            }
+              title: { display: true, text: 'Rainfall (mm)' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            },
+            x: { grid: { display: false } }
           }
         }
       });
+    }
+
+    // Create frost days chart
+    function createFrostChart(labels, data) {
+      const ctx = document.getElementById('frostChart').getContext('2d');
+      if (window.frostChartInstance) window.frostChartInstance.destroy();
       
-      // Sample data for frost days chart
-      const frostCtx = document.getElementById('frostChart').getContext('2d');
-      new Chart(frostCtx, {
+      window.frostChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: ['2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023'],
+          labels: labels,
           datasets: [{
             label: 'Freezing Days',
-            data: [32, 28, 35, 30, 29, 31, 27, 26, 42, 30, 31, 29, 33, 28],
-            backgroundColor: 'rgba(33, 150, 243, 0.2)',
-            borderColor: 'rgba(33, 150, 243, 1)',
+            data: data,
+            backgroundColor: 'rgba(30, 136, 229, 0.2)',
+            borderColor: 'rgba(30, 136, 229, 1)',
             borderWidth: 3,
+            pointBackgroundColor: 'rgba(30, 136, 229, 1)',
+            pointRadius: 5,
+            pointHoverRadius: 8,
             tension: 0.3,
             fill: true
           }]
@@ -605,31 +1742,182 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: context => `Freezing days: ${context.parsed.y}` }
+            }
           },
           scales: {
             y: {
               beginAtZero: true,
-              title: { display: true, text: 'Freezing Days' }
-            }
+              title: { display: true, text: 'Freezing Days' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            },
+            x: { grid: { display: false } }
           }
         }
       });
     }
-    
-    // Initialize Leaflet after the DOM is loaded
-    setTimeout(() => {
-      // Initialize map properly
-      map.invalidateSize();
+
+    // Create monthly charts
+    function createMonthlyCharts() {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       
-      // Add sample marker
-      currentMarker = L.marker([51.505, -0.09]).addTo(map);
-      map.setView([51.505, -0.09], 13);
-      document.getElementById("gpsInput").value = "51.505, -0.09";
-    }, 500);
+      // Monthly rain chart
+      const rainCtx = document.getElementById('monthlyRainChart').getContext('2d');
+      if (window.monthlyRainChartInstance) window.monthlyRainChartInstance.destroy();
+      
+      window.monthlyRainChartInstance = new Chart(rainCtx, {
+        type: 'bar',
+        data: {
+          labels: monthNames,
+          datasets: [{
+            label: 'Avg. Rainfall (mm)',
+            data: monthlyData.rain,
+            backgroundColor: 'rgba(46, 125, 50, 0.7)',
+            borderColor: 'rgba(46, 125, 50, 1)',
+            borderWidth: 1,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Rainfall (mm)' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+      
+      // Monthly frost chart
+      const frostCtx = document.getElementById('monthlyFrostChart').getContext('2d');
+      if (window.monthlyFrostChartInstance) window.monthlyFrostChartInstance.destroy();
+      
+      window.monthlyFrostChartInstance = new Chart(frostCtx, {
+        type: 'bar',
+        data: {
+          labels: monthNames,
+          datasets: [{
+            label: 'Avg. Freezing Days',
+            data: monthlyData.frost,
+            backgroundColor: 'rgba(30, 136, 229, 0.7)',
+            borderColor: 'rgba(30, 136, 229, 1)',
+            borderWidth: 1,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Freezing Days' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // Create month selector
+    function createMonthSelector() {
+      const container = document.getElementById('month-selector');
+      container.innerHTML = '';
+      
+      monthNames.forEach((name, index) => {
+        const btn = document.createElement('button');
+        btn.className = `month-btn ${index === selectedMonth ? 'active' : ''}`;
+        btn.textContent = name.substring(0, 3);
+        btn.title = name;
+        btn.dataset.month = index;
+        btn.onclick = () => selectMonth(index);
+        container.appendChild(btn);
+      });
+    }
+    
+    // Select month for detailed view
+    function selectMonth(monthIndex) {
+      selectedMonth = monthIndex;
+      
+      document.querySelectorAll('.month-btn').forEach((btn, index) => {
+        btn.classList.toggle('active', index === monthIndex);
+      });
+      
+      showNotification(`Showing detailed analysis for ${monthNames[monthIndex]}`, 'info');
+    }
+
+    // Download PDF report
+    function downloadPDF() {
+      const reportElement = document.getElementById('report');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const originalText = downloadBtn.innerHTML;
+      downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin btn-icon"></i> Generating PDF...';
+      downloadBtn.disabled = true;
+      
+      html2pdf()
+        .from(reportElement)
+        .set({
+          margin: 15,
+          filename: `farm-climate-report.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        })
+        .save()
+        .then(() => {
+          downloadBtn.innerHTML = originalText;
+          downloadBtn.disabled = false;
+          showNotification("PDF report downloaded!", 'success');
+        })
+        .catch((error) => {
+          console.error('PDF generation failed:', error);
+          downloadBtn.innerHTML = originalText;
+          downloadBtn.disabled = false;
+          showNotification("Failed to generate PDF", 'error');
+        });
+    }
+
+    // Reset report
+    function resetReport() {
+      document.getElementById('report').classList.add('hidden');
+      document.getElementById('report-placeholder').classList.remove('hidden');
+      document.getElementById('downloadBtn').disabled = true;
+      resetMap();
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      const notificationText = document.getElementById('notification-text');
+      
+      notification.className = `notification ${type}`;
+      notificationText.textContent = message;
+      notification.classList.add('show');
+      
+      setTimeout(() => notification.classList.remove('show'), 3000);
+    }
+    
+    // Initialize progress bars
+    updateProgress('progress', 0, 'Ready');
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      const suggestions = document.getElementById('suggestions');
+      const locationInput = document.getElementById('locationInput');
+      
+      if (!locationInput.contains(e.target) && !suggestions.contains(e.target)) {
+        suggestions.style.display = 'none';
+      }
+    });
   </script>
-  
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
 </html>
