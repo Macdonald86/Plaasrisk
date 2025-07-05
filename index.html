@@ -918,6 +918,53 @@
       color: #2e7d32;
       font-weight: 600;
     }
+    
+    /* Frost season visualization */
+    .frost-season {
+      background: #e3f2fd;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .frost-season-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    
+    .frost-season-bar {
+      height: 24px;
+      background: #e0e0e0;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    
+    .frost-season-fill {
+      height: 100%;
+      background: #1e88e5;
+      border-radius: 12px;
+    }
+    
+    .frost-season-months {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 5px;
+      font-size: 0.8rem;
+      color: #555;
+    }
+    
+    .frost-peak-marker {
+      position: absolute;
+      top: -5px;
+      height: 34px;
+      width: 3px;
+      background: #d32f2f;
+    }
   </style>
 </head>
 <body>
@@ -1000,7 +1047,7 @@
               <ul class="report-preview-list">
                 <li>Annual rainfall and frost day analysis</li>
                 <li>Monthly climate patterns visualization</li>
-                <li>Freezing days analysis (temperatures below 0°C)</li>
+                <li>Frost days analysis (temperatures below 0°C)</li>
                 <li>Drought year identification</li>
                 <li>Detailed seasonal insights</li>
                 <li>Risk assessment and expert commentary</li>
@@ -1067,7 +1114,7 @@
                 <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
                 <ul>
                   <li>Analysis of rainfall patterns and drought risks</li>
-                  <li>Impact of freezing days on crop selection</li>
+                  <li>Impact of frost days on crop selection</li>
                   <li>Long-term climate trends and projections</li>
                   <li>Recommendations for farming practices</li>
                   <li>Risk mitigation strategies</li>
@@ -1083,7 +1130,7 @@
               </h3>
               <p>This report provides detailed insights into your farm's climate patterns:</p>
               <ul>
-                <li><span class="info-icon">1</span> <strong>Freezing days</strong>: Days with temperatures below 0°C</li>
+                <li><span class="info-icon">1</span> <strong>Frost days</strong>: Days with temperatures below 0°C</li>
                 <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
                 <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
                 <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 20 plus years of data</li>
@@ -1109,10 +1156,10 @@
                 </div>
                 <div class="stat-card">
                   <div class="stat-icon">
-                    <i class="fas fa-temperature-low"></i>
+                    <i class="fas fa-snowflake"></i>
                   </div>
                   <div class="stat-value" id="max-frost">0</div>
-                  <div class="stat-label">Max Freezing Days</div>
+                  <div class="stat-label">Max Frost Days</div>
                 </div>
                 <div class="stat-card">
                   <div class="stat-icon">
@@ -1136,7 +1183,7 @@
               <div class="report-card">
                 <h3>
                   <i class="fas fa-snowflake"></i>
-                  Freezing Days (temperature &lt; 0°C)
+                  Frost Days (temperature &lt; 0°C)
                 </h3>
                 <div class="chart-container">
                   <canvas id="frostChart"></canvas>
@@ -1174,12 +1221,23 @@
                   <div class="monthly-card">
                     <h4>
                       <i class="fas fa-snowflake"></i>
-                      Monthly Freezing Days
+                      Monthly Frost Days
                     </h4>
                     <div class="monthly-chart-container">
                       <canvas id="monthlyFrostChart"></canvas>
                     </div>
                   </div>
+                </div>
+              </div>
+              
+              <!-- Frost Season Visualization -->
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-snowflake"></i>
+                  Frost Season Analysis
+                </h3>
+                <div id="frost-season-visualization">
+                  <!-- Visualization will be inserted here -->
                 </div>
               </div>
               
@@ -1803,6 +1861,7 @@
         calculateRiskRating(analysisData);
         generateCommentary(analysisData);
         createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
+        createFrostSeasonVisualization(avgMonthlyFrost);
         
         // Hide error message and show analysis content
         document.getElementById('error-message').classList.add('hidden');
@@ -1890,7 +1949,7 @@
         data: {
           labels: labels,
           datasets: [{
-            label: 'Freezing Days',
+            label: 'Frost Days',
             data: data,
             backgroundColor: 'rgba(30, 136, 229, 0.2)',
             borderColor: 'rgba(30, 136, 229, 1)',
@@ -1908,13 +1967,13 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              callbacks: { label: context => `Freezing days: ${context.parsed.y}` }
+              callbacks: { label: context => `Frost days: ${context.parsed.y}` }
             }
           },
           scales: {
             y: {
               beginAtZero: true,
-              title: { display: true, text: 'Freezing Days' },
+              title: { display: true, text: 'Frost Days' },
               grid: { color: 'rgba(0, 0, 0, 0.05)' }
             },
             x: { grid: { display: false } }
@@ -1966,7 +2025,7 @@
         data: {
           labels: shortMonthNames,
           datasets: [{
-            label: 'Avg. Freezing Days',
+            label: 'Avg. Frost Days',
             data: monthlyData.frost,
             backgroundColor: 'rgba(30, 136, 229, 0.7)',
             borderColor: 'rgba(30, 136, 229, 1)',
@@ -1981,7 +2040,7 @@
           scales: {
             y: {
               beginAtZero: true,
-              title: { display: true, text: 'Freezing Days' },
+              title: { display: true, text: 'Frost Days' },
               grid: { color: 'rgba(0, 0, 0, 0.05)' }
             },
             x: { grid: { display: false } }
@@ -2042,7 +2101,7 @@
         commentaryHTML += `, creating favorable conditions for moisture-dependent crops.`;
       }
       
-      commentaryHTML += ` The area sees a maximum of <strong>${maxFrost} freezing days</strong> annually, `;
+      commentaryHTML += ` The area sees a maximum of <strong>${maxFrost} frost days</strong> annually, `;
       
       if (maxFrost > 50) {
         commentaryHTML += `posing significant challenges for frost-sensitive crops.`;
@@ -2086,12 +2145,24 @@
         .filter(item => item.value == maxFrostDays)
         .map(item => monthNames[item.index]);
       
+      // Detailed frost season analysis
+      const frostSeasonMonths = monthlyFrost
+        .map((days, index) => ({ days, month: monthNames[index] }))
+        .filter(item => item.days > 0);
+      
+      const frostSeasonStart = frostSeasonMonths[0]?.month || 'None';
+      const frostSeasonEnd = frostSeasonMonths[frostSeasonMonths.length - 1]?.month || 'None';
+      const frostSeasonDuration = frostSeasonMonths.length;
+      
       commentaryHTML += `</p><p><strong>Seasonal Patterns:</strong> The driest months are typically <span class="highlight-month">${formatMonthList(minRainMonths)}</span> `;
       commentaryHTML += `with average rainfall as low as <strong>${minRain}mm</strong>. `;
       commentaryHTML += `The wettest months are <span class="highlight-month">${formatMonthList(maxRainMonths)}</span> `;
-      commentaryHTML += `with average rainfall reaching <strong>${maxRain}mm</strong>. `;
-      commentaryHTML += `Frost risk is highest during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> `;
-      commentaryHTML += `with an average of <strong>${maxFrostDays.toFixed(1)} freezing days</strong> per month.`;
+      commentaryHTML += `with average rainfall reaching <strong>${maxRain}mm</strong>.`;
+      
+      commentaryHTML += `</p><p><strong>Frost Season Analysis:</strong> Frost typically begins in <span class="highlight-month">${frostSeasonStart}</span> `;
+      commentaryHTML += `and ends in <span class="highlight-month">${frostSeasonEnd}</span>, lasting approximately <strong>${frostSeasonDuration} months</strong>. `;
+      commentaryHTML += `Peak frost occurs during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> `;
+      commentaryHTML += `with an average of <strong>${maxFrostDays.toFixed(1)} frost days</strong> per month.`;
       
       // Recommendations
       commentaryHTML += `</p><p><strong>Agricultural Recommendations:</strong></p><ul>`;
@@ -2106,6 +2177,10 @@
       
       if (droughtCount > 3) {
         commentaryHTML += `<li>Develop water storage systems to capture rainfall from wet months for use during dry periods</li>`;
+      }
+      
+      if (frostSeasonDuration > 4) {
+        commentaryHTML += `<li>Select crop varieties with shorter growing seasons to avoid extended frost periods</li>`;
       }
       
       if (completeness < 80) {
@@ -2182,6 +2257,46 @@
         
         tableBody.appendChild(row);
       });
+    }
+    
+    // Create frost season visualization
+    function createFrostSeasonVisualization(monthlyFrost) {
+      const container = document.getElementById('frost-season-visualization');
+      container.innerHTML = '';
+      
+      // Determine frost season months
+      const frostSeasonMonths = monthlyFrost
+        .map((days, index) => ({ days, month: monthNames[index] }))
+        .filter(item => item.days > 0);
+      
+      if (frostSeasonMonths.length === 0) {
+        container.innerHTML = '<p>No significant frost season detected in this region.</p>';
+        return;
+      }
+      
+      // Create visualization
+      const visualizationHTML = `
+        <div class="frost-season">
+          <div class="frost-season-header">
+            <div><strong>Frost Season Duration:</strong> ${frostSeasonMonths.length} months</div>
+            <div><strong>Peak Frost:</strong> ${Math.max(...monthlyFrost).toFixed(1)} days/month</div>
+          </div>
+          <div class="frost-season-bar">
+            <div class="frost-season-fill" style="width: ${(frostSeasonMonths.length / 12) * 100}%"></div>
+            <div class="frost-peak-marker" style="left: ${(monthlyFrost.indexOf(Math.max(...monthlyFrost)) / 12) * 100}%"></div>
+          </div>
+          <div class="frost-season-months">
+            <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+            <span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+          </div>
+          <p style="margin-top: 15px; font-size: 0.9rem;">
+            <i class="fas fa-info-circle"></i> The blue bar shows the frost season duration. 
+            The red marker indicates the month with peak frost days.
+          </p>
+        </div>
+      `;
+      
+      container.innerHTML = visualizationHTML;
     }
     
     // Function to calculate and display risk rating
@@ -2329,7 +2444,7 @@
         <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
         <ul>
           <li>Analysis of rainfall patterns and drought risks</li>
-          <li>Impact of freezing days on crop selection</li>
+          <li>Impact of frost days on crop selection</li>
           <li>Long-term climate trends and projections</li>
           <li>Recommendations for farming practices</li>
           <li>Risk mitigation strategies</li>
