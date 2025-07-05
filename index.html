@@ -544,70 +544,6 @@
       margin-right: 10px;
     }
     
-    .data-marker {
-      background: var(--success);
-      border-radius: 50%;
-      width: 12px;
-      height: 12px;
-      display: inline-block;
-      margin-right: 5px;
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
-    }
-    
-    .data-marker.no-data {
-      background: var(--danger);
-    }
-    
-    .data-marker.limited-data {
-      background: var(--warning);
-    }
-    
-    .legend {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 10px;
-      border-radius: 8px;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      font-size: 0.85rem;
-    }
-    
-    .legend-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
-    }
-    
-    .legend-item:last-child {
-      margin-bottom: 0;
-    }
-    
-    .month-selector {
-      display: flex;
-      justify-content: center;
-      gap: 5px;
-      margin: 10px 0 15px;
-      flex-wrap: wrap;
-    }
-    
-    .month-btn {
-      padding: 5px 10px;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      background: white;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .month-btn.active {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
-    
     .completeness-indicator {
       display: flex;
       align-items: center;
@@ -669,33 +605,6 @@
       font-size: 0.7rem;
       font-weight: 500;
       text-shadow: 0 1px 1px rgba(0,0,0,0.3);
-    }
-    
-    /* Performance metrics */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-top: 10px;
-    }
-    
-    .metric-card {
-      background: white;
-      border-radius: 8px;
-      padding: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    
-    .metric-value {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--primary);
-      margin: 5px 0;
-    }
-    
-    .metric-label {
-      font-size: 0.8rem;
-      color: #666;
     }
     
     /* Status messages */
@@ -851,17 +760,6 @@
           </div>
         </div>
         <div id="map"></div>
-        <div class="legend">
-          <div class="legend-item">
-            <span class="data-marker"></span> Reliable data available
-          </div>
-          <div class="legend-item">
-            <span class="data-marker no-data"></span> No data available
-          </div>
-          <div class="legend-item">
-            <span class="data-marker limited-data"></span> Limited data available
-          </div>
-        </div>
       </div>
       
       <div class="report-section">
@@ -885,7 +783,6 @@
                 <li>Freezing days analysis (temperatures below 0°C)</li>
                 <li>Drought year identification</li>
                 <li>Detailed seasonal insights</li>
-                <li>Performance metrics and progress tracking</li>
               </ul>
               <div style="text-align: center; margin: 20px 0 12px;">
                 <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
@@ -934,7 +831,6 @@
                 <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
                 <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
                 <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 20 plus years of data</li>
-                <li><span class="info-icon">5</span> <strong>Performance metrics</strong>: Optimization and efficiency data</li>
               </ul>
             </div>
             
@@ -960,32 +856,6 @@
                   </div>
                   <div class="stat-value" id="max-frost">0</div>
                   <div class="stat-label">Max Freezing Days</div>
-                </div>
-              </div>
-              
-              <!-- Performance Metrics Card -->
-              <div class="report-card">
-                <h3>
-                  <i class="fas fa-tachometer-alt"></i>
-                  Performance Metrics
-                </h3>
-                <div class="metrics-grid">
-                  <div class="metric-card">
-                    <div class="metric-value" id="fetch-time">0ms</div>
-                    <div class="metric-label">Data Fetch Time</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-value" id="process-time">0ms</div>
-                    <div class="metric-label">Processing Time</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-value" id="optimization">0%</div>
-                    <div class="metric-label">Optimization Gain</div>
-                  </div>
-                  <div class="metric-card">
-                    <div class="metric-value" id="data-points">0</div>
-                    <div class="metric-label">Data Points</div>
-                  </div>
                 </div>
               </div>
               
@@ -1631,15 +1501,6 @@
         
         updateStatus(`Visualizations generated in ${chartTime.toFixed(0)}ms`, 'success');
         
-        // Update performance metrics
-        const totalTime = performance.now() - startTime;
-        const optimization = Math.max(0, Math.min(100, Math.round((1 - (processTime / totalTime)) * 100)));
-        
-        document.getElementById('fetch-time').textContent = `${fetchTime.toFixed(0)}ms`;
-        document.getElementById('process-time').textContent = `${processTime.toFixed(0)}ms`;
-        document.getElementById('optimization').textContent = `${optimization}%`;
-        document.getElementById('data-points').textContent = totalDays.toLocaleString();
-        
         // Hide error message and show analysis content
         document.getElementById('error-message').classList.add('hidden');
         document.getElementById('analysis-content').style.display = 'block';
@@ -1914,8 +1775,10 @@
       const suggestions = document.getElementById('suggestions');
       const locationInput = document.getElementById('locationInput');
       
-      if (!locationInput.contains(e.target) && !suggestions.contains(e.target)) {
-        suggestions.style.display = 'none';
+      if (suggestions && locationInput) {
+        if (!locationInput.contains(e.target) && !suggestions.contains(e.target)) {
+          suggestions.style.display = 'none';
+        }
       }
     });
   </script>
