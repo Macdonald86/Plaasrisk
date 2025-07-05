@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Enhanced Farm Climate Risk Analysis</title>
+  <title>Farm Climate Risk Analysis</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -1046,8 +1046,8 @@
           <div class="form-group">
             <div class="input-with-icon">
               <i class="fas fa-search input-icon"></i>
-              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. 40.7128, -74.0060" />
-              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. New York City" />
+              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.7313, 28.2184" />
+              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Pretoria, South Africa" />
             </div>
           </div>
           
@@ -1207,7 +1207,7 @@
                   <div class="stat-icon">
                     <i class="fas fa-calendar-alt"></i>
                   </div>
-                  <div class="stat-value" id="years-count">19</div>
+                  <div class="stat-value" id="years-count">0</div>
                   <div class="stat-label">Years Analyzed</div>
                 </div>
                 <div class="stat-card">
@@ -1394,7 +1394,7 @@
     const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
     // Initialize map
-    const map = L.map('map').setView([0, 0], 2);
+    const map = L.map('map').setView([-25.7313, 28.2184], 8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
@@ -1718,7 +1718,7 @@
         map.removeLayer(currentMarker);
         currentMarker = null;
       }
-      map.setView([0, 0], 2);
+      map.setView([-25.7313, 28.2184], 8);
       document.getElementById("gpsInput").value = "";
       document.getElementById("locationInput").value = "";
       document.getElementById('suggestions').style.display = 'none';
