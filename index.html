@@ -841,6 +841,9 @@
     .commentary-content {
       line-height: 1.7;
       color: #444;
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
     }
     
     .commentary-content p {
@@ -865,6 +868,55 @@
       position: absolute;
       left: 0;
       top: -5px;
+    }
+    
+    .highlight-month {
+      background-color: #e3f2fd;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    
+    .month-rain-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .month-rain-table th {
+      background-color: #e8f5e9;
+      padding: 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+    
+    .month-rain-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .month-rain-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .month-rain-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    
+    .critical-month {
+      background-color: #ffebee !important;
+      color: #d32f2f;
+      font-weight: 600;
+    }
+    
+    .favorable-month {
+      background-color: #e8f5e9 !important;
+      color: #2e7d32;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -1019,6 +1071,7 @@
                   <li>Long-term climate trends and projections</li>
                   <li>Recommendations for farming practices</li>
                   <li>Risk mitigation strategies</li>
+                  <li>Specific monthly analysis of rainfall and frost patterns</li>
                 </ul>
               </div>
             </div>
@@ -1129,6 +1182,26 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- Monthly Rainfall Table -->
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-table"></i>
+                  Monthly Rainfall Analysis
+                </h3>
+                <table class="month-rain-table" id="month-rain-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Avg. Rainfall (mm)</th>
+                      <th>Classification</th>
+                    </tr>
+                  </thead>
+                  <tbody id="month-rain-table-body">
+                    <!-- Table rows will be inserted here -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
           
@@ -1186,6 +1259,7 @@
   <script>
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
     // Initialize map
     const map = L.map('map').setView([0, 0], 2);
@@ -1728,6 +1802,7 @@
         
         calculateRiskRating(analysisData);
         generateCommentary(analysisData);
+        createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
         
         // Hide error message and show analysis content
         document.getElementById('error-message').classList.add('hidden');
@@ -1850,8 +1925,6 @@
 
     // Create monthly charts
     function createMonthlyCharts() {
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      
       // Monthly rain chart
       const rainCtx = document.getElementById('monthlyRainChart').getContext('2d');
       if (window.monthlyRainChartInstance) window.monthlyRainChartInstance.destroy();
@@ -1859,7 +1932,7 @@
       window.monthlyRainChartInstance = new Chart(rainCtx, {
         type: 'bar',
         data: {
-          labels: monthNames,
+          labels: shortMonthNames,
           datasets: [{
             label: 'Avg. Rainfall (mm)',
             data: monthlyData.rain,
@@ -1891,7 +1964,7 @@
       window.monthlyFrostChartInstance = new Chart(frostCtx, {
         type: 'bar',
         data: {
-          labels: monthNames,
+          labels: shortMonthNames,
           datasets: [{
             label: 'Avg. Freezing Days',
             data: monthlyData.frost,
@@ -1992,37 +2065,55 @@
       }
       
       // Monthly patterns
-      const driestMonth = monthlyRain.indexOf(Math.min(...monthlyRain));
-      const wettestMonth = monthlyRain.indexOf(Math.max(...monthlyRain));
-      const frostiestMonth = monthlyFrost.indexOf(Math.max(...monthlyFrost));
+      // Find months with lowest rainfall
+      const minRain = Math.min(...monthlyRain);
+      const minRainMonths = monthlyRain
+        .map((value, index) => ({ value, index }))
+        .filter(item => item.value == minRain)
+        .map(item => monthNames[item.index]);
       
-      commentaryHTML += `</p><p><strong>Seasonal Patterns:</strong> The driest month is typically <strong>${monthNames[driestMonth]}</strong> `;
-      commentaryHTML += `while the wettest is <strong>${monthNames[wettestMonth]}</strong>. `;
-      commentaryHTML += `Most freezing days occur in <strong>${monthNames[frostiestMonth]}</strong>, `;
-      commentaryHTML += `requiring special attention to frost protection during this period.`;
+      // Find months with highest rainfall
+      const maxRain = Math.max(...monthlyRain);
+      const maxRainMonths = monthlyRain
+        .map((value, index) => ({ value, index }))
+        .filter(item => item.value == maxRain)
+        .map(item => monthNames[item.index]);
+      
+      // Find months with highest frost probability
+      const maxFrostDays = Math.max(...monthlyFrost);
+      const maxFrostMonths = monthlyFrost
+        .map((value, index) => ({ value, index }))
+        .filter(item => item.value == maxFrostDays)
+        .map(item => monthNames[item.index]);
+      
+      commentaryHTML += `</p><p><strong>Seasonal Patterns:</strong> The driest months are typically <span class="highlight-month">${formatMonthList(minRainMonths)}</span> `;
+      commentaryHTML += `with average rainfall as low as <strong>${minRain}mm</strong>. `;
+      commentaryHTML += `The wettest months are <span class="highlight-month">${formatMonthList(maxRainMonths)}</span> `;
+      commentaryHTML += `with average rainfall reaching <strong>${maxRain}mm</strong>. `;
+      commentaryHTML += `Frost risk is highest during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> `;
+      commentaryHTML += `with an average of <strong>${maxFrostDays.toFixed(1)} freezing days</strong> per month.`;
       
       // Recommendations
       commentaryHTML += `</p><p><strong>Agricultural Recommendations:</strong></p><ul>`;
       
-      if (avgRain < 500) {
-        commentaryHTML += `<li>Prioritize drought-resistant crop varieties and implement water conservation techniques</li>`;
+      if (minRain < 30) {
+        commentaryHTML += `<li>Implement irrigation strategies during <span class="highlight-month">${formatMonthList(minRainMonths)}</span> to mitigate drought stress</li>`;
       }
       
-      if (maxFrost > 30) {
-        commentaryHTML += `<li>Consider frost protection systems for sensitive crops</li>`;
-        commentaryHTML += `<li>Schedule planting to avoid peak frost periods</li>`;
+      if (maxFrostDays > 5) {
+        commentaryHTML += `<li>Employ frost protection measures during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> for sensitive crops</li>`;
       }
       
       if (droughtCount > 3) {
-        commentaryHTML += `<li>Develop water storage and irrigation infrastructure for drought resilience</li>`;
+        commentaryHTML += `<li>Develop water storage systems to capture rainfall from wet months for use during dry periods</li>`;
       }
       
       if (completeness < 80) {
         commentaryHTML += `<li>Note: Data completeness is ${completeness}% - consider supplemental data sources for critical decisions</li>`;
       }
       
-      commentaryHTML += `<li>Monitor seasonal forecasts to optimize planting and harvesting schedules</li>`;
-      commentaryHTML += `<li>Implement soil moisture conservation techniques to maximize water efficiency</li>`;
+      commentaryHTML += `<li>Schedule planting to avoid peak frost periods in <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span></li>`;
+      commentaryHTML += `<li>Select crop varieties that can tolerate dry conditions in <span class="highlight-month">${formatMonthList(minRainMonths)}</span></li>`;
       commentaryHTML += `</ul>`;
       
       // Long-term outlook
@@ -2031,6 +2122,66 @@
       commentaryHTML += `improving soil health, and implementing sustainable water management practices.</p>`;
       
       commentaryContainer.innerHTML = commentaryHTML;
+    }
+    
+    // Helper function to format month lists
+    function formatMonthList(months) {
+      if (months.length === 0) return "";
+      if (months.length === 1) return months[0];
+      if (months.length === 2) return months.join(" and ");
+      return months.slice(0, -1).join(", ") + ", and " + months[months.length - 1];
+    }
+    
+    // Create monthly rainfall table
+    function createMonthlyRainTable(monthlyRain, monthlyFrost) {
+      const tableBody = document.getElementById('month-rain-table-body');
+      tableBody.innerHTML = '';
+      
+      monthlyRain.forEach((rain, index) => {
+        const row = document.createElement('tr');
+        const monthCell = document.createElement('td');
+        const rainCell = document.createElement('td');
+        const classificationCell = document.createElement('td');
+        
+        monthCell.textContent = monthNames[index];
+        rainCell.textContent = rain;
+        
+        // Classification based on rainfall
+        let classification = '';
+        let rowClass = '';
+        
+        if (rain < 30) {
+          classification = 'Critical Dryness';
+          rowClass = 'critical-month';
+        } else if (rain < 60) {
+          classification = 'Dry';
+        } else if (rain < 100) {
+          classification = 'Moderate';
+        } else {
+          classification = 'Wet';
+          rowClass = 'favorable-month';
+        }
+        
+        // Add frost warning if needed
+        if (monthlyFrost[index] > 5) {
+          classification += ' (High Frost Risk)';
+          rowClass = 'critical-month';
+        } else if (monthlyFrost[index] > 2) {
+          classification += ' (Some Frost Risk)';
+        }
+        
+        classificationCell.textContent = classification;
+        
+        row.appendChild(monthCell);
+        row.appendChild(rainCell);
+        row.appendChild(classificationCell);
+        
+        if (rowClass) {
+          row.className = rowClass;
+        }
+        
+        tableBody.appendChild(row);
+      });
     }
     
     // Function to calculate and display risk rating
@@ -2182,6 +2333,7 @@
           <li>Long-term climate trends and projections</li>
           <li>Recommendations for farming practices</li>
           <li>Risk mitigation strategies</li>
+          <li>Specific monthly analysis of rainfall and frost patterns</li>
         </ul>
       `;
       
