@@ -302,12 +302,18 @@
     
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 12px;
       margin-bottom: 15px;
     }
     
     @media (max-width: 1200px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
       .stats-grid {
         grid-template-columns: 1fr;
       }
@@ -763,6 +769,103 @@
       padding: 2px 5px;
       border-radius: 3px;
     }
+    
+    /* New styles for risk rating */
+    .risk-rating-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin: 15px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 10px;
+    }
+    
+    .risk-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      width: 70px;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: white;
+    }
+    
+    .risk-low { background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%); }
+    .risk-moderate { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+    .risk-high { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); }
+    
+    .risk-description {
+      flex: 1;
+    }
+    
+    .risk-description h4 {
+      margin-bottom: 8px;
+    }
+    
+    .risk-factors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .risk-factor {
+      background: rgba(255,255,255,0.5);
+      padding: 5px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    /* Commentary styles */
+    .commentary-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border-left: 4px solid #1e88e5;
+    }
+    
+    .commentary-card h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      color: #1e88e5;
+    }
+    
+    .commentary-content {
+      line-height: 1.7;
+      color: #444;
+    }
+    
+    .commentary-content p {
+      margin-bottom: 15px;
+    }
+    
+    .commentary-content ul {
+      margin: 15px 0;
+      padding-left: 20px;
+    }
+    
+    .commentary-content li {
+      margin-bottom: 10px;
+      position: relative;
+      padding-left: 25px;
+    }
+    
+    .commentary-content li:before {
+      content: "•";
+      color: #1e88e5;
+      font-size: 1.5rem;
+      position: absolute;
+      left: 0;
+      top: -5px;
+    }
   </style>
 </head>
 <body>
@@ -848,6 +951,7 @@
                 <li>Freezing days analysis (temperatures below 0°C)</li>
                 <li>Drought year identification</li>
                 <li>Detailed seasonal insights</li>
+                <li>Risk assessment and expert commentary</li>
               </ul>
               <div style="text-align: center; margin: 20px 0 12px;">
                 <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
@@ -885,6 +989,40 @@
               <p>Please try a location on land with reliable weather station coverage.</p>
             </div>
             
+            <!-- Risk Rating Section -->
+            <div class="report-card">
+              <h3>
+                <i class="fas fa-exclamation-triangle"></i>
+                Climate Risk Rating
+              </h3>
+              <div id="risk-rating-container" class="risk-rating-container">
+                <div class="risk-value" id="risk-value">0</div>
+                <div class="risk-description">
+                  <h4 id="risk-title">Risk Assessment</h4>
+                  <p id="risk-description">Risk rating will be calculated based on analysis</p>
+                  <div class="risk-factors" id="risk-factors"></div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Expert Commentary Section -->
+            <div class="commentary-card">
+              <h3>
+                <i class="fas fa-comment-alt"></i>
+                Expert Commentary
+              </h3>
+              <div id="expert-commentary" class="commentary-content">
+                <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
+                <ul>
+                  <li>Analysis of rainfall patterns and drought risks</li>
+                  <li>Impact of freezing days on crop selection</li>
+                  <li>Long-term climate trends and projections</li>
+                  <li>Recommendations for farming practices</li>
+                  <li>Risk mitigation strategies</li>
+                </ul>
+              </div>
+            </div>
+            
             <div class="explanation">
               <h3>
                 <i class="fas fa-info-circle"></i>
@@ -896,6 +1034,7 @@
                 <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
                 <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
                 <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 20 plus years of data</li>
+                <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
               </ul>
             </div>
             
@@ -921,6 +1060,13 @@
                   </div>
                   <div class="stat-value" id="max-frost">0</div>
                   <div class="stat-label">Max Freezing Days</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-fire"></i>
+                  </div>
+                  <div class="stat-value" id="drought-count">0</div>
+                  <div class="stat-label">Drought Years</div>
                 </div>
               </div>
               
@@ -1556,6 +1702,7 @@
         document.getElementById("years-count").innerText = totalYears;
         document.getElementById("avg-rain").innerText = avgRain;
         document.getElementById("max-frost").innerText = maxFrost;
+        document.getElementById("drought-count").innerText = droughtYears.length;
         
         // Create charts
         updateStatus("Generating visualizations...");
@@ -1568,6 +1715,19 @@
         chartTime = chartEnd - chartStart;
         
         updateStatus(`Visualizations generated in ${chartTime.toFixed(0)}ms`, 'success');
+        
+        // Generate risk rating and commentary
+        const analysisData = {
+          avgRain: parseFloat(avgRain),
+          maxFrost,
+          droughtCount: droughtYears.length,
+          monthlyRain: avgMonthlyRain,
+          monthlyFrost: avgMonthlyFrost,
+          completeness
+        };
+        
+        calculateRiskRating(analysisData);
+        generateCommentary(analysisData);
         
         // Hide error message and show analysis content
         document.getElementById('error-message').classList.add('hidden');
@@ -1784,6 +1944,191 @@
       showNotification(`Showing detailed analysis for ${monthNames[monthIndex]}`, 'info');
     }
 
+    // Function to generate commentary based on analysis
+    function generateCommentary(analysisData) {
+      const commentaryContainer = document.getElementById('expert-commentary');
+      let commentaryHTML = '';
+      
+      const { 
+        avgRain, 
+        maxFrost, 
+        droughtCount,
+        monthlyRain,
+        monthlyFrost,
+        completeness
+      } = analysisData;
+      
+      // Overall summary
+      commentaryHTML += `<p><strong>Climate Overview:</strong> This region experiences an average annual rainfall of <strong>${avgRain}mm</strong>`;
+      
+      if (avgRain < 400) {
+        commentaryHTML += `, which is below the recommended threshold for most crops.`;
+      } else if (avgRain < 700) {
+        commentaryHTML += `, providing adequate moisture for many crops with proper management.`;
+      } else {
+        commentaryHTML += `, creating favorable conditions for moisture-dependent crops.`;
+      }
+      
+      commentaryHTML += ` The area sees a maximum of <strong>${maxFrost} freezing days</strong> annually, `;
+      
+      if (maxFrost > 50) {
+        commentaryHTML += `posing significant challenges for frost-sensitive crops.`;
+      } else if (maxFrost > 20) {
+        commentaryHTML += `requiring careful selection of cold-tolerant varieties.`;
+      } else {
+        commentaryHTML += `making it suitable for a wide range of temperature-sensitive crops.`;
+      }
+      
+      // Drought analysis
+      commentaryHTML += `</p><p><strong>Drought Risk:</strong> Analysis identified <strong>${droughtCount} drought years</strong> `;
+      commentaryHTML += `(years with rainfall below 400mm) in the past two decades. `;
+      
+      if (droughtCount > 5) {
+        commentaryHTML += `This high frequency of drought conditions indicates significant water management challenges. `;
+      } else if (droughtCount > 2) {
+        commentaryHTML += `Occasional drought conditions require contingency planning for dry periods. `;
+      } else {
+        commentaryHTML += `Relatively stable rainfall patterns reduce drought-related risks. `;
+      }
+      
+      // Monthly patterns
+      const driestMonth = monthlyRain.indexOf(Math.min(...monthlyRain));
+      const wettestMonth = monthlyRain.indexOf(Math.max(...monthlyRain));
+      const frostiestMonth = monthlyFrost.indexOf(Math.max(...monthlyFrost));
+      
+      commentaryHTML += `</p><p><strong>Seasonal Patterns:</strong> The driest month is typically <strong>${monthNames[driestMonth]}</strong> `;
+      commentaryHTML += `while the wettest is <strong>${monthNames[wettestMonth]}</strong>. `;
+      commentaryHTML += `Most freezing days occur in <strong>${monthNames[frostiestMonth]}</strong>, `;
+      commentaryHTML += `requiring special attention to frost protection during this period.`;
+      
+      // Recommendations
+      commentaryHTML += `</p><p><strong>Agricultural Recommendations:</strong></p><ul>`;
+      
+      if (avgRain < 500) {
+        commentaryHTML += `<li>Prioritize drought-resistant crop varieties and implement water conservation techniques</li>`;
+      }
+      
+      if (maxFrost > 30) {
+        commentaryHTML += `<li>Consider frost protection systems for sensitive crops</li>`;
+        commentaryHTML += `<li>Schedule planting to avoid peak frost periods</li>`;
+      }
+      
+      if (droughtCount > 3) {
+        commentaryHTML += `<li>Develop water storage and irrigation infrastructure for drought resilience</li>`;
+      }
+      
+      if (completeness < 80) {
+        commentaryHTML += `<li>Note: Data completeness is ${completeness}% - consider supplemental data sources for critical decisions</li>`;
+      }
+      
+      commentaryHTML += `<li>Monitor seasonal forecasts to optimize planting and harvesting schedules</li>`;
+      commentaryHTML += `<li>Implement soil moisture conservation techniques to maximize water efficiency</li>`;
+      commentaryHTML += `</ul>`;
+      
+      // Long-term outlook
+      commentaryHTML += `<p><strong>Long-term Outlook:</strong> Climate models suggest increasing variability in rainfall patterns. `;
+      commentaryHTML += `Farmers should prepare for more extreme weather events by diversifying crops, `;
+      commentaryHTML += `improving soil health, and implementing sustainable water management practices.</p>`;
+      
+      commentaryContainer.innerHTML = commentaryHTML;
+    }
+    
+    // Function to calculate and display risk rating
+    function calculateRiskRating(analysisData) {
+      const { 
+        avgRain, 
+        maxFrost, 
+        droughtCount,
+        completeness
+      } = analysisData;
+      
+      let riskScore = 0;
+      const riskFactors = [];
+      
+      // Rainfall risk
+      if (avgRain < 300) {
+        riskScore += 3;
+        riskFactors.push('Very low rainfall');
+      } else if (avgRain < 500) {
+        riskScore += 2;
+        riskFactors.push('Low rainfall');
+      } else if (avgRain < 700) {
+        riskScore += 1;
+        riskFactors.push('Moderate rainfall');
+      }
+      
+      // Frost risk
+      if (maxFrost > 80) {
+        riskScore += 3;
+        riskFactors.push('High frost days');
+      } else if (maxFrost > 50) {
+        riskScore += 2;
+        riskFactors.push('Moderate frost days');
+      } else if (maxFrost > 20) {
+        riskScore += 1;
+        riskFactors.push('Some frost days');
+      }
+      
+      // Drought risk
+      if (droughtCount > 6) {
+        riskScore += 3;
+        riskFactors.push('Frequent droughts');
+      } else if (droughtCount > 3) {
+        riskScore += 2;
+        riskFactors.push('Occasional droughts');
+      } else if (droughtCount > 0) {
+        riskScore += 1;
+        riskFactors.push('Rare droughts');
+      }
+      
+      // Data quality risk
+      if (completeness < 60) {
+        riskScore += 2;
+        riskFactors.push('Incomplete data');
+      } else if (completeness < 80) {
+        riskScore += 1;
+        riskFactors.push('Partial data');
+      }
+      
+      // Cap at 10
+      riskScore = Math.min(10, riskScore);
+      
+      // Determine risk level
+      let riskLevel = 'Low';
+      let riskClass = 'risk-low';
+      let description = 'Minimal climate-related risks';
+      
+      if (riskScore > 6) {
+        riskLevel = 'High';
+        riskClass = 'risk-high';
+        description = 'Significant climate challenges requiring careful management';
+      } else if (riskScore > 3) {
+        riskLevel = 'Moderate';
+        riskClass = 'risk-moderate';
+        description = 'Manageable risks with appropriate farming practices';
+      }
+      
+      // Update DOM
+      const riskValue = document.getElementById('risk-value');
+      riskValue.textContent = riskScore;
+      riskValue.className = `risk-value ${riskClass}`;
+      
+      document.getElementById('risk-title').textContent = `${riskLevel} Climate Risk`;
+      document.getElementById('risk-description').textContent = description;
+      
+      const riskFactorsContainer = document.getElementById('risk-factors');
+      riskFactorsContainer.innerHTML = '';
+      
+      riskFactors.forEach(factor => {
+        const el = document.createElement('div');
+        el.className = 'risk-factor';
+        el.textContent = factor;
+        riskFactorsContainer.appendChild(el);
+      });
+      
+      return riskScore;
+    }
+
     // Download PDF report
     function downloadPDF() {
       const reportElement = document.getElementById('report');
@@ -1820,6 +2165,26 @@
       document.getElementById('report').classList.add('hidden');
       document.getElementById('report-placeholder').classList.remove('hidden');
       document.getElementById('downloadBtn').disabled = true;
+      
+      // Reset risk rating
+      document.getElementById('risk-value').textContent = "0";
+      document.getElementById('risk-value').className = "risk-value";
+      document.getElementById('risk-title').textContent = "Risk Assessment";
+      document.getElementById('risk-description').textContent = "Risk rating will be calculated based on analysis";
+      document.getElementById('risk-factors').innerHTML = "";
+      
+      // Reset commentary
+      document.getElementById('expert-commentary').innerHTML = `
+        <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
+        <ul>
+          <li>Analysis of rainfall patterns and drought risks</li>
+          <li>Impact of freezing days on crop selection</li>
+          <li>Long-term climate trends and projections</li>
+          <li>Recommendations for farming practices</li>
+          <li>Risk mitigation strategies</li>
+        </ul>
+      `;
+      
       resetMap();
     }
 
