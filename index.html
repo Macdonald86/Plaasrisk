@@ -111,6 +111,7 @@
     #map {
       height: 100%;
       z-index: 1;
+      background: #e8f5e9;
     }
     
     .search-box {
@@ -1529,28 +1530,24 @@
     
     // Close mobile menu when clicking outside
     document.addEventListener('click', function(e) {
-      if (!searchBox.contains(e.target) {
+      if (!searchBox.contains(e.target) && e.target !== mobileMenuToggle) {
         searchBox.classList.remove('mobile-visible');
       }
     });
 
-    // Performance optimizations:
-    // 1. Optimized data processing algorithms
-    // 2. Reduced DOM manipulations
-    // 3. Improved chart rendering efficiency
-    // 4. Better memory management
-    // 5. Enhanced async operations
-
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December'];
-    const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Initialize map - FIXED ISSUE HERE
+    const map = L.map('map').setView([-25.0, 30.0], 5); // Set to South Africa coordinates
     
-    // Initialize map
-    const map = L.map('map').setView([0, 0], 2);
+    // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+    
+    // Add a marker to South Africa
+    L.marker([-25.0, 30.0]).addTo(map)
+      .bindPopup('South Africa')
+      .openPopup();
 
     // Initialize layers and controls
     let drawnItems = new L.FeatureGroup();
@@ -1896,7 +1893,7 @@
         map.removeLayer(currentMarker);
         currentMarker = null;
       }
-      map.setView([0, 0], 2);
+      map.setView([-25.0, 30.0], 5);
       document.getElementById("gpsInput").value = "";
       document.getElementById("locationInput").value = "";
       document.getElementById('suggestions').style.display = 'none';
@@ -2839,7 +2836,7 @@
     });
     
     // Make search box draggable
-    const searchBox = document.getElementById('searchBox');
+    const searchBoxEl = document.getElementById('searchBox');
     const positionIndicator = document.getElementById('positionIndicator');
     
     let isDragging = false;
@@ -2850,17 +2847,17 @@
     let xOffset = 0;
     let yOffset = 0;
     
-    searchBox.addEventListener("mousedown", dragStart);
+    searchBoxEl.addEventListener("mousedown", dragStart);
     document.addEventListener("mouseup", dragEnd);
     document.addEventListener("mousemove", drag);
     
     function dragStart(e) {
-      if (e.target !== searchBox && !searchBox.contains(e.target)) return;
+      if (e.target !== searchBoxEl && !searchBoxEl.contains(e.target)) return;
       
       initialX = e.clientX - xOffset;
       initialY = e.clientY - yOffset;
       
-      if (e.target === searchBox) {
+      if (e.target === searchBoxEl) {
         isDragging = true;
       }
     }
@@ -2872,7 +2869,7 @@
       isDragging = false;
       
       // Update position indicator
-      const rect = searchBox.getBoundingClientRect();
+      const rect = searchBoxEl.getBoundingClientRect();
       positionIndicator.textContent = `Position: ${Math.round(rect.left)}px, ${Math.round(rect.top)}px`;
     }
     
@@ -2886,7 +2883,7 @@
         xOffset = currentX;
         yOffset = currentY;
         
-        setTranslate(currentX, currentY, searchBox);
+        setTranslate(currentX, currentY, searchBoxEl);
       }
     }
     
@@ -2896,7 +2893,7 @@
     
     // Update position indicator on load
     window.addEventListener('load', function() {
-      const rect = searchBox.getBoundingClientRect();
+      const rect = searchBoxEl.getBoundingClientRect();
       positionIndicator.textContent = `Position: ${Math.round(rect.left)}px, ${Math.round(rect.top)}px`;
     });
     
