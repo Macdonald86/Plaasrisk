@@ -1,132 +1,3147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Enhanced Farm Climate Analysis</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Enhanced Farm Climate Analysis with GeoJSON</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary: #2e7d32;
+      --primary-light: #4caf50;
+      --primary-dark: #1b5e20;
+      --secondary: #388e3c;
+      --accent: #f57c00;
+      --accent-dark: #e65100;
+      --light: #f5f9f5;
+      --light-gray: #f8f9fa;
+      --dark: #2d3748;
+      --text: #333333;
+      --border: #e0e0e0;
+      --success: #4caf50;
+      --warning: #ff9800;
+      --danger: #f44336;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      --frost-blue: #1e88e5;
+      --frost-light: #bbdefb;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 10px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+    
+    .app-container {
+      display: grid;
+      grid-template-columns: 65% 35%;
+      gap: 15px;
+      margin-bottom: 15px;
+      height: calc(100vh - 30px);
+    }
+    
+    @media (max-width: 992px) {
+      .app-container {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      
+      .map-section {
+        height: 450px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .app-container {
+        gap: 10px;
+        height: auto;
+      }
+      
+      .map-section {
+        height: 400px;
+      }
+      
+      .report-section {
+        height: auto;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .map-section {
+        height: 350px;
+      }
+      
+      .app-container {
+        height: auto;
+      }
+    }
+    
+    .map-section, .report-section {
+      background: white;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .map-section {
+      overflow: hidden;
+      height: 100%;
+      position: relative;
+    }
+    
+    #map {
+      height: 100%;
+      z-index: 1;
+      background: #e8f5e9;
+    }
+    
+    .search-box {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+      width: 280px;
+      max-width: calc(100% - 30px);
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      cursor: move;
+    }
+    
+    @media (max-width: 768px) {
+      .search-box {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 15px auto;
+        width: 100%;
+        max-width: 100%;
+        transform: none !important;
+      }
+      
+      .position-indicator {
+        display: none;
+      }
+    }
+    
+    .search-box h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      padding-bottom: 8px;
+    }
+    
+    .search-box h2::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 20px;
+      height: 2px;
+      background: var(--accent);
+    }
+    
+    .data-availability {
+      background: #e8f5e9;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .data-availability.warning {
+      background: #fff8e1;
+    }
+    
+    .data-availability.error {
+      background: #ffebee;
+    }
+    
+    .data-availability i {
+      color: var(--success);
+    }
+    
+    .data-availability.warning i {
+      color: var(--warning);
+    }
+    
+    .data-availability.error i {
+      color: var(--danger);
+    }
+    
+    .form-group {
+      margin-bottom: 12px;
+      position: relative;
+    }
+    
+    .input-with-icon {
+      position: relative;
+    }
+    
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary);
+      font-size: 0.95rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 10px 12px 10px 35px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+      background: var(--light-gray);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+      background: white;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      gap: 8px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 12px rgba(46, 125, 50, 0.25);
+    }
+    
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    
+    .btn-outline:hover {
+      background: rgba(46, 125, 50, 0.08);
+    }
+    
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+    
+    .btn-block {
+      width: 100%;
+    }
+    
+    .map-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .map-actions .btn {
+      flex: 1;
+      min-width: 120px;
+    }
+    
+    @media (max-width: 768px) {
+      .map-actions {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .map-actions .btn {
+        width: 100%;
+        min-width: auto;
+      }
+    }
+    
+    .report-section {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    
+    .report-header {
+      text-align: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .report-header h2 {
+      font-size: 1.3rem;
+      color: var(--primary-dark);
+      margin-bottom: 5px;
+    }
+    
+    .report-header p {
+      color: #666;
+      font-size: 0.85rem;
+    }
+    
+    .report-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 3px;
+    }
+    
+    .report-card {
+      background: var(--light-gray);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-left: 3px solid var(--primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+    
+    .report-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      color: var(--dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+    
+    @media (max-width: 1200px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+      transition: transform 0.3s, box-shadow 0.3s;
+      border-top: 2px solid var(--primary-light);
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .stat-icon {
+      font-size: 1.3rem;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+    
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin: 6px 0;
+    }
+    
+    .stat-label {
+      color: #666;
+      font-size: 0.8rem;
+    }
+    
+    .chart-container, .monthly-chart-container {
+      position: relative;
+      height: 180px;
+      margin: 10px 0 15px;
+    }
+    
+    .drought-summary {
+      background: #fff8e1;
+      border-radius: 10px;
+      padding: 12px;
+      border-left: 3px solid var(--warning);
+      margin: 12px 0;
+    }
+    
+    .drought-summary h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: #e65100;
+      font-size: 1rem;
+    }
+    
+    .drought-years {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    
+    .drought-year {
+      background: #ffecb3;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .monthly-analysis {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    @media (max-width: 768px) {
+      .monthly-analysis {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .monthly-card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+      border-top: 3px solid var(--primary-light);
+    }
+    
+    .monthly-card h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+      color: var(--dark);
+      font-size: 0.9rem;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    @media (max-width: 768px) {
+      .actions {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .actions .btn {
+        width: 100%;
+      }
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .spinner {
+      width: 35px;
+      height: 35px;
+      border: 4px solid rgba(46, 125, 50, 0.2);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+    }
+    
+    .loading-text {
+      font-size: 1rem;
+      color: var(--dark);
+      text-align: center;
+      font-weight: 500;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    footer {
+      text-align: center;
+      padding: 10px;
+      color: #666;
+      font-size: 0.85rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    
+    .notification {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateX(200%);
+      transition: transform 0.4s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      .notification {
+        top: auto;
+        bottom: 15px;
+        left: 15px;
+        right: 15px;
+        width: calc(100% - 30px);
+      }
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+    
+    .notification.success {
+      background: var(--success);
+    }
+    
+    .notification.error {
+      background: var(--danger);
+    }
+    
+    .notification.info {
+      background: var(--primary);
+    }
+    
+    .error-message {
+      background: #ffebee;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      border-left: 4px solid var(--danger);
+      margin: 20px 0;
+    }
+    
+    .explanation {
+      background: #e8f5e9;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid var(--primary);
+    }
+    
+    .explanation h3 {
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .explanation ul {
+      padding-left: 20px;
+      margin: 15px 0;
+    }
+    
+    .explanation li {
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    
+    .info-icon {
+      background: var(--primary);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+    }
+    
+    .completeness-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .completeness-bar {
+      flex-grow: 1;
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .completeness-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+    }
+    
+    /* Progress bar styles */
+    .progress-container {
+      width: 100%;
+      margin: 15px 0;
+    }
+    
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 0.85rem;
+      color: var(--dark);
+    }
+    
+    .progress-bar {
+      height: 12px;
+      background: #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 6px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    
+    .progress-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 500;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    }
+    
+    /* Status messages */
+    .status-message {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 3px solid var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status-message i {
+      color: var(--primary);
+    }
+    
+    .status-message.warning {
+      border-left-color: var(--warning);
+    }
+    
+    .status-message.warning i {
+      color: var(--warning);
+    }
+    
+    .status-message.error {
+      border-left-color: var(--danger);
+    }
+    
+    .status-message.error i {
+      color: var(--danger);
+    }
+    
+    .status-message.success {
+      border-left-color: var(--success);
+    }
+    
+    .status-message.success i {
+      color: var(--success);
+    }
+    
+    .search-type-toggle {
+      display: flex;
+      background: var(--light-gray);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 10px;
+    }
+    
+    .search-type-btn {
+      flex: 1;
+      padding: 6px;
+      text-align: center;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    
+    .search-type-btn.active {
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-weight: 500;
+      color: var(--primary-dark);
+    }
+    
+    .suggestions-box {
+      position: absolute;
+      width: calc(100% - 30px);
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1001;
+      margin-top: 5px;
+      display: none;
+    }
+    
+    .suggestion-item {
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    
+    .suggestion-item:hover {
+      background: var(--light);
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    
+    /* Added for monthly selector buttons - matching drought-year style */
+    .month-btn {
+      background: #e8f5e9;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      margin: 0 2px 5px 0;
+      transition: all 0.2s;
+    }
+    
+    .month-btn:hover {
+      background: #c8e6c9;
+    }
+    
+    .month-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .month-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 15px;
+    }
+    
+    /* Draggable cursor */
+    .draggable {
+      cursor: move;
+    }
+    
+    /* Reduced font size for report preview */
+    .report-preview-text {
+      font-size: 0.85rem;
+      margin: 10px 0;
+      color: #555;
+      line-height: 1.6;
+    }
+    
+    .report-preview-list {
+      margin: 10px 0 10px 18px;
+      font-size: 0.85rem;
+    }
+    
+    .report-preview-list li {
+      margin-bottom: 8px;
+    }
+    
+    /* Positioning indicator */
+    .position-indicator {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      font-size: 0.7rem;
+      color: #888;
+      background: rgba(255, 255, 255, 0.7);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    
+    /* New styles for risk rating */
+    .risk-rating-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin: 15px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 10px;
+    }
+    
+    .risk-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      width: 70px;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: white;
+    }
+    
+    .risk-low { background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%); }
+    .risk-moderate { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
+    .risk-high { background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); }
+    
+    .risk-description {
+      flex: 1;
+    }
+    
+    .risk-description h4 {
+      margin-bottom: 8px;
+    }
+    
+    .risk-factors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .risk-factor {
+      background: rgba(255,255,255,0.5);
+      padding: 5px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    /* Commentary styles */
+    .commentary-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border-left: 4px solid #1e88e5;
+    }
+    
+    .commentary-card h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      color: #1e88e5;
+    }
+    
+    .commentary-content {
+      line-height: 1.7;
+      color: #444;
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    
+    .commentary-content p {
+      margin-bottom: 15px;
+    }
+    
+    .commentary-content ul {
+      margin: 15px 0;
+      padding-left: 20px;
+    }
+    
+    .commentary-content li {
+      margin-bottom: 10px;
+      position: relative;
+      padding-left: 25px;
+    }
+    
+    .commentary-content li:before {
+      content: "•";
+      color: #1e88e5;
+      font-size: 1.5rem;
+      position: absolute;
+      left: 0;
+      top: -5px;
+    }
+    
+    .highlight-month {
+      background-color: #e3f2fd;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    
+    .month-rain-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .month-rain-table th {
+      background-color: #e8f5e9;
+      padding: 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+    
+    .month-rain-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .month-rain-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .month-rain-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    
+    .critical-month {
+      background-color: #ffebee !important;
+      color: #d32f2f;
+      font-weight: 600;
+    }
+    
+    .favorable-month {
+      background-color: #e8f5e9 !important;
+      color: #2e7d32;
+      font-weight: 600;
+    }
+    
+    .frost-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    .frost-none {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .frost-low {
+      background-color: #fff8e1;
+      color: #f57c00;
+    }
+    
+    .frost-moderate {
+      background-color: #ffecb3;
+      color: #e65100;
+    }
+    
+    .frost-high {
+      background-color: #ffebee;
+      color: #d32f2f;
+    }
 
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-
-<!-- Fonts & Icons -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-/* ... Your existing CSS here ... */
-</style>
+    /* NEW: Enhanced Risk Rating Styles */
+    .risk-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 15px 0;
+    }
+    
+    @media (max-width: 768px) {
+      .risk-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+      }
+      
+      .risk-overall {
+        grid-column: span 2;
+      }
+    }
+    
+    .risk-category {
+      text-align: center;
+      padding: 12px;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .risk-category-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #555;
+    }
+    
+    .risk-category-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin: 5px 0;
+    }
+    
+    .risk-category-label {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+    
+    .risk-overall {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 10px;
+    }
+    
+    .risk-overall-value {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin: 5px 0;
+    }
+    
+    .risk-overall-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    
+    /* Mobile menu button */
+    .mobile-menu-toggle {
+      display: none;
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 1010;
+      background: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .mobile-menu-toggle span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 1px;
+      transition: all 0.3s;
+    }
+    
+    @media (max-width: 768px) {
+      .mobile-menu-toggle {
+        display: flex;
+      }
+      
+      .search-box {
+        top: -1000px;
+        transition: top 0.3s ease;
+      }
+      
+      .search-box.mobile-visible {
+        top: 70px;
+      }
+    }
+    
+    /* Touch-friendly adjustments */
+    .btn, .month-btn, .drought-year {
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    
+    .form-control {
+      min-height: 44px;
+    }
+    
+    /* Zoom prevention for iOS */
+    input, textarea, select {
+      font-size: 16px;
+    }
+    
+    /* Fix for mobile viewport */
+    @media (max-width: 768px) {
+      body, html {
+        overflow: auto;
+        height: auto;
+      }
+    }
+    
+    /* GeoJSON Upload Styles */
+    .geojson-upload {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .geojson-upload h3 {
+      font-size: 1rem;
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .file-input-container {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    
+    .file-input-label {
+      display: block;
+      padding: 8px 12px;
+      background: var(--light-gray);
+      border: 1px dashed var(--primary);
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .file-input-label:hover {
+      background: rgba(46, 125, 50, 0.05);
+    }
+    
+    .file-input-label i {
+      margin-right: 8px;
+      color: var(--primary);
+    }
+    
+    .file-input {
+      position: absolute;
+      width: 0.1px;
+      height: 0.1px;
+      opacity: 0;
+      overflow: hidden;
+      z-index: -1;
+    }
+    
+    .file-name {
+      font-size: 0.8rem;
+      text-align: center;
+      margin-top: 5px;
+      color: #666;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .geojson-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .geojson-actions .btn {
+      flex: 1;
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-  <!-- ... Your HTML structure remains unchanged ... -->
-</div>
+  <div class="container">
+    <div class="app-container">
+      <div class="map-section">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        
+        <div class="search-box draggable" id="searchBox">
+          <div class="position-indicator" id="positionIndicator">Position: 15px, 15px</div>
+          <h2>
+            <i class="fas fa-map-marker-alt"></i>
+            Farm Location
+          </h2>
+          
+          <div class="search-type-toggle">
+            <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
+            <div class="search-type-btn" id="locationToggle">Location Name</div>
+          </div>
+          
+          <div class="form-group">
+            <div class="input-with-icon">
+              <i class="fas fa-search input-icon"></i>
+              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
+              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
+            </div>
+          </div>
+          
+          <div id="suggestions" class="suggestions-box"></div>
+          
+          <div id="data-availability" class="data-availability">
+            <i class="fas fa-info-circle"></i>
+            <span>Data availability: Select a location</span>
+          </div>
+          
+          <button class="btn btn-primary" onclick="searchLocation()">
+            <i class="fas fa-search-location btn-icon"></i> Search
+          </button>
+          
+          <div class="map-actions">
+            <button class="btn btn-outline" onclick="resetMap()">
+              <i class="fas fa-trash-alt btn-icon"></i> Clear Map
+            </button>
+            <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
+              <i class="fas fa-chart-line btn-icon"></i> Analyze
+            </button>
+            <button class="btn btn-outline btn-sm" id="dropPinBtn" onclick="activatePinMode()">
+              <i class="fas fa-map-pin"></i> Drop Pin
+            </button>
+          </div>
+          
+          <!-- Data Fetching Progress Bar -->
+          <div class="progress-container">
+            <div class="progress-header">
+              <span>Data Retrieval</span>
+              <span id="progress-percentage">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+              <div class="progress-label" id="progress-label">Starting</div>
+            </div>
+          </div>
+          
+          <!-- GeoJSON Upload Section -->
+          <div class="geojson-upload">
+            <h3>
+              <i class="fas fa-upload"></i>
+              Upload Farm Boundary
+            </h3>
+            <div class="file-input-container">
+              <label for="geojsonFile" class="file-input-label">
+                <i class="fas fa-cloud-upload-alt"></i>
+                Choose GeoJSON File
+              </label>
+              <input type="file" id="geojsonFile" class="file-input" accept=".geojson,.json" />
+              <div id="fileName" class="file-name"></div>
+            </div>
+            <div class="geojson-actions">
+              <button class="btn btn-outline" id="clearGeojsonBtn" onclick="clearGeoJSON()">
+                <i class="fas fa-times"></i> Clear
+              </button>
+              <button class="btn btn-primary" id="uploadGeojsonBtn" onclick="uploadGeoJSON()">
+                <i class="fas fa-upload"></i> Upload
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="map"></div>
+      </div>
+      
+      <div class="report-section">
+        <div class="report-header">
+          <h2>Comprehensive Climate Report</h2>
+          <p>Detailed analysis of historical weather patterns with monthly insights</p>
+        </div>
+        
+        <div class="report-content">
+          <div id="report-placeholder">
+            <div class="report-card">
+              <h3>
+                <i class="fas fa-file-alt"></i>
+                Report Preview
+              </h3>
+              <p class="report-preview-text">Draw your farm boundaries on the map, upload a GeoJSON file, or search for a location to generate a comprehensive climate report using real historical data.</p>
+              <p class="report-preview-text">The enhanced report includes:</p>
+              <ul class="report-preview-list">
+                <li>Annual rainfall and frost day analysis</li>
+                <li>Monthly climate patterns visualization</li>
+                <li>Freezing days analysis (temperatures below 0°C)</li>
+                <li>Drought year identification</li>
+                <li>Detailed seasonal insights</li>
+                <li>Risk assessment and expert commentary</li>
+                <li>Frost risk analysis</li>
+                <li>GeoJSON boundary visualization</li>
+              </ul>
+              <div style="text-align: center; margin: 20px 0 12px;">
+                <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
+                  <i class="fas fa-snowflake"></i>
+                </div>
+                <p style="color: #888; font-size: 0.85rem;">Your detailed climate analysis will appear here</p>
+              </div>
+            </div>
+          </div>
+          
+          <div id="report" class="hidden">
+            <div class="report-card">
+              <h3>
+                <i class="fas fa-map-marked-alt"></i>
+                Location Details
+              </h3>
+              <p id="location-text"></p>
+              <p id="data-status" style="margin-top: 8px; font-size: 0.9rem;"></p>
+              
+              <div class="completeness-indicator" id="completeness-container">
+                <span>Data Completeness:</span>
+                <div class="completeness-bar">
+                  <div class="completeness-fill" id="completeness-bar"></div>
+                </div>
+                <span id="completeness-value">0%</span>
+              </div>
+            </div>
+            
+            <div id="error-message" class="hidden error-message">
+              <h3>
+                <i class="fas fa-exclamation-circle"></i>
+                Data Not Available
+              </h3>
+              <p>We couldn't find climate data for the selected location.</p>
+              <p>Please try a location on land with reliable weather station coverage.</p>
+            </div>
+            
+            <!-- Risk Rating Section -->
+            <div class="report-card">
+              <h3>
+                <i class="fas fa-exclamation-triangle"></i>
+                Climate Risk Rating
+              </h3>
+              <div class="risk-grid">
+                <div class="risk-category">
+                  <div class="risk-category-title">Drought Severity</div>
+                  <div class="risk-category-value" id="drought-severity">0</div>
+                  <div class="risk-category-label" id="drought-severity-label">-</div>
+                </div>
+                
+                <div class="risk-category">
+                  <div class="risk-category-title">Drought Frequency</div>
+                  <div class="risk-category-value" id="drought-frequency">0</div>
+                  <div class="risk-category-label" id="drought-frequency-label">-</div>
+                </div>
+                
+                <div class="risk-category">
+                  <div class="risk-category-title">Frost Risk</div>
+                  <div class="risk-category-value" id="frost-risk">0</div>
+                  <div class="risk-category-label" id="frost-risk-label">-</div>
+                </div>
+                
+                <div class="risk-overall">
+                  <div>Overall Risk</div>
+                  <div class="risk-overall-value" id="overall-risk">0</div>
+                  <div class="risk-overall-title" id="overall-risk-title">No Risk</div>
+                </div>
+              </div>
+              
+              <div class="risk-factors" id="risk-factors"></div>
+            </div>
+            
+            <!-- Expert Commentary Section -->
+            <div class="commentary-card">
+              <h3>
+                <i class="fas fa-comment-alt"></i>
+                Expert Commentary
+              </h3>
+              <div id="expert-commentary" class="commentary-content">
+                <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
+                <ul>
+                  <li>Analysis of rainfall patterns and drought risks</li>
+                  <li>Impact of freezing days on crop selection</li>
+                  <li>Long-term climate trends and projections</li>
+                  <li>Recommendations for farming practices</li>
+                  <li>Risk mitigation strategies</li>
+                  <li>Specific monthly analysis of rainfall and frost patterns</li>
+                  <li>Detailed frost risk assessment</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="explanation">
+              <h3>
+                <i class="fas fa-info-circle"></i>
+                Enhanced Climate Analysis
+              </h3>
+              <p>This report provides detailed insights into your farm's climate patterns:</p>
+              <ul>
+                <li><span class="info-icon">1</span> <strong>Freezing days</strong>: Days with temperatures below 0°C</li>
+                <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
+                <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
+                <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
+                <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
+                <li><span class="info-icon">6</span> <strong>Frost risk</strong>: Detailed analysis of frost patterns</li>
+                <li><span class="info-icon">7</span> <strong>GeoJSON integration</strong>: Upload and visualize custom farm boundaries</li>
+              </ul>
+            </div>
+            
+            <div id="analysis-content">
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                  </div>
+                  <div class="stat-value" id="years-count">19</div>
+                  <div class="stat-label">Years Analyzed</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-cloud-rain"></i>
+                  </div>
+                  <div class="stat-value" id="avg-rain">0</div>
+                  <div class="stat-label">Avg. Rainfall (mm)</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-temperature-low"></i>
+                  </div>
+                  <div class="stat-value" id="max-frost">0</div>
+                  <div class="stat-label">Max Freezing Days</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <i class="fas fa-fire"></i>
+                  </div>
+                  <div class="stat-value" id="drought-count">0</div>
+                  <div class="stat-label">Drought Years</div>
+                </div>
+              </div>
+              
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-cloud-showers-heavy"></i>
+                  Annual Rainfall (mm)
+                </h3>
+                <div class="chart-container">
+                  <canvas id="rainChart"></canvas>
+                </div>
+              </div>
+              
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-snowflake"></i>
+                  Freezing Days (temperature &lt; 0°C)
+                </h3>
+                <div id="frost-indicator-container" style="margin-bottom: 15px;">
+                  <!-- Frost indicator will be inserted here -->
+                </div>
+                <div class="chart-container">
+                  <canvas id="frostChart"></canvas>
+                </div>
+              </div>
+              
+              <div class="drought-summary">
+                <h4>
+                  <i class="fas fa-exclamation-triangle"></i>
+                  Drought Analysis
+                </h4>
+                <p id="drought-summary"></p>
+                <div class="drought-years" id="drought-years"></div>
+              </div>
+              
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-calendar-alt"></i>
+                  Monthly Climate Patterns
+                </h3>
+                
+                <div class="month-selector" id="month-selector"></div>
+                
+                <div class="monthly-analysis">
+                  <div class="monthly-card">
+                    <h4>
+                      <i class="fas fa-cloud-rain"></i>
+                      Monthly Rainfall
+                    </h4>
+                    <div class="monthly-chart-container">
+                      <canvas id="monthlyRainChart"></canvas>
+                    </div>
+                  </div>
+                  
+                  <div class="monthly-card">
+                    <h4>
+                      <i class="fas fa-snowflake"></i>
+                      Monthly Freezing Days
+                    </h4>
+                    <div class="monthly-chart-container">
+                      <canvas id="monthlyFrostChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Monthly Rainfall Table -->
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-table"></i>
+                  Monthly Rainfall Analysis
+                </h3>
+                <table class="month-rain-table" id="month-rain-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Avg. Rainfall (mm)</th>
+                      <th>Classification</th>
+                    </tr>
+                  </thead>
+                  <tbody id="month-rain-table-body">
+                    <!-- Table rows will be inserted here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing climate patterns...</div>
+            
+            <!-- Processing Progress Bar -->
+            <div class="progress-container" style="width: 80%;">
+              <div class="progress-header">
+                <span>Processing Data</span>
+                <span id="processing-percentage">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="processing-fill"></div>
+                <div class="progress-label" id="processing-label">Starting</div>
+              </div>
+            </div>
+            
+            <div class="status-message">
+              <i class="fas fa-info-circle"></i>
+              <span>Processing data: This may take a few moments for large datasets</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="actions">
+          <button class="btn btn-outline" onclick="resetReport()">
+            <i class="fas fa-sync-alt btn-icon"></i> Reset
+          </button>
+          <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
+            <i class="fas fa-download btn-icon"></i> Download Report
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <footer>
+      <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
+      <p style="margin-top: 8px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
+    </footer>
+  </div>
+  
+  <div id="notification" class="notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="notification-text">Notification message</span>
+  </div>
 
-<footer>
-  <p>Farm Climate Analysis Tool • Data provided by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" aria-label="Open-Meteo Website">Open-Meteo Historical Weather API</a></p>
-  <p style="margin-top: 8px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
-</footer>
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-<div id="notification" class="notification" aria-live="polite">
-  <i class="fas fa-check-circle"></i>
-  <span id="notification-text">Notification message</span>
-</div>
+  <script>
+    // Month names for display
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    const shortMonthNames = monthNames.map(m => m.substring(0, 3));
+    
+    // Mobile menu toggle
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const searchBox = document.getElementById('searchBox');
+    
+    mobileMenuToggle.addEventListener('click', function() {
+      searchBox.classList.toggle('mobile-visible');
+      // Invalidate map size after transition
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 350);
+    });
+    
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!searchBox.contains(e.target) && e.target !== mobileMenuToggle) {
+        searchBox.classList.remove('mobile-visible');
+        // Invalidate map size when closing mobile menu
+        setTimeout(() => {
+          if (map) map.invalidateSize();
+        }, 50);
+      }
+    });
 
-<!-- Scripts -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    // Initialize map
+    const map = L.map('map').setView([-25.0, 30.0], 5); // Set to South Africa coordinates
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    // Add a marker to South Africa
+    L.marker([-25.0, 30.0]).addTo(map)
+      .bindPopup('South Africa')
+      .openPopup();
 
-<script>
-// --- Utility: Debounce Function ---
-function debounce(fn, delay) {
-  let timeout;
-  return function(...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn.apply(this, args), delay);
-  };
-}
+    // Initialize layers and controls
+    let drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    let lastPolygonCenter = null;
+    let currentMarker = null;
+    let dataAvailable = false;
+    let monthlyData = null;
+    let selectedMonth = 0;
+    let pinModeActive = false;
+    let geocodeTimeout = null;
+    let currentRequest = null;
+    let geojsonLayer = null; // Store GeoJSON layer
+    
+    const dataAvailabilityLayer = L.layerGroup().addTo(map);
 
-// --- DOM Ready Helper ---
-function onReady(fn) {
-  if (document.readyState !== 'loading') fn();
-  else document.addEventListener('DOMContentLoaded', fn);
-}
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#2e7d32' } },
+        polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false
+      },
+      edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
 
-onReady(function() {
-  // --- Map Initialization ---
-  const map = L.map('map').setView([-25.0, 30.0], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer">OpenStreetMap</a> contributors'
-  }).addTo(map);
+    // Fix for mobile devices - invalidate map size after initialization
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
 
-  // --- Variables ---
-  let drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
-  let lastPolygonCenter = null;
-  let currentMarker = null;
-  let dataAvailable = false;
-  let monthlyData = null;
-  let selectedMonth = 0;
-  let pinModeActive = false;
-  let geocodeTimeout = null;
-  let currentRequest = null;
+    // Optimized progress bar function
+    let lastProgressUpdate = 0;
+    function updateProgress(barId, percentage, text) {
+      const now = Date.now();
+      // Throttle updates to max 10 per second
+      if (now - lastProgressUpdate < 100) return;
+      lastProgressUpdate = now;
+      
+      const fill = document.getElementById(`${barId}-fill`);
+      const label = document.getElementById(`${barId}-label`);
+      const percentageDisplay = document.getElementById(`${barId}-percentage`);
+      
+      if (fill) fill.style.width = `${percentage}%`;
+      if (label) label.textContent = text;
+      if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
+    }
+    
+    // Update status message
+    function updateStatus(message, type = 'info') {
+      const statusEl = document.createElement('div');
+      statusEl.className = `status-message ${type}`;
+      statusEl.innerHTML = `
+        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
+                         type === 'warning' ? 'exclamation-circle' : 
+                         type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+      `;
+      
+      const reportContent = document.querySelector('.report-content');
+      if (reportContent) {
+        reportContent.appendChild(statusEl);
+        
+        // Auto-scroll to new message
+        statusEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
 
-  // --- Debounced Location Input ---
-  const locationInput = document.getElementById('locationInput');
-  locationInput.addEventListener('input', debounce(function(e) {
-    const query = e.target.value;
-    if (query.length < 3) {
+    // Event handlers
+    map.on(L.Draw.Event.CREATED, function (e) {
+      if (e.layerType === 'polygon') {
+        const layer = e.layer;
+        const latlngs = layer.getLatLngs()[0];
+        
+        if (latlngs.length < 3) {
+          showNotification("Please draw a valid polygon with at least 3 points", "error");
+          return;
+        }
+        
+        drawnItems.clearLayers();
+        drawnItems.addLayer(layer);
+
+        const latSum = latlngs.reduce((sum, pt) => sum + pt.lat, 0);
+        const lngSum = latlngs.reduce((sum, pt) => sum + pt.lng, 0);
+        const center = {
+          lat: latSum / latlngs.length,
+          lng: lngSum / latlngs.length
+        };
+        lastPolygonCenter = center;
+        showNotification(`Farm boundary drawn at ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, 'success');
+        
+        checkDataAvailability(center.lat, center.lng);
+      }
+    });
+    
+    // Function to check data availability
+    function checkDataAvailability(lat, lng) {
+      const availabilityEl = document.getElementById('data-availability');
+      availabilityEl.innerHTML = '<i class="fas fa-sync fa-spin"></i> Checking data availability...';
+      availabilityEl.className = 'data-availability';
+      
+      // Simulate progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        updateProgress('progress', progress, `Checking data availability... ${progress}%`);
+        
+        if (progress >= 100) {
+          clearInterval(interval);
+          
+          const isLand = !(lat < -60 || lat > 60 || Math.abs(lng) > 170);
+          const isRemote = Math.abs(lat) > 55 || Math.abs(lng) > 140;
+          
+          if (!isLand) {
+            availabilityEl.innerHTML = '<i class="fas fa-times-circle"></i> No data available (ocean location)';
+            availabilityEl.className = 'data-availability error';
+            dataAvailable = false;
+          } else if (isRemote) {
+            availabilityEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Limited data available (remote area)';
+            availabilityEl.className = 'data-availability warning';
+            dataAvailable = true;
+          } else {
+            availabilityEl.innerHTML = '<i class="fas fa-check-circle"></i> Reliable data available';
+            availabilityEl.className = 'data-availability';
+            dataAvailable = true;
+          }
+        }
+      }, 200);
+    }
+
+    // Activate pin drop mode
+    function activatePinMode() {
+      pinModeActive = true;
+      document.getElementById('dropPinBtn').classList.add('btn-primary');
+      document.getElementById('dropPinBtn').classList.remove('btn-outline');
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Click on Map';
+      
+      // Add event listener for map click
+      map.on('click', handleMapClick);
+      
+      showNotification("Click on the map to drop a pin", 'info');
+    }
+    
+    // Handle map click for pin drop
+    function handleMapClick(e) {
+      if (!pinModeActive) return;
+      
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      
+      // Clear any existing markers
+      if (currentMarker) map.removeLayer(currentMarker);
+      
+      // Add new marker
+      currentMarker = L.marker([lat, lng]).addTo(map)
+        .bindPopup("Dropped Pin: " + lat.toFixed(4) + ", " + lng.toFixed(4))
+        .openPopup();
+      
+      // Update GPS input
+      document.getElementById("gpsInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      lastPolygonCenter = { lat, lng };
+      
+      // Check data availability
+      checkDataAvailability(lat, lng);
+      
+      // Deactivate pin mode
+      pinModeActive = false;
+      document.getElementById('dropPinBtn').classList.remove('btn-primary');
+      document.getElementById('dropPinBtn').classList.add('btn-outline');
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      
+      // Remove event listener
+      map.off('click', handleMapClick);
+      
+      showNotification(`Pin dropped at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
+    }
+    
+    // Toggle search type
+    document.getElementById('gpsToggle').addEventListener('click', () => {
+      document.getElementById('gpsToggle').classList.add('active');
+      document.getElementById('locationToggle').classList.remove('active');
+      document.getElementById('gpsInput').classList.remove('hidden');
+      document.getElementById('locationInput').classList.add('hidden');
+    });
+    
+    document.getElementById('locationToggle').addEventListener('click', () => {
+      document.getElementById('locationToggle').classList.add('active');
+      document.getElementById('gpsToggle').classList.remove('active');
+      document.getElementById('locationInput').classList.remove('hidden');
+      document.getElementById('gpsInput').classList.add('hidden');
+    });
+    
+    // Location input suggestions
+    document.getElementById('locationInput').addEventListener('input', function(e) {
+      const query = e.target.value;
+      if (query.length < 3) {
+        document.getElementById('suggestions').style.display = 'none';
+        return;
+      }
+      
+      // Clear any existing timeout
+      if (geocodeTimeout) clearTimeout(geocodeTimeout);
+      
+      // Set timeout to avoid too many requests
+      geocodeTimeout = setTimeout(() => {
+        geocodeLocation(query, true);
+      }, 500);
+    });
+    
+    // Search location by text or coordinates
+    function searchLocation() {
+      if (document.getElementById('gpsInput').classList.contains('hidden')) {
+        // Search by location name
+        const query = document.getElementById('locationInput').value;
+        if (!query) {
+          showNotification("Enter a location name to search", 'error');
+          return;
+        }
+        geocodeLocation(query);
+      } else {
+        // Search by coordinates
+        const input = document.getElementById("gpsInput").value;
+        const parts = input.split(',');
+        if (parts.length === 2) {
+          const lat = parseFloat(parts[0].trim());
+          const lng = parseFloat(parts[1].trim());
+          if (!isNaN(lat) && !isNaN(lng)) {
+            map.setView([lat, lng], 13);
+            
+            if (currentMarker) map.removeLayer(currentMarker);
+            
+            currentMarker = L.marker([lat, lng]).addTo(map)
+              .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
+            lastPolygonCenter = { lat, lng };
+            showNotification(`Location set to: ${lat}, ${lng}`, 'success');
+            
+            checkDataAvailability(lat, lng);
+          } else {
+            showNotification("Invalid coordinates. Please enter in 'latitude, longitude' format.", 'error');
+          }
+        } else {
+          showNotification("Enter coordinates in 'lat, lng' format.", 'error');
+        }
+      }
+    }
+    
+    // Fixed geocoding function with better error handling
+    function geocodeLocation(query, forSuggestions = false) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`;
+      
+      // Cancel previous request if any
+      if (currentRequest) {
+        currentRequest.abort();
+      }
+      
+      const controller = new AbortController();
+      const signal = controller.signal;
+      currentRequest = controller;
+      
+      fetch(url, { signal })
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          if (forSuggestions) {
+            // Show suggestions
+            const suggestions = document.getElementById('suggestions');
+            suggestions.innerHTML = '';
+            
+            if (data.length === 0) {
+              suggestions.style.display = 'none';
+              return;
+            }
+            
+            // Use document fragment for efficient DOM updates
+            const fragment = document.createDocumentFragment();
+            data.forEach(item => {
+              const suggestion = document.createElement('div');
+              suggestion.className = 'suggestion-item';
+              suggestion.textContent = item.display_name;
+              suggestion.onclick = () => {
+                document.getElementById('locationInput').value = item.display_name;
+                suggestions.style.display = 'none';
+                
+                // Set the location on the map
+                const lat = parseFloat(item.lat);
+                const lon = parseFloat(item.lon);
+                map.setView([lat, lon], 13);
+                
+                if (currentMarker) map.removeLayer(currentMarker);
+                currentMarker = L.marker([lat, lon]).addTo(map)
+                  .bindPopup(item.display_name)
+                  .openPopup();
+                
+                lastPolygonCenter = { lat, lng: lon };
+                checkDataAvailability(lat, lon);
+                
+                showNotification(`Location set to: ${item.display_name}`, 'success');
+              };
+              fragment.appendChild(suggestion);
+            });
+            
+            suggestions.appendChild(fragment);
+            suggestions.style.display = 'block';
+          } else {
+            // Process actual search
+            if (data.length === 0) {
+              showNotification("Location not found. Please try a different name.", 'error');
+              return;
+            }
+            
+            const item = data[0];
+            const lat = parseFloat(item.lat);
+            const lon = parseFloat(item.lon);
+            
+            map.setView([lat, lon], 13);
+            
+            if (currentMarker) map.removeLayer(currentMarker);
+            currentMarker = L.marker([lat, lon]).addTo(map)
+              .bindPopup(item.display_name)
+              .openPopup();
+            
+            lastPolygonCenter = { lat, lng: lon };
+            checkDataAvailability(lat, lon);
+            
+            showNotification(`Location set to: ${item.display_name}`, 'success');
+          }
+        })
+        .catch(error => {
+          if (error.name === 'AbortError') {
+            console.log('Request aborted');
+          } else {
+            console.error('Geocoding error:', error);
+            if (!forSuggestions) {
+              showNotification("Error finding location. Please try again.", 'error');
+            }
+          }
+        })
+        .finally(() => {
+          currentRequest = null;
+        });
+    }
+
+    // Reset map
+    function resetMap() {
+      drawnItems.clearLayers();
+      lastPolygonCenter = null;
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+        currentMarker = null;
+      }
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
+        geojsonLayer = null;
+      }
+      map.setView([-25.0, 30.0], 5);
+      document.getElementById("gpsInput").value = "";
+      document.getElementById("locationInput").value = "";
       document.getElementById('suggestions').style.display = 'none';
-      return;
+      document.getElementById('fileName').textContent = '';
+      
+      const availabilityEl = document.getElementById('data-availability');
+      availabilityEl.innerHTML = '<i class="fas fa-info-circle"></i> Data availability: Select a location';
+      availabilityEl.className = 'data-availability';
+      
+      showNotification("Map has been reset", 'info');
+      
+      // Reset progress bar
+      updateProgress('progress', 0, 'Ready');
+      
+      // Reset pin mode if active
+      if (pinModeActive) {
+        pinModeActive = false;
+        map.off('click', handleMapClick);
+        document.getElementById('dropPinBtn').classList.remove('btn-primary');
+        document.getElementById('dropPinBtn').classList.add('btn-outline');
+        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      }
     }
-    geocodeLocation(query, true);
-  }, 300));
 
-  // --- Accessibility: ARIA Labels Example ---
-  document.getElementById('gpsInput').setAttribute('aria-label', 'GPS Coordinates');
-  document.getElementById('locationInput').setAttribute('aria-label', 'Location Name');
-  document.getElementById('generateBtn').setAttribute('aria-label', 'Analyze Location');
-  document.getElementById('downloadBtn').setAttribute('aria-label', 'Download PDF Report');
+    // GeoJSON Upload Functions
+    document.getElementById('geojsonFile').addEventListener('change', function(e) {
+      const fileName = e.target.files[0] ? e.target.files[0].name : '';
+      document.getElementById('fileName').textContent = fileName;
+    });
 
-  // --- Example: Modularized Function ---
-  async function generateReport() {
-    if (!lastPolygonCenter) {
-      showNotification("Draw a farm boundary or search a location first.", 'error');
-      return;
+    function uploadGeoJSON() {
+      const fileInput = document.getElementById('geojsonFile');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showNotification("Please select a GeoJSON file", "error");
+        return;
+      }
+      
+      // Remove any existing GeoJSON layer
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const geojsonData = JSON.parse(e.target.result);
+          
+          // Process GeoJSON
+          geojsonLayer = L.geoJSON(geojsonData, {
+            style: {
+              color: '#ff7800',
+              weight: 3,
+              opacity: 0.8,
+              fillOpacity: 0.2,
+              fillColor: '#ff7800'
+            },
+            onEachFeature: function(feature, layer) {
+              if (feature.properties && feature.properties.name) {
+                layer.bindPopup(feature.properties.name);
+              }
+            }
+          }).addTo(map);
+          
+          // Zoom to the GeoJSON bounds
+          map.fitBounds(geojsonLayer.getBounds());
+          
+          // Calculate center point
+          const bounds = geojsonLayer.getBounds();
+          const center = bounds.getCenter();
+          lastPolygonCenter = { lat: center.lat, lng: center.lng };
+          
+          // Update GPS input
+          document.getElementById("gpsInput").value = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+          
+          showNotification("GeoJSON uploaded and displayed on map", "success");
+          checkDataAvailability(center.lat, center.lng);
+          
+        } catch (error) {
+          console.error("Error parsing GeoJSON:", error);
+          showNotification("Invalid GeoJSON file format", "error");
+        }
+      };
+      
+      reader.onerror = function() {
+        showNotification("Error reading file", "error");
+      };
+      
+      reader.readAsText(file);
     }
-    if (!dataAvailable) {
-      showNotification("No data available for this location. Please choose another location.", 'error');
-      return;
-    }
-    showLoadingState();
-    try {
-      const data = await fetchClimateData(lastPolygonCenter);
-      const analysis = processClimateData(data);
-      renderReport(analysis);
-      showNotification("Report generated successfully!", 'success');
-    } catch (err) {
-      showErrorState(err);
-    } finally {
-      hideLoadingState();
-    }
-  }
 
-  // --- Example: Show Notification ---
-  function showNotification(message, type) {
-    const notification = document.getElementById('notification');
-    const notificationText = document.getElementById('notification-text');
-    notification.className = `notification ${type}`;
-    notificationText.textContent = message;
-    notification.classList.add('show');
-    setTimeout(() => notification.classList.remove('show'), 3000);
-  }
+    function clearGeoJSON() {
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
+        geojsonLayer = null;
+      }
+      document.getElementById('geojsonFile').value = '';
+      document.getElementById('fileName').textContent = '';
+      showNotification("GeoJSON boundary cleared", "info");
+    }
 
-  // --- The rest of your logic goes here ---
-  // (You can modularize other large functions similarly)
-});
-</script>
+    // Generate report with real climate data
+    async function generateReport() {
+      if (!lastPolygonCenter) {
+        showNotification("Draw a farm boundary, upload GeoJSON, or search a location first.", 'error');
+        return;
+      }
+      
+      if (!dataAvailable) {
+        showNotification("No data available for this location. Please choose another location.", 'error');
+        return;
+      }
+
+      // Show loading indicator
+      document.getElementById('report-placeholder').classList.add('hidden');
+      document.getElementById('report').classList.add('hidden');
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('generateBtn').disabled = true;
+      
+      const lat = lastPolygonCenter.lat.toFixed(4);
+      const lon = lastPolygonCenter.lng.toFixed(4);
+      
+      // API request parameters - FIXED API ENDPOINT
+      const startDate = "2000-01-01";
+      const endDate = "2024-12-31";
+      const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&timezone=auto`;
+      
+      // Performance tracking
+      const startTime = performance.now();
+      let fetchTime, processTime, chartTime;
+      
+      try {
+        // Cancel any previous request
+        if (currentRequest) {
+          currentRequest.abort();
+        }
+        
+        const controller = new AbortController();
+        const signal = controller.signal;
+        currentRequest = controller;
+        
+        // Step 1: Fetch data
+        updateStatus("Starting data retrieval from weather API...");
+        const fetchStart = performance.now();
+        
+        // Simulate progress during fetch
+        let fetchProgress = 0;
+        const fetchInterval = setInterval(() => {
+          if (fetchProgress < 95) {
+            fetchProgress += 5;
+            updateProgress('processing', fetchProgress, `Fetching data... ${fetchProgress}%`);
+          }
+        }, 100);
+        
+        const response = await fetch(apiUrl, { signal });
+        if (!response.ok) {
+          let errorMessage = `API request failed with status ${response.status}`;
+          try {
+            const errorData = await response.json();
+            if (errorData.reason) {
+              errorMessage = errorData.reason;
+            }
+          } catch (e) {
+            // Ignore JSON parse error
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const data = await response.json();
+        
+        // Clear interval immediately after fetch
+        clearInterval(fetchInterval);
+        updateProgress('processing', 100, "Data fetched!");
+        
+        const fetchEnd = performance.now();
+        fetchTime = fetchEnd - fetchStart;
+        
+        updateStatus(`Data fetched successfully in ${fetchTime.toFixed(0)}ms`, 'success');
+        
+        // Process the data
+        updateStatus("Processing weather data...");
+        const processStart = performance.now();
+        const daily = data.daily;
+        
+        if (!daily || !daily.time || daily.time.length === 0) throw new Error('No data available for this location');
+        
+        // Optimized data processing
+        const yearsMap = new Map();
+        const monthlyRain = Array(12).fill().map(() => []);
+        const monthlyFrost = Array(12).fill().map(() => []);
+        
+        const totalDays = daily.time.length;
+        let completeDays = 0;
+        
+        // Precompute date objects and year/month indices
+        const dateInfo = daily.time.map(dateStr => {
+          const date = new Date(dateStr);
+          return {
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            date
+          };
+        });
+        
+        // Process data in batches to avoid blocking UI
+        const batchSize = 1000;
+        let processed = 0;
+        
+        while (processed < totalDays) {
+          const end = Math.min(processed + batchSize, totalDays);
+          for (let i = processed; i < end; i++) {
+            const { year, month } = dateInfo[i];
+            const precipitation = daily.precipitation_sum[i];
+            const temperature = daily.temperature_2m_min[i];
+            
+            // Check data completeness
+            if (precipitation !== null && temperature !== null) completeDays++;
+            
+            // Aggregate precipitation
+            if (precipitation !== null) {
+              if (!yearsMap.has(year)) {
+                yearsMap.set(year, { precipitation: 0, frostDays: 0 });
+              }
+              const yearData = yearsMap.get(year);
+              yearData.precipitation += precipitation;
+              monthlyRain[month].push(precipitation);
+            }
+            
+            // Count freezing days
+            if (temperature !== null && temperature < 0) {
+              yearsMap.get(year).frostDays += 1;
+              monthlyFrost[month].push(1);
+            } else if (temperature !== null) {
+              monthlyFrost[month].push(0);
+            }
+          }
+          
+          processed = end;
+          const progress = Math.min(95, Math.round((processed / totalDays) * 100));
+          updateProgress('processing', progress, `Processing data: ${processed}/${totalDays} days`);
+          
+          // Yield to UI thread
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        
+        // Complete processing
+        updateProgress('processing', 100, "Data processed!");
+        const processEnd = performance.now();
+        processTime = processEnd - processStart;
+        
+        updateStatus(`Data processed in ${processTime.toFixed(0)}ms`, 'success');
+        
+        // Calculate data completeness
+        const completeness = Math.round((completeDays / totalDays) * 100);
+        document.getElementById('completeness-bar').style.width = `${completeness}%`;
+        document.getElementById('completeness-value').textContent = `${completeness}%`;
+        
+        // Extract data for each year
+        const years = [];
+        const rainData = [];
+        const frostData = [];
+        const droughtYears = [];
+        
+        // Sort years and extract data
+        const sortedYears = [...yearsMap.keys()].sort();
+        for (const year of sortedYears) {
+          const yearData = yearsMap.get(year);
+          years.push(year);
+          rainData.push(Math.round(yearData.precipitation * 10) / 10);
+          frostData.push(yearData.frostDays);
+          
+          if (yearData.precipitation < 400) droughtYears.push(year);
+        }
+        
+        // Calculate stats
+        const totalYears = years.length;
+        const avgRain = (rainData.reduce((a, b) => a + b, 0) / totalYears).toFixed(1);
+        const maxFrost = Math.max(...frostData);
+        
+        // Calculate monthly averages
+        const avgMonthlyRain = monthlyRain.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
+        const avgMonthlyFrost = monthlyFrost.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
+        
+        // Store monthly data
+        monthlyData = { rain: avgMonthlyRain, frost: avgMonthlyFrost };
+        
+        // Update report content
+        document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
+        document.getElementById("data-status").innerText = "Reliable data available for this location";
+        document.getElementById("data-status").style.color = "var(--success)";
+        
+        const droughtText = droughtYears.length ? 
+          `${droughtYears.length} drought years detected (rainfall < 400mm)` : 
+          "No significant drought years detected";
+          
+        document.getElementById("drought-summary").innerText = droughtText;
+        
+        // Add drought years using document fragment
+        const droughtYearsContainer = document.getElementById("drought-years");
+        droughtYearsContainer.innerHTML = '';
+        
+        const fragment = document.createDocumentFragment();
+        droughtYears.forEach(year => {
+          const el = document.createElement('div');
+          el.className = 'drought-year';
+          el.innerText = year;
+          fragment.appendChild(el);
+        });
+        droughtYearsContainer.appendChild(fragment);
+        
+        // Update stats
+        document.getElementById("years-count").innerText = totalYears;
+        document.getElementById("avg-rain").innerText = avgRain;
+        document.getElementById("max-frost").innerText = maxFrost;
+        document.getElementById("drought-count").innerText = droughtYears.length;
+        
+        // Create charts
+        updateStatus("Generating visualizations...");
+        const chartStart = performance.now();
+        createRainChart(years, rainData);
+        createFrostChart(years, frostData);
+        createMonthlyCharts();
+        createMonthSelector();
+        const chartEnd = performance.now();
+        chartTime = chartEnd - chartStart;
+        
+        updateStatus(`Visualizations generated in ${chartTime.toFixed(0)}ms`, 'success');
+        
+        // Generate risk rating and commentary
+        const analysisData = {
+          avgRain: parseFloat(avgRain),
+          maxFrost,
+          droughtCount: droughtYears.length,
+          monthlyRain: avgMonthlyRain,
+          monthlyFrost: avgMonthlyFrost,
+          completeness,
+          totalYears
+        };
+        
+        calculateRiskRating(analysisData);
+        generateCommentary(analysisData);
+        createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
+        createFrostIndicator(maxFrost);
+        
+        // Hide error message and show analysis content
+        document.getElementById('error-message').classList.add('hidden');
+        document.getElementById('analysis-content').style.display = 'block';
+        
+        // Show report and enable download
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('report').classList.remove('hidden');
+        document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('generateBtn').disabled = false;
+        
+        showNotification("Report generated successfully!", 'success');
+      } catch (err) {
+        console.error('Error generating report:', err);
+        
+        // Show error message
+        document.getElementById('error-message').classList.remove('hidden');
+        document.getElementById('analysis-content').style.display = 'none';
+        
+        // Update location text
+        document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
+        document.getElementById("data-status").innerText = "No data available for this location";
+        document.getElementById("data-status").style.color = "var(--danger)";
+        
+        // Hide completeness indicator
+        document.getElementById('completeness-container').style.display = 'none';
+        
+        // Show report with error
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('report').classList.remove('hidden');
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('downloadBtn').disabled = false;
+        
+        updateStatus(`Error: ${err.message}`, 'error');
+        showNotification("Couldn't fetch data for this location", 'error');
+      } finally {
+        currentRequest = null;
+      }
+    }
+
+    // Create frost indicator
+    function createFrostIndicator(maxFrost) {
+      const container = document.getElementById('frost-indicator-container');
+      container.innerHTML = '';
+      
+      const indicator = document.createElement('div');
+      indicator.className = 'frost-indicator';
+      
+      if (maxFrost === 0) {
+        indicator.className += ' frost-none';
+        indicator.innerHTML = '<i class="fas fa-check-circle"></i> No frost risk in this region';
+      } else if (maxFrost <= 10) {
+        indicator.className += ' frost-low';
+        indicator.innerHTML = '<i class="fas fa-exclamation-circle"></i> Low frost risk';
+      } else if (maxFrost <= 30) {
+        indicator.className += ' frost-moderate';
+        indicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Moderate frost risk';
+      } else {
+        indicator.className += ' frost-high';
+        indicator.innerHTML = '<i class="fas fa-skull-crossbones"></i> High frost risk';
+      }
+      
+      container.appendChild(indicator);
+    }
+
+    // Create rainfall chart with optimization
+    function createRainChart(labels, data) {
+      const ctx = document.getElementById('rainChart').getContext('2d');
+      
+      // Reuse existing chart instance if available
+      if (window.rainChartInstance) {
+        window.rainChartInstance.data.labels = labels;
+        window.rainChartInstance.data.datasets[0].data = data;
+        window.rainChartInstance.update();
+        return;
+      }
+      
+      window.rainChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Rainfall (mm)',
+            data: data,
+            backgroundColor: 'rgba(46, 125, 50, 0.7)',
+            borderColor: 'rgba(46, 125, 50, 1)',
+            borderWidth: 1,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: context => `Rainfall: ${context.parsed.y} mm` }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Rainfall (mm)' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // Create frost days chart with optimization
+    function createFrostChart(labels, data) {
+      const ctx = document.getElementById('frostChart').getContext('2d');
+      
+      // Reuse existing chart instance if available
+      if (window.frostChartInstance) {
+        window.frostChartInstance.data.labels = labels;
+        window.frostChartInstance.data.datasets[0].data = data;
+        window.frostChartInstance.update();
+        return;
+      }
+      
+      window.frostChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Freezing Days',
+            data: data,
+            backgroundColor: 'rgba(30, 136, 229, 0.2)',
+            borderColor: 'rgba(30, 136, 229, 1)',
+            borderWidth: 3,
+            pointBackgroundColor: 'rgba(30, 136, 229, 1)',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: context => `Freezing days: ${context.parsed.y}` }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Freezing Days' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // Create monthly charts with optimization
+    function createMonthlyCharts() {
+      // Monthly rain chart
+      const rainCtx = document.getElementById('monthlyRainChart').getContext('2d');
+      
+      // Reuse existing chart instance if available
+      if (window.monthlyRainChartInstance) {
+        window.monthlyRainChartInstance.data.datasets[0].data = monthlyData.rain;
+        window.monthlyRainChartInstance.update();
+      } else {
+        window.monthlyRainChartInstance = new Chart(rainCtx, {
+          type: 'bar',
+          data: {
+            labels: shortMonthNames,
+            datasets: [{
+              label: 'Avg. Rainfall (mm)',
+              data: monthlyData.rain,
+              backgroundColor: 'rgba(46, 125, 50, 0.7)',
+              borderColor: 'rgba(46, 125, 50, 1)',
+              borderWidth: 1,
+              borderRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Rainfall (mm)' },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+      
+      // Monthly frost chart
+      const frostCtx = document.getElementById('monthlyFrostChart').getContext('2d');
+      
+      // Reuse existing chart instance if available
+      if (window.monthlyFrostChartInstance) {
+        window.monthlyFrostChartInstance.data.datasets[0].data = monthlyData.frost;
+        window.monthlyFrostChartInstance.update();
+      } else {
+        window.monthlyFrostChartInstance = new Chart(frostCtx, {
+          type: 'bar',
+          data: {
+            labels: shortMonthNames,
+            datasets: [{
+              label: 'Avg. Freezing Days',
+              data: monthlyData.frost,
+              backgroundColor: 'rgba(30, 136, 229, 0.7)',
+              borderColor: 'rgba(30, 136, 229, 1)',
+              borderWidth: 1,
+              borderRadius: 5
+            }]
+          },
+          options: {
+            responsive: true;
+            maintainAspectRatio: false;
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Freezing Days' },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+    }
+
+    // Create month selector with document fragment
+    function createMonthSelector() {
+      const container = document.getElementById('month-selector');
+      container.innerHTML = '';
+      
+      const fragment = document.createDocumentFragment();
+      
+      monthNames.forEach((name, index) => {
+        const btn = document.createElement('button');
+        btn.className = `month-btn ${index === selectedMonth ? 'active' : ''}`;
+        btn.textContent = name.substring(0, 3);
+        btn.title = name;
+        btn.dataset.month = index;
+        btn.onclick = () => selectMonth(index);
+        fragment.appendChild(btn);
+      });
+      
+      container.appendChild(fragment);
+    }
+    
+    // Select month for detailed view
+    function selectMonth(monthIndex) {
+      selectedMonth = monthIndex;
+      
+      document.querySelectorAll('.month-btn').forEach((btn, index) => {
+        btn.classList.toggle('active', index === monthIndex);
+      });
+      
+      showNotification(`Showing detailed analysis for ${monthNames[monthIndex]}`, 'info');
+    }
+
+    // Function to generate commentary based on analysis
+    function generateCommentary(analysisData) {
+      const commentaryContainer = document.getElementById('expert-commentary');
+      let commentaryHTML = '';
+      
+      const { 
+        avgRain, 
+        maxFrost, 
+        droughtCount,
+        monthlyRain,
+        monthlyFrost,
+        completeness
+      } = analysisData;
+      
+      // Overall summary
+      commentaryHTML += `<p><strong>Climate Overview:</strong> This region experiences an average annual rainfall of <strong>${avgRain}mm</strong>`;
+      
+      if (avgRain < 400) {
+        commentaryHTML += `, which is below the recommended threshold for most crops.`;
+      } else if (avgRain < 700) {
+        commentaryHTML += `, providing adequate moisture for many crops with proper management.`;
+      } else {
+        commentaryHTML += `, creating favorable conditions for moisture-dependent crops.`;
+      }
+      
+      // Frost risk analysis
+      commentaryHTML += `</p><p><strong>Frost Risk Analysis:</strong> `;
+      if (maxFrost === 0) {
+        commentaryHTML += `The climate analysis shows <strong>no frost risk</strong> in this region, making it ideal for year-round cultivation of frost-sensitive crops.`;
+      } else {
+        commentaryHTML += `The area sees a maximum of <strong>${maxFrost} freezing days</strong> annually, `;
+        
+        if (maxFrost > 50) {
+          commentaryHTML += `posing significant challenges for frost-sensitive crops.`;
+        } else if (maxFrost > 20) {
+          commentaryHTML += `requiring careful selection of cold-tolerant varieties.`;
+        } else {
+          commentaryHTML += `making it suitable for a wide range of temperature-sensitive crops.`;
+        }
+        
+        // Add month-specific frost analysis
+        const maxFrostMonths = monthlyFrost
+            .map((value, index) => ({ value, index }))
+            .filter(item => item.value >= 3);
+        
+        if (maxFrostMonths.length > 0) {
+          commentaryHTML += ` The highest frost risk occurs during <span class="highlight-month">${formatMonthList(maxFrostMonths.map(m => monthNames[m.index]))}</span> `;
+          commentaryHTML += `with an average of <strong>${Math.max(...maxFrostMonths.map(m => m.value)).toFixed(1)} freezing days</strong> per month.`;
+        }
+      }
+      commentaryHTML += `</p>`;
+      
+      // Drought analysis
+      commentaryHTML += `<p><strong>Drought Risk:</strong> Analysis identified <strong>${droughtCount} drought years</strong> `;
+      commentaryHTML += `(years with rainfall below 400mm) in the past two decades. `;
+      
+      if (droughtCount > 5) {
+        commentaryHTML += `This high frequency of drought conditions indicates significant water management challenges. `;
+      } else if (droughtCount > 2) {
+        commentaryHTML += `Occasional drought conditions require contingency planning for dry periods. `;
+      } else {
+        commentaryHTML += `Relatively stable rainfall patterns reduce drought-related risks. `;
+      }
+      
+      // Monthly patterns
+      // Find months with lowest rainfall
+      const minRain = Math.min(...monthlyRain);
+      const minRainMonths = monthlyRain
+        .map((value, index) => ({ value, index }))
+        .filter(item => item.value == minRain)
+        .map(item => monthNames[item.index]);
+      
+      // Find months with highest rainfall
+      const maxRain = Math.max(...monthlyRain);
+      const maxRainMonths = monthlyRain
+        .map((value, index) => ({ value, index }))
+        .filter(item => item.value == maxRain)
+        .map(item => monthNames[item.index]);
+      
+      // Find months with highest frost probability
+      const maxFrostDays = Math.max(...monthlyFrost);
+      const maxFrostMonths = monthlyFrost
+        .map((value, index) => ({ value, index }))
+        .filter(item => item.value == maxFrostDays)
+        .map(item => monthNames[item.index]);
+      
+      commentaryHTML += `</p><p><strong>Seasonal Patterns:</strong> The driest months are typically <span class="highlight-month">${formatMonthList(minRainMonths)}</span> `;
+      commentaryHTML += `with average rainfall as low as <strong>${minRain}mm</strong>. `;
+      commentaryHTML += `The wettest months are <span class="highlight-month">${formatMonthList(maxRainMonths)}</span> `;
+      commentaryHTML += `with average rainfall reaching <strong>${maxRain}mm</strong>. `;
+      
+      // Only show frost months if there is frost risk
+      if (maxFrostDays > 0) {
+        commentaryHTML += `Frost risk is highest during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> `;
+        commentaryHTML += `with an average of <strong>${maxFrostDays.toFixed(1)} freezing days</strong> per month.`;
+      }
+      
+      // Recommendations
+      commentaryHTML += `</p><p><strong>Agricultural Recommendations:</strong></p><ul>`;
+      
+      if (minRain < 30) {
+        commentaryHTML += `<li>Implement irrigation strategies during <span class="highlight-month">${formatMonthList(minRainMonths)}</span> to mitigate drought stress</li>`;
+      }
+      
+      // Only show frost recommendations if there is frost risk
+      if (maxFrostDays > 5) {
+        commentaryHTML += `<li>Employ frost protection measures during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> for sensitive crops</li>`;
+      } else if (maxFrostDays > 0) { // Added condition for some frost risk
+        commentaryHTML += `<li>Monitor temperatures during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> for potential light frost events</li>`;
+      } else if (maxFrost === 0) {
+        commentaryHTML += `<li>No frost protection measures needed - ideal for frost-sensitive crops year-round</li>`;
+      }
+      
+      if (droughtCount > 3) {
+        commentaryHTML += `<li>Develop water storage systems to capture rainfall from wet months for use during dry periods</li>`;
+      }
+      
+      if (completeness < 80) {
+        commentaryHTML += `<li>Note: Data completeness is ${completeness}% - consider supplemental data sources for critical decisions</li>`;
+      }
+      
+      // Only show planting recommendation if there is frost risk
+      if (maxFrostDays > 0) {
+        commentaryHTML += `<li>Schedule planting to avoid peak frost periods in <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span></li>`;
+      }
+      
+      commentaryHTML += `<li>Select crop varieties that can tolerate dry conditions in <span class="highlight-month">${formatMonthList(minRainMonths)}</span></li>`;
+      commentaryHTML += `</ul>`;
+      
+      // Long-term outlook
+      commentaryHTML += `<p><strong>Long-term Outlook:</strong> Climate models suggest increasing variability in rainfall patterns. `;
+      commentaryHTML += `Farmers should prepare for more extreme weather events by diversifying crops, `;
+      commentaryHTML += `improving soil health, and implementing sustainable water management practices.</p>`;
+      
+      commentaryContainer.innerHTML = commentaryHTML;
+    }
+    
+    // Helper function to format month lists
+    function formatMonthList(months) {
+      if (months.length === 0) return "";
+      if (months.length === 1) return months[0];
+      if (months.length === 2) return months.join(" and ");
+      return months.slice(0, -1).join(", ") + ", and " + months[months.length - 1];
+    }
+    
+    // Create monthly rainfall table with document fragment
+    function createMonthlyRainTable(monthlyRain, monthlyFrost) {
+      const tableBody = document.getElementById('month-rain-table-body');
+      tableBody.innerHTML = '';
+      
+      const fragment = document.createDocumentFragment();
+      
+      monthlyRain.forEach((rain, index) => {
+        const row = document.createElement('tr');
+        const monthCell = document.createElement('td');
+        const rainCell = document.createElement('td');
+        const classificationCell = document.createElement('td');
+        
+        monthCell.textContent = monthNames[index];
+        rainCell.textContent = rain;
+        
+        // Classification based on rainfall
+        let classification = '';
+        let rowClass = '';
+        
+        if (rain < 30) {
+          classification = 'Critical Dryness';
+          rowClass = 'critical-month';
+        } else if (rain < 60) {
+          classification = 'Dry';
+        } else if (rain < 100) {
+          classification = 'Moderate';
+        } else {
+          classification = 'Wet';
+          rowClass = 'favorable-month';
+        }
+        
+        // Add frost warning if needed
+        if (monthlyFrost[index] > 5) {
+          classification += ' (High Frost Risk)';
+          rowClass = 'critical-month';
+        } else if (monthlyFrost[index] > 2) {
+          classification += ' (Some Frost Risk)';
+        }
+        
+        classificationCell.textContent = classification;
+        
+        row.appendChild(monthCell);
+        row.appendChild(rainCell);
+        row.appendChild(classificationCell);
+        
+        if (rowClass) {
+          row.className = rowClass;
+        }
+        
+        fragment.appendChild(row);
+      });
+      
+      tableBody.appendChild(fragment);
+    }
+    
+    // UPDATED: Function to calculate and display risk rating
+    function calculateRiskRating(analysisData) {
+      const { 
+        avgRain, 
+        maxFrost, 
+        droughtCount,
+        completeness,
+        totalYears
+      } = analysisData;
+      
+      // Calculate drought severity (0-3)
+      let droughtSeverity = 0;
+      if (avgRain < 300) {
+        droughtSeverity = 3;
+      } else if (avgRain < 400) {
+        droughtSeverity = 2.5;
+      } else if (avgRain < 500) {
+        droughtSeverity = 2;
+      } else if (avgRain < 600) {
+        droughtSeverity = 1;
+      }
+      
+      // Calculate drought frequency (0-3)
+      const droughtFrequencyPercent = (droughtCount / totalYears) * 100;
+      let droughtFrequency = 0;
+      if (droughtFrequencyPercent > 30) {
+        droughtFrequency = 3;
+      } else if (droughtFrequencyPercent > 20) {
+        droughtFrequency = 2.5;
+      } else if (droughtFrequencyPercent > 10) {
+        droughtFrequency = 2;
+      } else if (droughtFrequencyPercent > 5) {
+        droughtFrequency = 1;
+      }
+      
+      // Calculate frost risk (0-3)
+      let frostRisk = 0;
+      if (maxFrost > 50) {
+        frostRisk = 3;
+      } else if (maxFrost > 30) {
+        frostRisk = 2.5;
+      } else if (maxFrost > 15) {
+        frostRisk = 2;
+      } else if (maxFrost > 5) {
+        frostRisk = 1;
+      } else if (maxFrost > 0) {
+        frostRisk = 0.5;
+      }
+      
+      // Calculate overall risk (average of the three)
+      const overallRisk = (droughtSeverity + droughtFrequency + frostRisk) / 3;
+      
+      // Determine labels
+      const getSeverityLabel = (value) => {
+        if (value >= 2.5) return 'High';
+        if (value >= 1.5) return 'Moderate';
+        return 'Low';
+      };
+      
+      const getRiskLevel = (value) => {
+        if (value >= 2.0) return 'High Risk';
+        if (value >= 1.0) return 'Moderate Risk';
+        return 'Low Risk';
+      };
+      
+      // Update DOM with individual scores
+      document.getElementById('drought-severity').textContent = droughtSeverity.toFixed(1);
+      document.getElementById('drought-frequency').textContent = droughtFrequency.toFixed(1);
+      document.getElementById('frost-risk').textContent = frostRisk.toFixed(1);
+      document.getElementById('overall-risk').textContent = overallRisk.toFixed(1);
+      document.getElementById('overall-risk-title').textContent = getRiskLevel(overallRisk);
+      
+      // Set labels
+      document.getElementById('drought-severity-label').textContent = getSeverityLabel(droughtSeverity);
+      document.getElementById('drought-frequency-label').textContent = getSeverityLabel(droughtFrequency);
+      document.getElementById('frost-risk-label').textContent = getSeverityLabel(frostRisk);
+      
+      // Set label colors
+      const setLabelColor = (elementId, value) => {
+        const label = document.getElementById(elementId);
+        label.className = 'risk-category-label';
+        if (value >= 2.5) {
+          label.style.backgroundColor = '#ffebee';
+          label.style.color = '#d32f2f';
+        } else if (value >= 1.5) {
+          label.style.backgroundColor = '#fff8e1';
+          label.style.color = '#e65100';
+        } else {
+          label.style.backgroundColor = '#e8f5e9';
+          label.style.color = '#2e7d32';
+        }
+      };
+      
+      setLabelColor('drought-severity-label', droughtSeverity);
+      setLabelColor('drought-frequency-label', droughtFrequency);
+      setLabelColor('frost-risk-label', frostRisk);
+      
+      // Set overall risk color
+      const overallRiskEl = document.getElementById('overall-risk');
+      overallRiskEl.className = 'risk-overall-value';
+      if (overallRisk >= 2.0) {
+        overallRiskEl.style.color = '#d32f2f';
+      } else if (overallRisk >= 1.0) {
+        overallRiskEl.style.color = '#e65100';
+      } else {
+        overallRiskEl.style.color = '#2e7d32';
+      }
+      
+      // Risk factors
+      const riskFactors = [];
+      if (droughtSeverity >= 2) riskFactors.push('High drought severity');
+      if (droughtFrequency >= 2) riskFactors.push('Frequent drought years');
+      if (frostRisk >= 2) riskFactors.push('Significant frost risk');
+      if (completeness < 80) riskFactors.push('Partial data reliability');
+      
+      const riskFactorsContainer = document.getElementById('risk-factors');
+      riskFactorsContainer.innerHTML = '';
+      
+      const fragment = document.createDocumentFragment();
+      riskFactors.forEach(factor => {
+        const el = document.createElement('div');
+        el.className = 'risk-factor';
+        el.textContent = factor;
+        fragment.appendChild(el);
+      });
+      
+      riskFactorsContainer.appendChild(fragment);
+      
+      return overallRisk;
+    }
+
+    // Download PDF report
+    function downloadPDF() {
+      const reportElement = document.getElementById('report');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const originalText = downloadBtn.innerHTML;
+      downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin btn-icon"></i> Generating PDF...';
+      downloadBtn.disabled = true;
+      
+      html2pdf()
+        .from(reportElement)
+        .set({
+          margin: 15,
+          filename: `farm-climate-report.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        })
+        .save()
+        .then(() => {
+          downloadBtn.innerHTML = originalText;
+          downloadBtn.disabled = false;
+          showNotification("PDF report downloaded!", 'success');
+        })
+        .catch((error) => {
+          console.error('PDF generation failed:', error);
+          downloadBtn.innerHTML = originalText;
+          downloadBtn.disabled = false;
+          showNotification("Failed to generate PDF", 'error');
+        });
+    }
+
+    // Reset report
+    function resetReport() {
+      document.getElementById('report').classList.add('hidden');
+      document.getElementById('report-placeholder').classList.remove('hidden');
+      document.getElementById('downloadBtn').disabled = true;
+      
+      // Reset risk rating
+      document.getElementById('drought-severity').textContent = "0";
+      document.getElementById('drought-frequency').textContent = "0";
+      document.getElementById('frost-risk').textContent = "0";
+      document.getElementById('overall-risk').textContent = "0";
+      document.getElementById('overall-risk-title').textContent = "No Risk";
+      
+      // Reset commentary
+      document.getElementById('expert-commentary').innerHTML = `
+        <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
+        <ul>
+          <li>Analysis of rainfall patterns and drought risks</li>
+          <li>Impact of freezing days on crop selection</li>
+          <li>Long-term climate trends and projections</li>
+          <li>Recommendations for farming practices</li>
+          <li>Risk mitigation strategies</li>
+          <li>Specific monthly analysis of rainfall and frost patterns</li>
+          <li>Detailed frost risk assessment</li>
+        </ul>
+      `;
+      
+      resetMap();
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      const notificationText = document.getElementById('notification-text');
+      
+      notification.className = `notification ${type}`;
+      notificationText.textContent = message;
+      notification.classList.add('show');
+      
+      setTimeout(() => notification.classList.remove('show'), 3000);
+    }
+    
+    // Initialize progress bars
+    updateProgress('progress', 0, 'Ready');
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      const suggestions = document.getElementById('suggestions');
+      const locationInput = document.getElementById('locationInput');
+      
+      if (suggestions && locationInput) {
+        if (!locationInput.contains(e.target) && !suggestions.contains(e.target)) {
+          suggestions.style.display = 'none';
+        }
+      }
+    });
+    
+    // Make search box draggable
+    const searchBoxEl = document.getElementById('searchBox');
+    const positionIndicator = document.getElementById('positionIndicator');
+    
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+    
+    searchBoxEl.addEventListener("mousedown", dragStart);
+    document.addEventListener("mouseup", dragEnd);
+    document.addEventListener("mousemove", drag);
+    
+    function dragStart(e) {
+      if (e.target !== searchBoxEl && !searchBoxEl.contains(e.target)) return;
+      
+      initialX = e.clientX - xOffset;
+      initialY = e.clientY - yOffset;
+      
+      if (e.target === searchBoxEl) {
+        isDragging = true;
+      }
+    }
+    
+    function dragEnd(e) {
+      initialX = currentX;
+      initialY = currentY;
+      
+      isDragging = false;
+      
+      // Update position indicator
+      const rect = searchBoxEl.getBoundingClientRect();
+      positionIndicator.textContent = `Position: ${Math.round(rect.left)}px, ${Math.round(rect.top)}px`;
+    }
+    
+    function drag(e) {
+      if (isDragging) {
+        e.preventDefault();
+        
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+        
+        xOffset = currentX;
+        yOffset = currentY;
+        
+        setTranslate(currentX, currentY, searchBoxEl);
+      }
+    }
+    
+    function setTranslate(xPos, yPos, el) {
+      el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+    }
+    
+    // Update position indicator on load
+    window.addEventListener('load', function() {
+      const rect = searchBoxEl.getBoundingClientRect();
+      positionIndicator.textContent = `Position: ${Math.round(rect.left)}px, ${Math.round(rect.top)}px`;
+    });
+    
+    // Cleanup event listeners when page unloads
+    window.addEventListener('beforeunload', function() {
+      document.removeEventListener('mousemove', drag);
+      document.removeEventListener('mouseup', dragEnd);
+      
+      if (currentRequest) {
+        currentRequest.abort();
+      }
+    });
+    
+    // Handle window resize for mobile devices
+    window.addEventListener('resize', function() {
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      }
+    });
+  </script>
 </body>
 </html>
