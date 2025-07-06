@@ -69,6 +69,30 @@
         grid-template-columns: 1fr;
         height: auto;
       }
+      
+      .map-section {
+        height: 450px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .app-container {
+        gap: 10px;
+      }
+      
+      .map-section {
+        height: 400px;
+      }
+      
+      .report-section {
+        height: auto;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .map-section {
+        height: 350px;
+      }
     }
     
     .map-section, .report-section {
@@ -99,11 +123,27 @@
       border-radius: 12px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
       width: 280px;
-      max-width: 90%;
+      max-width: calc(100% - 30px);
       backdrop-filter: blur(5px);
       border: 1px solid rgba(0, 0, 0, 0.05);
       transition: all 0.3s ease;
       cursor: move;
+    }
+    
+    @media (max-width: 768px) {
+      .search-box {
+        position: relative;
+        top: auto;
+        left: auto;
+        margin: 15px auto;
+        width: 100%;
+        max-width: 100%;
+        transform: none !important;
+      }
+      
+      .position-indicator {
+        display: none;
+      }
     }
     
     .search-box h2 {
@@ -249,6 +289,18 @@
     .map-actions .btn {
       flex: 1;
       min-width: 120px;
+    }
+    
+    @media (max-width: 768px) {
+      .map-actions {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .map-actions .btn {
+        width: 100%;
+        min-width: auto;
+      }
     }
     
     .report-section {
@@ -426,6 +478,17 @@
       margin-top: 15px;
     }
     
+    @media (max-width: 768px) {
+      .actions {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .actions .btn {
+        width: 100%;
+      }
+    }
+    
     .hidden {
       display: none;
     }
@@ -486,6 +549,16 @@
       align-items: center;
       gap: 10px;
       font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      .notification {
+        top: auto;
+        bottom: 15px;
+        left: 15px;
+        right: 15px;
+        width: calc(100% - 30px);
+      }
     }
     
     .notification.show {
@@ -957,6 +1030,17 @@
       margin: 15px 0;
     }
     
+    @media (max-width: 768px) {
+      .risk-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+      }
+      
+      .risk-overall {
+        grid-column: span 2;
+      }
+    }
+    
     .risk-category {
       text-align: center;
       padding: 12px;
@@ -1007,15 +1091,63 @@
       margin-top: 5px;
     }
     
+    /* Mobile menu button */
+    .mobile-menu-toggle {
+      display: none;
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 1010;
+      background: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .mobile-menu-toggle span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 1px;
+      transition: all 0.3s;
+    }
+    
     @media (max-width: 768px) {
-      .risk-grid {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto;
+      .mobile-menu-toggle {
+        display: flex;
       }
       
-      .risk-overall {
-        grid-column: span 2;
+      .search-box {
+        top: -1000px;
+        transition: top 0.3s ease;
       }
+      
+      .search-box.mobile-visible {
+        top: 70px;
+      }
+    }
+    
+    /* Touch-friendly adjustments */
+    .btn, .month-btn, .drought-year {
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    
+    .form-control {
+      min-height: 44px;
+    }
+    
+    /* Zoom prevention for iOS */
+    input, textarea, select {
+      font-size: 16px;
     }
   </style>
 </head>
@@ -1023,6 +1155,12 @@
   <div class="container">
     <div class="app-container">
       <div class="map-section">
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        
         <div class="search-box draggable" id="searchBox">
           <div class="position-indicator" id="positionIndicator">Position: 15px, 15px</div>
           <h2>
@@ -1381,6 +1519,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script>
+    // Mobile menu toggle
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const searchBox = document.getElementById('searchBox');
+    
+    mobileMenuToggle.addEventListener('click', function() {
+      searchBox.classList.toggle('mobile-visible');
+    });
+    
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!searchBox.contains(e.target) {
+        searchBox.classList.remove('mobile-visible');
+      }
+    });
+
     // Performance optimizations:
     // 1. Optimized data processing algorithms
     // 2. Reduced DOM manipulations
