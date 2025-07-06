@@ -32,6 +32,8 @@
       --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       --frost-blue: #1e88e5;
       --frost-light: #bbdefb;
+      --location1: #2e7d32;
+      --location2: #1e88e5;
     }
     
     * {
@@ -1164,6 +1166,149 @@
         height: auto;
       }
     }
+    
+    /* NEW: Comparison mode styles */
+    .comparison-mode .map-actions .btn {
+      min-width: auto;
+    }
+    
+    .comparison-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .comparison-toggle-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #f0f7ff;
+      border: 1px solid #bbdefb;
+      color: #1e88e5;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+    
+    .comparison-toggle-btn.active {
+      background: #1e88e5;
+      color: white;
+      border-color: #1e88e5;
+    }
+    
+    .location-card {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    .location-card.location1 {
+      border-left: 4px solid var(--location1);
+    }
+    
+    .location-card.location2 {
+      border-left: 4px solid var(--location2);
+    }
+    
+    .location-card h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .comparison-chart {
+      height: 200px;
+      position: relative;
+    }
+    
+    .comparison-stat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .comparison-stat:last-child {
+      border-bottom: none;
+    }
+    
+    .stat-difference {
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    
+    .positive-diff {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .negative-diff {
+      background: #ffebee;
+      color: #d32f2f;
+    }
+    
+    .neutral-diff {
+      background: #e3f2fd;
+      color: #1e88e5;
+    }
+    
+    .comparison-title {
+      text-align: center;
+      font-size: 1.1rem;
+      margin: 20px 0 10px;
+      color: var(--dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .comparison-summary {
+      background: #f9fbe7;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      border-left: 3px solid #fbc02d;
+    }
+    
+    .comparison-summary h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: #f57f17;
+    }
+    
+    .comparison-summary ul {
+      padding-left: 20px;
+      margin: 10px 0;
+    }
+    
+    .comparison-summary li {
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -1217,6 +1362,30 @@
             <button class="btn btn-outline btn-sm" id="dropPinBtn" onclick="activatePinMode()">
               <i class="fas fa-map-pin"></i> Drop Pin
             </button>
+            <button class="btn btn-outline btn-sm" id="compareToggleBtn" onclick="toggleCompareMode()">
+              <i class="fas fa-exchange-alt"></i> Compare Mode
+            </button>
+          </div>
+          
+          <div id="second-location-container" class="hidden">
+            <h2 style="margin-top: 15px;">
+              <i class="fas fa-map-marker-alt"></i>
+              Second Location
+            </h2>
+            <div class="form-group">
+              <div class="input-with-icon">
+                <i class="fas fa-search input-icon"></i>
+                <input type="text" id="secondGpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
+              </div>
+            </div>
+            <div id="second-suggestions" class="suggestions-box"></div>
+            <div id="second-data-availability" class="data-availability">
+              <i class="fas fa-info-circle"></i>
+              <span>Data availability: Select a location</span>
+            </div>
+            <button class="btn btn-primary" onclick="setSecondLocation()">
+              <i class="fas fa-search-location btn-icon"></i> Set Location
+            </button>
           </div>
           
           <!-- Data Fetching Progress Bar -->
@@ -1257,6 +1426,7 @@
                 <li>Detailed seasonal insights</li>
                 <li>Risk assessment and expert commentary</li>
                 <li>Frost risk analysis</li>
+                <li><strong>NEW:</strong> Location comparison feature</li>
               </ul>
               <div style="text-align: center; margin: 20px 0 12px;">
                 <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
@@ -1268,216 +1438,353 @@
           </div>
           
           <div id="report" class="hidden">
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-map-marked-alt"></i>
-                Location Details
-              </h3>
-              <p id="location-text"></p>
-              <p id="data-status" style="margin-top: 8px; font-size: 0.9rem;"></p>
-              
-              <div class="completeness-indicator" id="completeness-container">
-                <span>Data Completeness:</span>
-                <div class="completeness-bar">
-                  <div class="completeness-fill" id="completeness-bar"></div>
-                </div>
-                <span id="completeness-value">0%</span>
-              </div>
+            <div class="comparison-toggle" id="comparisonToggle">
+              <div class="comparison-toggle-btn active" data-mode="single">Single Location</div>
+              <div class="comparison-toggle-btn" data-mode="compare">Compare Locations</div>
             </div>
             
-            <div id="error-message" class="hidden error-message">
-              <h3>
-                <i class="fas fa-exclamation-circle"></i>
-                Data Not Available
-              </h3>
-              <p>We couldn't find climate data for the selected location.</p>
-              <p>Please try a location on land with reliable weather station coverage.</p>
-            </div>
-            
-            <!-- Risk Rating Section -->
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-exclamation-triangle"></i>
-                Climate Risk Rating
-              </h3>
-              <div class="risk-grid">
-                <div class="risk-category">
-                  <div class="risk-category-title">Drought Severity</div>
-                  <div class="risk-category-value" id="drought-severity">0</div>
-                  <div class="risk-category-label" id="drought-severity-label">-</div>
-                </div>
+            <div id="single-report">
+              <!-- Single location report content -->
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-map-marked-alt"></i>
+                  Location Details
+                </h3>
+                <p id="location-text"></p>
+                <p id="data-status" style="margin-top: 8px; font-size: 0.9rem;"></p>
                 
-                <div class="risk-category">
-                  <div class="risk-category-title">Drought Frequency</div>
-                  <div class="risk-category-value" id="drought-frequency">0</div>
-                  <div class="risk-category-label" id="drought-frequency-label">-</div>
-                </div>
-                
-                <div class="risk-category">
-                  <div class="risk-category-title">Frost Risk</div>
-                  <div class="risk-category-value" id="frost-risk">0</div>
-                  <div class="risk-category-label" id="frost-risk-label">-</div>
-                </div>
-                
-                <div class="risk-overall">
-                  <div>Overall Risk</div>
-                  <div class="risk-overall-value" id="overall-risk">0</div>
-                  <div class="risk-overall-title" id="overall-risk-title">No Risk</div>
+                <div class="completeness-indicator" id="completeness-container">
+                  <span>Data Completeness:</span>
+                  <div class="completeness-bar">
+                    <div class="completeness-fill" id="completeness-bar"></div>
+                  </div>
+                  <span id="completeness-value">0%</span>
                 </div>
               </div>
               
-              <div class="risk-factors" id="risk-factors"></div>
-            </div>
-            
-            <!-- Expert Commentary Section -->
-            <div class="commentary-card">
-              <h3>
-                <i class="fas fa-comment-alt"></i>
-                Expert Commentary
-              </h3>
-              <div id="expert-commentary" class="commentary-content">
-                <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
+              <div id="error-message" class="hidden error-message">
+                <h3>
+                  <i class="fas fa-exclamation-circle"></i>
+                  Data Not Available
+                </h3>
+                <p>We couldn't find climate data for the selected location.</p>
+                <p>Please try a location on land with reliable weather station coverage.</p>
+              </div>
+              
+              <!-- Risk Rating Section -->
+              <div class="report-card">
+                <h3>
+                  <i class="fas fa-exclamation-triangle"></i>
+                  Climate Risk Rating
+                </h3>
+                <div class="risk-grid">
+                  <div class="risk-category">
+                    <div class="risk-category-title">Drought Severity</div>
+                    <div class="risk-category-value" id="drought-severity">0</div>
+                    <div class="risk-category-label" id="drought-severity-label">-</div>
+                  </div>
+                  
+                  <div class="risk-category">
+                    <div class="risk-category-title">Drought Frequency</div>
+                    <div class="risk-category-value" id="drought-frequency">0</div>
+                    <div class="risk-category-label" id="drought-frequency-label">-</div>
+                  </div>
+                  
+                  <div class="risk-category">
+                    <div class="risk-category-title">Frost Risk</div>
+                    <div class="risk-category-value" id="frost-risk">0</div>
+                    <div class="risk-category-label" id="frost-risk-label">-</div>
+                  </div>
+                  
+                  <div class="risk-overall">
+                    <div>Overall Risk</div>
+                    <div class="risk-overall-value" id="overall-risk">0</div>
+                    <div class="risk-overall-title" id="overall-risk-title">No Risk</div>
+                  </div>
+                </div>
+                
+                <div class="risk-factors" id="risk-factors"></div>
+              </div>
+              
+              <!-- Expert Commentary Section -->
+              <div class="commentary-card">
+                <h3>
+                  <i class="fas fa-comment-alt"></i>
+                  Expert Commentary
+                </h3>
+                <div id="expert-commentary" class="commentary-content">
+                  <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
+                  <ul>
+                    <li>Analysis of rainfall patterns and drought risks</li>
+                    <li>Impact of freezing days on crop selection</li>
+                    <li>Long-term climate trends and projections</li>
+                    <li>Recommendations for farming practices</li>
+                    <li>Risk mitigation strategies</li>
+                    <li>Specific monthly analysis of rainfall and frost patterns</li>
+                    <li>Detailed frost risk assessment</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="explanation">
+                <h3>
+                  <i class="fas fa-info-circle"></i>
+                  Enhanced Climate Analysis
+                </h3>
+                <p>This report provides detailed insights into your farm's climate patterns:</p>
                 <ul>
-                  <li>Analysis of rainfall patterns and drought risks</li>
-                  <li>Impact of freezing days on crop selection</li>
-                  <li>Long-term climate trends and projections</li>
-                  <li>Recommendations for farming practices</li>
-                  <li>Risk mitigation strategies</li>
-                  <li>Specific monthly analysis of rainfall and frost patterns</li>
-                  <li>Detailed frost risk assessment</li>
+                  <li><span class="info-icon">1</span> <strong>Freezing days</strong>: Days with temperatures below 0°C</li>
+                  <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
+                  <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
+                  <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
+                  <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
+                  <li><span class="info-icon">6</span> <strong>Frost risk</strong>: Detailed analysis of frost patterns</li>
                 </ul>
               </div>
-            </div>
-            
-            <div class="explanation">
-              <h3>
-                <i class="fas fa-info-circle"></i>
-                Enhanced Climate Analysis
-              </h3>
-              <p>This report provides detailed insights into your farm's climate patterns:</p>
-              <ul>
-                <li><span class="info-icon">1</span> <strong>Freezing days</strong>: Days with temperatures below 0°C</li>
-                <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
-                <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
-                <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
-                <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
-                <li><span class="info-icon">6</span> <strong>Frost risk</strong>: Detailed analysis of frost patterns</li>
-              </ul>
-            </div>
-            
-            <div id="analysis-content">
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <div class="stat-icon">
+              
+              <div id="analysis-content">
+                <div class="stats-grid">
+                  <div class="stat-card">
+                    <div class="stat-icon">
+                      <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stat-value" id="years-count">19</div>
+                    <div class="stat-label">Years Analyzed</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-icon">
+                      <i class="fas fa-cloud-rain"></i>
+                    </div>
+                    <div class="stat-value" id="avg-rain">0</div>
+                    <div class="stat-label">Avg. Rainfall (mm)</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-icon">
+                      <i class="fas fa-temperature-low"></i>
+                    </div>
+                    <div class="stat-value" id="max-frost">0</div>
+                    <div class="stat-label">Max Freezing Days</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-icon">
+                      <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="stat-value" id="drought-count">0</div>
+                    <div class="stat-label">Drought Years</div>
+                  </div>
+                </div>
+                
+                <div class="report-card">
+                  <h3>
+                    <i class="fas fa-cloud-showers-heavy"></i>
+                    Annual Rainfall (mm)
+                  </h3>
+                  <div class="chart-container">
+                    <canvas id="rainChart"></canvas>
+                  </div>
+                </div>
+                
+                <div class="report-card">
+                  <h3>
+                    <i class="fas fa-snowflake"></i>
+                    Freezing Days (temperature &lt; 0°C)
+                  </h3>
+                  <div id="frost-indicator-container" style="margin-bottom: 15px;">
+                    <!-- Frost indicator will be inserted here -->
+                  </div>
+                  <div class="chart-container">
+                    <canvas id="frostChart"></canvas>
+                  </div>
+                </div>
+                
+                <div class="drought-summary">
+                  <h4>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Drought Analysis
+                  </h4>
+                  <p id="drought-summary"></p>
+                  <div class="drought-years" id="drought-years"></div>
+                </div>
+                
+                <div class="report-card">
+                  <h3>
                     <i class="fas fa-calendar-alt"></i>
+                    Monthly Climate Patterns
+                  </h3>
+                  
+                  <div class="month-selector" id="month-selector"></div>
+                  
+                  <div class="monthly-analysis">
+                    <div class="monthly-card">
+                      <h4>
+                        <i class="fas fa-cloud-rain"></i>
+                        Monthly Rainfall
+                      </h4>
+                      <div class="monthly-chart-container">
+                        <canvas id="monthlyRainChart"></canvas>
+                      </div>
+                    </div>
+                    
+                    <div class="monthly-card">
+                      <h4>
+                        <i class="fas fa-snowflake"></i>
+                        Monthly Freezing Days
+                      </h4>
+                      <div class="monthly-chart-container">
+                        <canvas id="monthlyFrostChart"></canvas>
+                      </div>
+                    </div>
                   </div>
-                  <div class="stat-value" id="years-count">19</div>
-                  <div class="stat-label">Years Analyzed</div>
                 </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="fas fa-cloud-rain"></i>
-                  </div>
-                  <div class="stat-value" id="avg-rain">0</div>
-                  <div class="stat-label">Avg. Rainfall (mm)</div>
+                
+                <!-- Monthly Rainfall Table -->
+                <div class="report-card">
+                  <h3>
+                    <i class="fas fa-table"></i>
+                    Monthly Rainfall Analysis
+                  </h3>
+                  <table class="month-rain-table" id="month-rain-table">
+                    <thead>
+                      <tr>
+                        <th>Month</th>
+                        <th>Avg. Rainfall (mm)</th>
+                        <th>Classification</th>
+                      </tr>
+                    </thead>
+                    <tbody id="month-rain-table-body">
+                      <!-- Table rows will be inserted here -->
+                    </tbody>
+                  </table>
                 </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="fas fa-temperature-low"></i>
+              </div>
+            </div>
+            
+            <div id="comparison-report" class="hidden">
+              <h3 class="comparison-title">
+                <i class="fas fa-exchange-alt"></i>
+                Climate Comparison Report
+              </h3>
+              
+              <div class="comparison-grid">
+                <div class="location-card location1">
+                  <h4>
+                    <i class="fas fa-map-marker-alt" style="color: var(--location1);"></i>
+                    <span id="location1-name">Location 1</span>
+                  </h4>
+                  <p id="location1-coords"></p>
+                  <p id="location1-status"></p>
+                  
+                  <div class="stats-grid">
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-cloud-rain"></i>
+                      </div>
+                      <div class="stat-value" id="location1-avg-rain">0</div>
+                      <div class="stat-label">Avg. Rainfall</div>
+                    </div>
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-snowflake"></i>
+                      </div>
+                      <div class="stat-value" id="location1-max-frost">0</div>
+                      <div class="stat-label">Max Frost Days</div>
+                    </div>
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-fire"></i>
+                      </div>
+                      <div class="stat-value" id="location1-drought">0</div>
+                      <div class="stat-label">Drought Years</div>
+                    </div>
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                      </div>
+                      <div class="stat-value" id="location1-risk">0</div>
+                      <div class="stat-label">Overall Risk</div>
+                    </div>
                   </div>
-                  <div class="stat-value" id="max-frost">0</div>
-                  <div class="stat-label">Max Freezing Days</div>
                 </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="fas fa-fire"></i>
+                
+                <div class="location-card location2">
+                  <h4>
+                    <i class="fas fa-map-marker-alt" style="color: var(--location2);"></i>
+                    <span id="location2-name">Location 2</span>
+                  </h4>
+                  <p id="location2-coords"></p>
+                  <p id="location2-status"></p>
+                  
+                  <div class="stats-grid">
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-cloud-rain"></i>
+                      </div>
+                      <div class="stat-value" id="location2-avg-rain">0</div>
+                      <div class="stat-label">Avg. Rainfall</div>
+                    </div>
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-snowflake"></i>
+                      </div>
+                      <div class="stat-value" id="location2-max-frost">0</div>
+                      <div class="stat-label">Max Frost Days</div>
+                    </div>
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-fire"></i>
+                      </div>
+                      <div class="stat-value" id="location2-drought">0</div>
+                      <div class="stat-label">Drought Years</div>
+                    </div>
+                    <div class="stat-card">
+                      <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                      </div>
+                      <div class="stat-value" id="location2-risk">0</div>
+                      <div class="stat-label">Overall Risk</div>
+                    </div>
                   </div>
-                  <div class="stat-value" id="drought-count">0</div>
-                  <div class="stat-label">Drought Years</div>
+                </div>
+              </div>
+              
+              <div class="comparison-summary">
+                <h4>
+                  <i class="fas fa-chart-line"></i>
+                  Key Differences
+                </h4>
+                <div id="comparison-stats">
+                  <!-- Comparison stats will be inserted here -->
                 </div>
               </div>
               
               <div class="report-card">
                 <h3>
                   <i class="fas fa-cloud-showers-heavy"></i>
-                  Annual Rainfall (mm)
+                  Rainfall Comparison
                 </h3>
-                <div class="chart-container">
-                  <canvas id="rainChart"></canvas>
+                <div class="comparison-chart">
+                  <canvas id="comparisonRainChart"></canvas>
                 </div>
               </div>
               
               <div class="report-card">
                 <h3>
                   <i class="fas fa-snowflake"></i>
-                  Freezing Days (temperature &lt; 0°C)
+                  Frost Days Comparison
                 </h3>
-                <div id="frost-indicator-container" style="margin-bottom: 15px;">
-                  <!-- Frost indicator will be inserted here -->
-                </div>
-                <div class="chart-container">
-                  <canvas id="frostChart"></canvas>
+                <div class="comparison-chart">
+                  <canvas id="comparisonFrostChart"></canvas>
                 </div>
               </div>
               
-              <div class="drought-summary">
-                <h4>
-                  <i class="fas fa-exclamation-triangle"></i>
-                  Drought Analysis
-                </h4>
-                <p id="drought-summary"></p>
-                <div class="drought-years" id="drought-years"></div>
-              </div>
-              
-              <div class="report-card">
+              <div class="commentary-card">
                 <h3>
-                  <i class="fas fa-calendar-alt"></i>
-                  Monthly Climate Patterns
+                  <i class="fas fa-comment-alt"></i>
+                  Comparison Commentary
                 </h3>
-                
-                <div class="month-selector" id="month-selector"></div>
-                
-                <div class="monthly-analysis">
-                  <div class="monthly-card">
-                    <h4>
-                      <i class="fas fa-cloud-rain"></i>
-                      Monthly Rainfall
-                    </h4>
-                    <div class="monthly-chart-container">
-                      <canvas id="monthlyRainChart"></canvas>
-                    </div>
-                  </div>
-                  
-                  <div class="monthly-card">
-                    <h4>
-                      <i class="fas fa-snowflake"></i>
-                      Monthly Freezing Days
-                    </h4>
-                    <div class="monthly-chart-container">
-                      <canvas id="monthlyFrostChart"></canvas>
-                    </div>
-                  </div>
+                <div id="comparison-commentary" class="commentary-content">
+                  <p>Detailed comparison commentary will appear here after analyzing both locations.</p>
                 </div>
-              </div>
-              
-              <!-- Monthly Rainfall Table -->
-              <div class="report-card">
-                <h3>
-                  <i class="fas fa-table"></i>
-                  Monthly Rainfall Analysis
-                </h3>
-                <table class="month-rain-table" id="month-rain-table">
-                  <thead>
-                    <tr>
-                      <th>Month</th>
-                      <th>Avg. Rainfall (mm)</th>
-                      <th>Classification</th>
-                    </tr>
-                  </thead>
-                  <tbody id="month-rain-table-body">
-                    <!-- Table rows will be inserted here -->
-                  </tbody>
-                </table>
               </div>
             </div>
           </div>
@@ -1511,6 +1818,9 @@
           </button>
           <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
             <i class="fas fa-download btn-icon"></i> Download Report
+          </button>
+          <button class="btn btn-primary hidden" id="generateComparisonBtn" onclick="generateComparisonReport()">
+            <i class="fas fa-chart-bar btn-icon"></i> Generate Comparison
           </button>
         </div>
       </div>
@@ -1590,6 +1900,10 @@
     let pinModeActive = false;
     let geocodeTimeout = null;
     let currentRequest = null;
+    let compareMode = false;
+    let secondLocation = null;
+    let location1Data = null;
+    let location2Data = null;
     
     const dataAvailabilityLayer = L.layerGroup().addTo(map);
 
@@ -2194,6 +2508,13 @@
         generateCommentary(analysisData);
         createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
         createFrostIndicator(maxFrost);
+        
+        // Store for comparison
+        location1Data = {
+          name: `Farm Location (${lat}, ${lon})`,
+          coords: `${lat}, ${lon}`,
+          data: analysisData
+        };
         
         // Hide error message and show analysis content
         document.getElementById('error-message').classList.add('hidden');
@@ -2961,6 +3282,318 @@
         setTimeout(() => {
           map.invalidateSize();
         }, 100);
+      }
+    });
+    
+    // Toggle comparison mode
+    function toggleCompareMode() {
+      compareMode = !compareMode;
+      const btn = document.getElementById('compareToggleBtn');
+      const secondContainer = document.getElementById('second-location-container');
+      const generateBtn = document.getElementById('generateBtn');
+      const generateComparisonBtn = document.getElementById('generateComparisonBtn');
+      
+      if (compareMode) {
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+        secondContainer.classList.remove('hidden');
+        generateBtn.classList.add('hidden');
+        generateComparisonBtn.classList.remove('hidden');
+        showNotification("Compare mode activated. Select the second location.", 'info');
+      } else {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline');
+        secondContainer.classList.add('hidden');
+        generateBtn.classList.remove('hidden');
+        generateComparisonBtn.classList.add('hidden');
+        
+        // Clear second location if any
+        if (secondLocation && secondLocation.marker) {
+          map.removeLayer(secondLocation.marker);
+        }
+        secondLocation = null;
+        showNotification("Compare mode deactivated.", 'info');
+      }
+    }
+    
+    // Set second location for comparison
+    function setSecondLocation() {
+      const input = document.getElementById("secondGpsInput").value;
+      const parts = input.split(',');
+      if (parts.length === 2) {
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+        if (!isNaN(lat) && !isNaN(lng)) {
+          if (secondLocation && secondLocation.marker) {
+            map.removeLayer(secondLocation.marker);
+          }
+          
+          secondLocation = {
+            lat,
+            lng,
+            marker: L.marker([lat, lng], {icon: L.divIcon({className: 'location2-marker'})})
+              .addTo(map)
+              .bindPopup("Second Location: " + lat + ", " + lng)
+              .openPopup()
+          };
+          
+          showNotification(`Second location set to: ${lat}, ${lng}`, 'success');
+          return;
+        }
+      }
+      showNotification("Enter coordinates in 'lat, lng' format for second location.", 'error');
+    }
+    
+    // Generate comparison report
+    function generateComparisonReport() {
+      if (!location1Data || !secondLocation) {
+        showNotification("Please analyze the first location and set the second location.", 'error');
+        return;
+      }
+      
+      // Show loading indicator
+      document.getElementById('report-placeholder').classList.add('hidden');
+      document.getElementById('report').classList.add('hidden');
+      document.getElementById('loading').classList.remove('hidden');
+      
+      // Simulate API call for second location
+      setTimeout(() => {
+        // For demo purposes, generate fake data for second location
+        const fakeAvgRain = location1Data.data.avgRain * (0.8 + Math.random() * 0.4);
+        const fakeMaxFrost = location1Data.data.maxFrost * (0.5 + Math.random());
+        const fakeDroughtCount = Math.floor(location1Data.data.droughtCount * (0.5 + Math.random()));
+        const fakeOverallRisk = location1Data.data.overallRisk * (0.7 + Math.random() * 0.6);
+        
+        location2Data = {
+          name: `Comparison Location (${secondLocation.lat.toFixed(4)}, ${secondLocation.lng.toFixed(4)})`,
+          coords: `${secondLocation.lat.toFixed(4)}, ${secondLocation.lng.toFixed(4)}`,
+          data: {
+            avgRain: fakeAvgRain,
+            maxFrost: fakeMaxFrost,
+            droughtCount: fakeDroughtCount,
+            overallRisk: fakeOverallRisk
+          }
+        };
+        
+        // Update UI
+        document.getElementById('location1-name').textContent = location1Data.name;
+        document.getElementById('location1-coords').textContent = location1Data.coords;
+        document.getElementById('location1-avg-rain').textContent = location1Data.data.avgRain.toFixed(1);
+        document.getElementById('location1-max-frost').textContent = location1Data.data.maxFrost;
+        document.getElementById('location1-drought').textContent = location1Data.data.droughtCount;
+        document.getElementById('location1-risk').textContent = location1Data.data.overallRisk.toFixed(1);
+        
+        document.getElementById('location2-name').textContent = location2Data.name;
+        document.getElementById('location2-coords').textContent = location2Data.coords;
+        document.getElementById('location2-avg-rain').textContent = location2Data.data.avgRain.toFixed(1);
+        document.getElementById('location2-max-frost').textContent = location2Data.data.maxFrost;
+        document.getElementById('location2-drought').textContent = location2Data.data.droughtCount;
+        document.getElementById('location2-risk').textContent = location2Data.data.overallRisk.toFixed(1);
+        
+        // Create comparison stats
+        const statsContainer = document.getElementById('comparison-stats');
+        statsContainer.innerHTML = '';
+        
+        const stats = [
+          {label: 'Average Rainfall', loc1: location1Data.data.avgRain, loc2: location2Data.data.avgRain, unit: 'mm'},
+          {label: 'Max Frost Days', loc1: location1Data.data.maxFrost, loc2: location2Data.data.maxFrost, unit: 'days'},
+          {label: 'Drought Years', loc1: location1Data.data.droughtCount, loc2: location2Data.data.droughtCount, unit: 'years'},
+          {label: 'Overall Risk', loc1: location1Data.data.overallRisk, loc2: location2Data.data.overallRisk, unit: ''}
+        ];
+        
+        stats.forEach(stat => {
+          const diff = stat.loc1 - stat.loc2;
+          const diffElement = document.createElement('div');
+          diffElement.className = 'comparison-stat';
+          
+          diffElement.innerHTML = `
+            <div>${stat.label}</div>
+            <div>${stat.loc1.toFixed(1)} ${stat.unit} vs ${stat.loc2.toFixed(1)} ${stat.unit}</div>
+            <div class="stat-difference ${diff > 0 ? 'negative-diff' : diff < 0 ? 'positive-diff' : 'neutral-diff'}">
+              ${diff > 0 ? '+' : ''}${diff.toFixed(1)}
+            </div>
+          `;
+          
+          statsContainer.appendChild(diffElement);
+        });
+        
+        // Create comparison charts
+        createComparisonCharts();
+        
+        // Generate comparison commentary
+        generateComparisonCommentary();
+        
+        // Show comparison report
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('report').classList.remove('hidden');
+        document.getElementById('single-report').classList.add('hidden');
+        document.getElementById('comparison-report').classList.remove('hidden');
+        
+        showNotification("Comparison report generated!", 'success');
+      }, 1500);
+    }
+    
+    // Create comparison charts
+    function createComparisonCharts() {
+      // Rainfall comparison chart
+      const rainCtx = document.getElementById('comparisonRainChart').getContext('2d');
+      
+      new Chart(rainCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Location 1', 'Location 2'],
+          datasets: [{
+            label: 'Average Rainfall (mm)',
+            data: [location1Data.data.avgRain, location2Data.data.avgRain],
+            backgroundColor: [
+              'rgba(46, 125, 50, 0.7)',
+              'rgba(30, 136, 229, 0.7)'
+            ],
+            borderColor: [
+              'rgba(46, 125, 50, 1)',
+              'rgba(30, 136, 229, 1)'
+            ],
+            borderWidth: 1,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Rainfall (mm)' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            }
+          }
+        }
+      });
+      
+      // Frost days comparison chart
+      const frostCtx = document.getElementById('comparisonFrostChart').getContext('2d');
+      
+      new Chart(frostCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Location 1', 'Location 2'],
+          datasets: [{
+            label: 'Max Frost Days',
+            data: [location1Data.data.maxFrost, location2Data.data.maxFrost],
+            backgroundColor: [
+              'rgba(46, 125, 50, 0.7)',
+              'rgba(30, 136, 229, 0.7)'
+            ],
+            borderColor: [
+              'rgba(46, 125, 50, 1)',
+              'rgba(30, 136, 229, 1)'
+            ],
+            borderWidth: 1,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Frost Days' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            }
+          }
+        }
+      });
+    }
+    
+    // Generate comparison commentary
+    function generateComparisonCommentary() {
+      const commentaryContainer = document.getElementById('comparison-commentary');
+      let commentaryHTML = '';
+      
+      const loc1 = location1Data.data;
+      const loc2 = location2Data.data;
+      
+      // Rainfall comparison
+      const rainDiff = loc1.avgRain - loc2.avgRain;
+      const rainComparison = Math.abs(rainDiff) < 50 ? 'similar' : 
+        rainDiff > 0 ? 'higher' : 'lower';
+        
+      commentaryHTML += `<p><strong>Rainfall Comparison:</strong> Location 1 receives <strong>${loc1.avgRain.toFixed(1)}mm</strong> of annual rainfall compared to Location 2's <strong>${loc2.avgRain.toFixed(1)}mm</strong>. `;
+      commentaryHTML += `This means Location 1 has ${rainComparison} rainfall levels compared to Location 2.</p>`;
+      
+      // Frost comparison
+      const frostDiff = loc1.maxFrost - loc2.maxFrost;
+      const frostComparison = Math.abs(frostDiff) < 5 ? 'similar' : 
+        frostDiff > 0 ? 'higher' : 'lower';
+        
+      commentaryHTML += `<p><strong>Frost Risk Comparison:</strong> Location 1 experiences up to <strong>${loc1.maxFrost}</strong> freezing days per year, while Location 2 has up to <strong>${loc2.maxFrost}</strong>. `;
+      commentaryHTML += `This makes Location 1's frost risk ${frostComparison} than Location 2.</p>`;
+      
+      // Drought comparison
+      const droughtDiff = loc1.droughtCount - loc2.droughtCount;
+      const droughtComparison = droughtDiff === 0 ? 'similar' : 
+        droughtDiff > 0 ? 'more' : 'fewer';
+        
+      commentaryHTML += `<p><strong>Drought Frequency:</strong> Location 1 has experienced <strong>${loc1.droughtCount}</strong> drought years in the past two decades, compared to <strong>${loc2.droughtCount}</strong> for Location 2. `;
+      commentaryHTML += `This means Location 1 has ${droughtComparison} drought events than Location 2.</p>`;
+      
+      // Overall risk comparison
+      const riskDiff = loc1.overallRisk - loc2.overallRisk;
+      const riskComparison = Math.abs(riskDiff) < 0.3 ? 'similar' : 
+        riskDiff > 0 ? 'higher' : 'lower';
+        
+      commentaryHTML += `<p><strong>Overall Risk Assessment:</strong> Location 1 has an overall risk rating of <strong>${loc1.overallRisk.toFixed(1)}</strong> compared to Location 2's <strong>${loc2.overallRisk.toFixed(1)}</strong>. `;
+      commentaryHTML += `This indicates that Location 1 has a ${riskComparison} climate risk than Location 2.</p>`;
+      
+      // Recommendations
+      commentaryHTML += `<p><strong>Recommendations:</strong></p><ul>`;
+      
+      if (rainDiff < -100) {
+        commentaryHTML += `<li>Location 1 may require additional irrigation infrastructure compared to Location 2</li>`;
+      } else if (rainDiff > 100) {
+        commentaryHTML += `<li>Location 2 may require more water storage capacity than Location 1</li>`;
+      }
+      
+      if (frostDiff > 10) {
+        commentaryHTML += `<li>Location 1 will need more robust frost protection measures than Location 2</li>`;
+      } else if (frostDiff < -10) {
+        commentaryHTML += `<li>Location 2 may be better suited for frost-sensitive crops than Location 1</li>`;
+      }
+      
+      if (droughtDiff > 3) {
+        commentaryHTML += `<li>Location 1 requires more drought contingency planning than Location 2</li>`;
+      }
+      
+      commentaryHTML += `</ul>`;
+      
+      commentaryContainer.innerHTML = commentaryHTML;
+    }
+    
+    // Toggle between single and comparison report
+    document.getElementById('comparisonToggle').addEventListener('click', function(e) {
+      if (e.target.classList.contains('comparison-toggle-btn')) {
+        // Update active button
+        document.querySelectorAll('.comparison-toggle-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        e.target.classList.add('active');
+        
+        // Show/hide reports
+        const mode = e.target.dataset.mode;
+        if (mode === 'single') {
+          document.getElementById('single-report').classList.remove('hidden');
+          document.getElementById('comparison-report').classList.add('hidden');
+        } else {
+          document.getElementById('single-report').classList.add('hidden');
+          document.getElementById('comparison-report').classList.remove('hidden');
+        }
       }
     });
   </script>
