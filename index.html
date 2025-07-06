@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Enhanced Farm Climate Analysis with GeoJSON</title>
+  <title>Enhanced Farm Climate Analysis</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -1029,7 +1029,7 @@
       color: #d32f2f;
     }
 
-    /* NEW: Enhanced Risk Rating Styles */
+    /* Enhanced Risk Rating Styles */
     .risk-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -1164,75 +1164,6 @@
         height: auto;
       }
     }
-    
-    /* GeoJSON Upload Styles */
-    .geojson-upload {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid var(--border);
-    }
-    
-    .geojson-upload h3 {
-      font-size: 1rem;
-      margin-bottom: 10px;
-      color: var(--primary-dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .file-input-container {
-      position: relative;
-      margin-bottom: 10px;
-    }
-    
-    .file-input-label {
-      display: block;
-      padding: 8px 12px;
-      background: var(--light-gray);
-      border: 1px dashed var(--primary);
-      border-radius: 8px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .file-input-label:hover {
-      background: rgba(46, 125, 50, 0.05);
-    }
-    
-    .file-input-label i {
-      margin-right: 8px;
-      color: var(--primary);
-    }
-    
-    .file-input {
-      position: absolute;
-      width: 0.1px;
-      height: 0.1px;
-      opacity: 0;
-      overflow: hidden;
-      z-index: -1;
-    }
-    
-    .file-name {
-      font-size: 0.8rem;
-      text-align: center;
-      margin-top: 5px;
-      color: #666;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    
-    .geojson-actions {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .geojson-actions .btn {
-      flex: 1;
-    }
   </style>
 </head>
 <body>
@@ -1299,30 +1230,6 @@
               <div class="progress-label" id="progress-label">Starting</div>
             </div>
           </div>
-          
-          <!-- GeoJSON Upload Section -->
-          <div class="geojson-upload">
-            <h3>
-              <i class="fas fa-upload"></i>
-              Upload Farm Boundary
-            </h3>
-            <div class="file-input-container">
-              <label for="geojsonFile" class="file-input-label">
-                <i class="fas fa-cloud-upload-alt"></i>
-                Choose GeoJSON File
-              </label>
-              <input type="file" id="geojsonFile" class="file-input" accept=".geojson,.json" />
-              <div id="fileName" class="file-name"></div>
-            </div>
-            <div class="geojson-actions">
-              <button class="btn btn-outline" id="clearGeojsonBtn" onclick="clearGeoJSON()">
-                <i class="fas fa-times"></i> Clear
-              </button>
-              <button class="btn btn-primary" id="uploadGeojsonBtn" onclick="uploadGeoJSON()">
-                <i class="fas fa-upload"></i> Upload
-              </button>
-            </div>
-          </div>
         </div>
         <div id="map"></div>
       </div>
@@ -1340,7 +1247,7 @@
                 <i class="fas fa-file-alt"></i>
                 Report Preview
               </h3>
-              <p class="report-preview-text">Draw your farm boundaries on the map, upload a GeoJSON file, or search for a location to generate a comprehensive climate report using real historical data.</p>
+              <p class="report-preview-text">Draw your farm boundaries on the map or search for a location to generate a comprehensive climate report using real historical data.</p>
               <p class="report-preview-text">The enhanced report includes:</p>
               <ul class="report-preview-list">
                 <li>Annual rainfall and frost day analysis</li>
@@ -1350,7 +1257,6 @@
                 <li>Detailed seasonal insights</li>
                 <li>Risk assessment and expert commentary</li>
                 <li>Frost risk analysis</li>
-                <li>GeoJSON boundary visualization</li>
               </ul>
               <div style="text-align: center; margin: 20px 0 12px;">
                 <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
@@ -1456,7 +1362,6 @@
                 <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
                 <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
                 <li><span class="info-icon">6</span> <strong>Frost risk</strong>: Detailed analysis of frost patterns</li>
-                <li><span class="info-icon">7</span> <strong>GeoJSON integration</strong>: Upload and visualize custom farm boundaries</li>
               </ul>
             </div>
             
@@ -1685,7 +1590,6 @@
     let pinModeActive = false;
     let geocodeTimeout = null;
     let currentRequest = null;
-    let geojsonLayer = null; // Store GeoJSON layer
     
     const dataAvailabilityLayer = L.layerGroup().addTo(map);
 
@@ -2024,15 +1928,10 @@
         map.removeLayer(currentMarker);
         currentMarker = null;
       }
-      if (geojsonLayer) {
-        map.removeLayer(geojsonLayer);
-        geojsonLayer = null;
-      }
       map.setView([-25.0, 30.0], 5);
       document.getElementById("gpsInput").value = "";
       document.getElementById("locationInput").value = "";
       document.getElementById('suggestions').style.display = 'none';
-      document.getElementById('fileName').textContent = '';
       
       const availabilityEl = document.getElementById('data-availability');
       availabilityEl.innerHTML = '<i class="fas fa-info-circle"></i> Data availability: Select a location';
@@ -2053,88 +1952,10 @@
       }
     }
 
-    // GeoJSON Upload Functions
-    document.getElementById('geojsonFile').addEventListener('change', function(e) {
-      const fileName = e.target.files[0] ? e.target.files[0].name : '';
-      document.getElementById('fileName').textContent = fileName;
-    });
-
-    function uploadGeoJSON() {
-      const fileInput = document.getElementById('geojsonFile');
-      const file = fileInput.files[0];
-      
-      if (!file) {
-        showNotification("Please select a GeoJSON file", "error");
-        return;
-      }
-      
-      // Remove any existing GeoJSON layer
-      if (geojsonLayer) {
-        map.removeLayer(geojsonLayer);
-      }
-      
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const geojsonData = JSON.parse(e.target.result);
-          
-          // Process GeoJSON
-          geojsonLayer = L.geoJSON(geojsonData, {
-            style: {
-              color: '#ff7800',
-              weight: 3,
-              opacity: 0.8,
-              fillOpacity: 0.2,
-              fillColor: '#ff7800'
-            },
-            onEachFeature: function(feature, layer) {
-              if (feature.properties && feature.properties.name) {
-                layer.bindPopup(feature.properties.name);
-              }
-            }
-          }).addTo(map);
-          
-          // Zoom to the GeoJSON bounds
-          map.fitBounds(geojsonLayer.getBounds());
-          
-          // Calculate center point
-          const bounds = geojsonLayer.getBounds();
-          const center = bounds.getCenter();
-          lastPolygonCenter = { lat: center.lat, lng: center.lng };
-          
-          // Update GPS input
-          document.getElementById("gpsInput").value = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
-          
-          showNotification("GeoJSON uploaded and displayed on map", "success");
-          checkDataAvailability(center.lat, center.lng);
-          
-        } catch (error) {
-          console.error("Error parsing GeoJSON:", error);
-          showNotification("Invalid GeoJSON file format", "error");
-        }
-      };
-      
-      reader.onerror = function() {
-        showNotification("Error reading file", "error");
-      };
-      
-      reader.readAsText(file);
-    }
-
-    function clearGeoJSON() {
-      if (geojsonLayer) {
-        map.removeLayer(geojsonLayer);
-        geojsonLayer = null;
-      }
-      document.getElementById('geojsonFile').value = '';
-      document.getElementById('fileName').textContent = '';
-      showNotification("GeoJSON boundary cleared", "info");
-    }
-
     // Generate report with real climate data
     async function generateReport() {
       if (!lastPolygonCenter) {
-        showNotification("Draw a farm boundary, upload GeoJSON, or search a location first.", 'error');
+        showNotification("Draw a farm boundary or search a location first.", 'error');
         return;
       }
       
@@ -2595,8 +2416,8 @@
             }]
           },
           options: {
-            responsive: true;
-            maintainAspectRatio: false;
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
               y: {
@@ -2843,7 +2664,7 @@
       tableBody.appendChild(fragment);
     }
     
-    // UPDATED: Function to calculate and display risk rating
+    // Function to calculate and display risk rating
     function calculateRiskRating(analysisData) {
       const { 
         avgRain, 
