@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Enhanced Farm Climate Analysis</title>
   
   <!-- Leaflet CSS -->
@@ -48,6 +48,7 @@
       padding: 10px;
       line-height: 1.6;
       overflow-x: hidden;
+      touch-action: manipulation;
     }
     
     .container {
@@ -78,6 +79,7 @@
     @media (max-width: 768px) {
       .app-container {
         gap: 10px;
+        height: auto;
       }
       
       .map-section {
@@ -92,6 +94,10 @@
     @media (max-width: 480px) {
       .map-section {
         height: 350px;
+      }
+      
+      .app-container {
+        height: auto;
       }
     }
     
@@ -1150,6 +1156,14 @@
     input, textarea, select {
       font-size: 16px;
     }
+    
+    /* Fix for mobile viewport */
+    @media (max-width: 768px) {
+      body, html {
+        overflow: auto;
+        height: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1534,12 +1548,20 @@
     
     mobileMenuToggle.addEventListener('click', function() {
       searchBox.classList.toggle('mobile-visible');
+      // Invalidate map size after transition
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 350);
     });
     
     // Close mobile menu when clicking outside
     document.addEventListener('click', function(e) {
       if (!searchBox.contains(e.target) && e.target !== mobileMenuToggle) {
         searchBox.classList.remove('mobile-visible');
+        // Invalidate map size when closing mobile menu
+        setTimeout(() => {
+          if (map) map.invalidateSize();
+        }, 50);
       }
     });
 
@@ -1579,6 +1601,11 @@
       edit: { featureGroup: drawnItems }
     });
     map.addControl(drawControl);
+
+    // Fix for mobile devices - invalidate map size after initialization
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
 
     // Optimized progress bar function
     let lastProgressUpdate = 0;
@@ -2925,6 +2952,15 @@
       
       if (currentRequest) {
         currentRequest.abort();
+      }
+    });
+    
+    // Handle window resize for mobile devices
+    window.addEventListener('resize', function() {
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
       }
     });
   </script>
