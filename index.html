@@ -918,6 +918,36 @@
       color: #2e7d32;
       font-weight: 600;
     }
+    
+    .frost-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    .frost-none {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .frost-low {
+      background-color: #fff8e1;
+      color: #f57c00;
+    }
+    
+    .frost-moderate {
+      background-color: #ffecb3;
+      color: #e65100;
+    }
+    
+    .frost-high {
+      background-color: #ffebee;
+      color: #d32f2f;
+    }
   </style>
 </head>
 <body>
@@ -1138,6 +1168,9 @@
                   <i class="fas fa-snowflake"></i>
                   Freezing Days (temperature &lt; 0°C)
                 </h3>
+                <div id="frost-indicator-container" style="margin-bottom: 15px;">
+                  <!-- Frost indicator will be inserted here -->
+                </div>
                 <div class="chart-container">
                   <canvas id="frostChart"></canvas>
                 </div>
@@ -1257,6 +1290,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script>
+    // Performance optimizations:
+    // 1. Optimized data processing algorithms
+    // 2. Reduced DOM manipulations
+    // 3. Improved chart rendering efficiency
+    // 4. Better memory management
+    // 5. Enhanced async operations
+
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                        'July', 'August', 'September', 'October', 'November', 'December'];
     const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -1278,6 +1318,7 @@
     let selectedMonth = 0;
     let pinModeActive = false;
     let geocodeTimeout = null;
+    let currentRequest = null;
     
     const dataAvailabilityLayer = L.layerGroup().addTo(map);
 
@@ -1290,8 +1331,14 @@
     });
     map.addControl(drawControl);
 
-    // Update progress bar function
+    // Optimized progress bar function
+    let lastProgressUpdate = 0;
     function updateProgress(barId, percentage, text) {
+      const now = Date.now();
+      // Throttle updates to max 10 per second
+      if (now - lastProgressUpdate < 100) return;
+      lastProgressUpdate = now;
+      
       const fill = document.getElementById(`${barId}-fill`);
       const label = document.getElementById(`${barId}-label`);
       const percentageDisplay = document.getElementById(`${barId}-percentage`);
@@ -1503,7 +1550,16 @@
     function geocodeLocation(query, forSuggestions = false) {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`;
       
-      fetch(url)
+      // Cancel previous request if any
+      if (currentRequest) {
+        currentRequest.abort();
+      }
+      
+      const controller = new AbortController();
+      const signal = controller.signal;
+      currentRequest = controller;
+      
+      fetch(url, { signal })
         .then(response => {
           if (!response.ok) throw new Error('Network response was not ok');
           return response.json();
@@ -1519,6 +1575,8 @@
               return;
             }
             
+            // Use document fragment for efficient DOM updates
+            const fragment = document.createDocumentFragment();
             data.forEach(item => {
               const suggestion = document.createElement('div');
               suggestion.className = 'suggestion-item';
@@ -1542,9 +1600,10 @@
                 
                 showNotification(`Location set to: ${item.display_name}`, 'success');
               };
-              suggestions.appendChild(suggestion);
+              fragment.appendChild(suggestion);
             });
             
+            suggestions.appendChild(fragment);
             suggestions.style.display = 'block';
           } else {
             // Process actual search
@@ -1571,10 +1630,17 @@
           }
         })
         .catch(error => {
-          console.error('Geocoding error:', error);
-          if (!forSuggestions) {
-            showNotification("Error finding location. Please try again.", 'error');
+          if (error.name === 'AbortError') {
+            console.log('Request aborted');
+          } else {
+            console.error('Geocoding error:', error);
+            if (!forSuggestions) {
+              showNotification("Error finding location. Please try again.", 'error');
+            }
           }
+        })
+        .finally(() => {
+          currentRequest = null;
         });
     }
 
@@ -1641,6 +1707,15 @@
       let fetchTime, processTime, chartTime;
       
       try {
+        // Cancel any previous request
+        if (currentRequest) {
+          currentRequest.abort();
+        }
+        
+        const controller = new AbortController();
+        const signal = controller.signal;
+        currentRequest = controller;
+        
         // Step 1: Fetch data
         updateStatus("Starting data retrieval from weather API...");
         const fetchStart = performance.now();
@@ -1654,7 +1729,7 @@
           }
         }, 100);
         
-        const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl, { signal });
         if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
         
         clearInterval(fetchInterval);
@@ -1673,48 +1748,63 @@
         
         if (!daily || !daily.time || daily.time.length === 0) throw new Error('No data available for this location');
         
-        // Process the data
-        const years = [], rainData = [], frostData = [], droughtYears = [];
+        // Optimized data processing
+        const yearsMap = new Map();
         const monthlyRain = Array(12).fill().map(() => []);
         const monthlyFrost = Array(12).fill().map(() => []);
         
-        let totalDays = daily.time.length;
+        const totalDays = daily.time.length;
         let completeDays = 0;
-        const dataByYear = {};
         
-        // Simulate processing progress
-        let processProgress = 0;
-        const processStep = Math.max(1, Math.floor(totalDays / 20));
+        // Precompute date objects and year/month indices
+        const dateInfo = daily.time.map(dateStr => {
+          const date = new Date(dateStr);
+          return {
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            date
+          };
+        });
         
-        for (let i = 0; i < daily.time.length; i++) {
-          const date = new Date(daily.time[i]);
-          const year = date.getFullYear();
-          const month = date.getMonth();
-          
-          if (!dataByYear[year]) dataByYear[year] = { precipitation: 0, frostDays: 0 };
-          
-          const hasPrecipitation = daily.precipitation_sum[i] !== null;
-          const hasTemperature = daily.temperature_2m_min[i] !== null;
-          
-          if (hasPrecipitation && hasTemperature) completeDays++;
-          
-          if (hasPrecipitation) {
-            dataByYear[year].precipitation += daily.precipitation_sum[i];
-            monthlyRain[month].push(daily.precipitation_sum[i]);
+        // Process data in batches to avoid blocking UI
+        const batchSize = 1000;
+        let processed = 0;
+        
+        while (processed < totalDays) {
+          const end = Math.min(processed + batchSize, totalDays);
+          for (let i = processed; i < end; i++) {
+            const { year, month } = dateInfo[i];
+            const precipitation = daily.precipitation_sum[i];
+            const temperature = daily.temperature_2m_min[i];
+            
+            // Check data completeness
+            if (precipitation !== null && temperature !== null) completeDays++;
+            
+            // Aggregate precipitation
+            if (precipitation !== null) {
+              if (!yearsMap.has(year)) {
+                yearsMap.set(year, { precipitation: 0, frostDays: 0 });
+              }
+              const yearData = yearsMap.get(year);
+              yearData.precipitation += precipitation;
+              monthlyRain[month].push(precipitation);
+            }
+            
+            // Count freezing days
+            if (temperature !== null && temperature < 0) {
+              yearsMap.get(year).frostDays += 1;
+              monthlyFrost[month].push(1);
+            } else if (temperature !== null) {
+              monthlyFrost[month].push(0);
+            }
           }
           
-          if (hasTemperature && daily.temperature_2m_min[i] < 0) {
-            dataByYear[year].frostDays += 1;
-            monthlyFrost[month].push(1);
-          } else if (hasTemperature) {
-            monthlyFrost[month].push(0);
-          }
+          processed = end;
+          const progress = Math.min(95, Math.round((processed / totalDays) * 100));
+          updateProgress('processing', progress, `Processing data: ${processed}/${totalDays} days`);
           
-          // Update progress periodically
-          if (i % processStep === 0) {
-            processProgress = Math.min(95, Math.round((i / totalDays) * 100));
-            updateProgress('processing', processProgress, `Processing data: ${i}/${totalDays} days`);
-          }
+          // Yield to UI thread
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
         
         // Complete processing
@@ -1730,13 +1820,20 @@
         document.getElementById('completeness-value').textContent = `${completeness}%`;
         
         // Extract data for each year
-        const yearsArray = Object.keys(dataByYear).sort();
-        for (const year of yearsArray) {
+        const years = [];
+        const rainData = [];
+        const frostData = [];
+        const droughtYears = [];
+        
+        // Sort years and extract data
+        const sortedYears = [...yearsMap.keys()].sort();
+        for (const year of sortedYears) {
+          const yearData = yearsMap.get(year);
           years.push(year);
-          rainData.push(Math.round(dataByYear[year].precipitation * 10) / 10);
-          frostData.push(dataByYear[year].frostDays);
+          rainData.push(Math.round(yearData.precipitation * 10) / 10);
+          frostData.push(yearData.frostDays);
           
-          if (dataByYear[year].precipitation < 400) droughtYears.push(year);
+          if (yearData.precipitation < 400) droughtYears.push(year);
         }
         
         // Calculate stats
@@ -1762,15 +1859,18 @@
           
         document.getElementById("drought-summary").innerText = droughtText;
         
-        // Add drought years
+        // Add drought years using document fragment
         const droughtYearsContainer = document.getElementById("drought-years");
         droughtYearsContainer.innerHTML = '';
+        
+        const fragment = document.createDocumentFragment();
         droughtYears.forEach(year => {
           const el = document.createElement('div');
           el.className = 'drought-year';
           el.innerText = year;
-          droughtYearsContainer.appendChild(el);
+          fragment.appendChild(el);
         });
+        droughtYearsContainer.appendChild(fragment);
         
         // Update stats
         document.getElementById("years-count").innerText = totalYears;
@@ -1803,6 +1903,7 @@
         calculateRiskRating(analysisData);
         generateCommentary(analysisData);
         createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
+        createFrostIndicator(maxFrost);
         
         // Hide error message and show analysis content
         document.getElementById('error-message').classList.add('hidden');
@@ -1838,13 +1939,47 @@
         
         updateStatus(`Error: ${err.message}`, 'error');
         showNotification("Couldn't fetch data for this location", 'error');
+      } finally {
+        currentRequest = null;
       }
     }
 
-    // Create rainfall chart
+    // Create frost indicator
+    function createFrostIndicator(maxFrost) {
+      const container = document.getElementById('frost-indicator-container');
+      container.innerHTML = '';
+      
+      const indicator = document.createElement('div');
+      indicator.className = 'frost-indicator';
+      
+      if (maxFrost === 0) {
+        indicator.className += ' frost-none';
+        indicator.innerHTML = '<i class="fas fa-check-circle"></i> No frost risk in this region';
+      } else if (maxFrost <= 10) {
+        indicator.className += ' frost-low';
+        indicator.innerHTML = '<i class="fas fa-exclamation-circle"></i> Low frost risk';
+      } else if (maxFrost <= 30) {
+        indicator.className += ' frost-moderate';
+        indicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Moderate frost risk';
+      } else {
+        indicator.className += ' frost-high';
+        indicator.innerHTML = '<i class="fas fa-skull-crossbones"></i> High frost risk';
+      }
+      
+      container.appendChild(indicator);
+    }
+
+    // Create rainfall chart with optimization
     function createRainChart(labels, data) {
       const ctx = document.getElementById('rainChart').getContext('2d');
-      if (window.rainChartInstance) window.rainChartInstance.destroy();
+      
+      // Reuse existing chart instance if available
+      if (window.rainChartInstance) {
+        window.rainChartInstance.data.labels = labels;
+        window.rainChartInstance.data.datasets[0].data = data;
+        window.rainChartInstance.update();
+        return;
+      }
       
       window.rainChartInstance = new Chart(ctx, {
         type: 'bar',
@@ -1880,10 +2015,17 @@
       });
     }
 
-    // Create frost days chart
+    // Create frost days chart with optimization
     function createFrostChart(labels, data) {
       const ctx = document.getElementById('frostChart').getContext('2d');
-      if (window.frostChartInstance) window.frostChartInstance.destroy();
+      
+      // Reuse existing chart instance if available
+      if (window.frostChartInstance) {
+        window.frostChartInstance.data.labels = labels;
+        window.frostChartInstance.data.datasets[0].data = data;
+        window.frostChartInstance.update();
+        return;
+      }
       
       window.frostChartInstance = new Chart(ctx, {
         type: 'line',
@@ -1923,77 +2065,89 @@
       });
     }
 
-    // Create monthly charts
+    // Create monthly charts with optimization
     function createMonthlyCharts() {
       // Monthly rain chart
       const rainCtx = document.getElementById('monthlyRainChart').getContext('2d');
-      if (window.monthlyRainChartInstance) window.monthlyRainChartInstance.destroy();
       
-      window.monthlyRainChartInstance = new Chart(rainCtx, {
-        type: 'bar',
-        data: {
-          labels: shortMonthNames,
-          datasets: [{
-            label: 'Avg. Rainfall (mm)',
-            data: monthlyData.rain,
-            backgroundColor: 'rgba(46, 125, 50, 0.7)',
-            borderColor: 'rgba(46, 125, 50, 1)',
-            borderWidth: 1,
-            borderRadius: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Rainfall (mm)' },
-              grid: { color: 'rgba(0, 0, 0, 0.05)' }
-            },
-            x: { grid: { display: false } }
+      // Reuse existing chart instance if available
+      if (window.monthlyRainChartInstance) {
+        window.monthlyRainChartInstance.data.datasets[0].data = monthlyData.rain;
+        window.monthlyRainChartInstance.update();
+      } else {
+        window.monthlyRainChartInstance = new Chart(rainCtx, {
+          type: 'bar',
+          data: {
+            labels: shortMonthNames,
+            datasets: [{
+              label: 'Avg. Rainfall (mm)',
+              data: monthlyData.rain,
+              backgroundColor: 'rgba(46, 125, 50, 0.7)',
+              borderColor: 'rgba(46, 125, 50, 1)',
+              borderWidth: 1,
+              borderRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Rainfall (mm)' },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              x: { grid: { display: false } }
+            }
           }
-        }
-      });
+        });
+      }
       
       // Monthly frost chart
       const frostCtx = document.getElementById('monthlyFrostChart').getContext('2d');
-      if (window.monthlyFrostChartInstance) window.monthlyFrostChartInstance.destroy();
       
-      window.monthlyFrostChartInstance = new Chart(frostCtx, {
-        type: 'bar',
-        data: {
-          labels: shortMonthNames,
-          datasets: [{
-            label: 'Avg. Freezing Days',
-            data: monthlyData.frost,
-            backgroundColor: 'rgba(30, 136, 229, 0.7)',
-            borderColor: 'rgba(30, 136, 229, 1)',
-            borderWidth: 1,
-            borderRadius: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Freezing Days' },
-              grid: { color: 'rgba(0, 0, 0, 0.05)' }
-            },
-            x: { grid: { display: false } }
+      // Reuse existing chart instance if available
+      if (window.monthlyFrostChartInstance) {
+        window.monthlyFrostChartInstance.data.datasets[0].data = monthlyData.frost;
+        window.monthlyFrostChartInstance.update();
+      } else {
+        window.monthlyFrostChartInstance = new Chart(frostCtx, {
+          type: 'bar',
+          data: {
+            labels: shortMonthNames,
+            datasets: [{
+              label: 'Avg. Freezing Days',
+              data: monthlyData.frost,
+              backgroundColor: 'rgba(30, 136, 229, 0.7)',
+              borderColor: 'rgba(30, 136, 229, 1)',
+              borderWidth: 1,
+              borderRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Freezing Days' },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              x: { grid: { display: false } }
+            }
           }
-        }
-      });
+        });
+      }
     }
 
-    // Create month selector
+    // Create month selector with document fragment
     function createMonthSelector() {
       const container = document.getElementById('month-selector');
       container.innerHTML = '';
+      
+      const fragment = document.createDocumentFragment();
       
       monthNames.forEach((name, index) => {
         const btn = document.createElement('button');
@@ -2002,8 +2156,10 @@
         btn.title = name;
         btn.dataset.month = index;
         btn.onclick = () => selectMonth(index);
-        container.appendChild(btn);
+        fragment.appendChild(btn);
       });
+      
+      container.appendChild(fragment);
     }
     
     // Select month for detailed view
@@ -2042,14 +2198,19 @@
         commentaryHTML += `, creating favorable conditions for moisture-dependent crops.`;
       }
       
-      commentaryHTML += ` The area sees a maximum of <strong>${maxFrost} freezing days</strong> annually, `;
-      
-      if (maxFrost > 50) {
-        commentaryHTML += `posing significant challenges for frost-sensitive crops.`;
-      } else if (maxFrost > 20) {
-        commentaryHTML += `requiring careful selection of cold-tolerant varieties.`;
+      // Frost risk analysis - ADDED THE NEW CONDITIONAL HERE
+      if (maxFrost === 0) {
+        commentaryHTML += ` The climate analysis shows <strong>no frost risk</strong> in this region.`;
       } else {
-        commentaryHTML += `making it suitable for a wide range of temperature-sensitive crops.`;
+        commentaryHTML += ` The area sees a maximum of <strong>${maxFrost} freezing days</strong> annually, `;
+        
+        if (maxFrost > 50) {
+          commentaryHTML += `posing significant challenges for frost-sensitive crops.`;
+        } else if (maxFrost > 20) {
+          commentaryHTML += `requiring careful selection of cold-tolerant varieties.`;
+        } else {
+          commentaryHTML += `making it suitable for a wide range of temperature-sensitive crops.`;
+        }
       }
       
       // Drought analysis
@@ -2090,8 +2251,12 @@
       commentaryHTML += `with average rainfall as low as <strong>${minRain}mm</strong>. `;
       commentaryHTML += `The wettest months are <span class="highlight-month">${formatMonthList(maxRainMonths)}</span> `;
       commentaryHTML += `with average rainfall reaching <strong>${maxRain}mm</strong>. `;
-      commentaryHTML += `Frost risk is highest during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> `;
-      commentaryHTML += `with an average of <strong>${maxFrostDays.toFixed(1)} freezing days</strong> per month.`;
+      
+      // Only show frost months if there is frost risk
+      if (maxFrostDays > 0) {
+        commentaryHTML += `Frost risk is highest during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> `;
+        commentaryHTML += `with an average of <strong>${maxFrostDays.toFixed(1)} freezing days</strong> per month.`;
+      }
       
       // Recommendations
       commentaryHTML += `</p><p><strong>Agricultural Recommendations:</strong></p><ul>`;
@@ -2100,8 +2265,13 @@
         commentaryHTML += `<li>Implement irrigation strategies during <span class="highlight-month">${formatMonthList(minRainMonths)}</span> to mitigate drought stress</li>`;
       }
       
+      // Only show frost recommendations if there is frost risk
       if (maxFrostDays > 5) {
         commentaryHTML += `<li>Employ frost protection measures during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> for sensitive crops</li>`;
+      } else if (maxFrostDays > 0) { // Added condition for some frost risk
+        commentaryHTML += `<li>Monitor temperatures during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> for potential light frost events</li>`;
+      } else if (maxFrost === 0) {
+        commentaryHTML += `<li>No frost protection measures needed - ideal for frost-sensitive crops year-round</li>`;
       }
       
       if (droughtCount > 3) {
@@ -2112,7 +2282,11 @@
         commentaryHTML += `<li>Note: Data completeness is ${completeness}% - consider supplemental data sources for critical decisions</li>`;
       }
       
-      commentaryHTML += `<li>Schedule planting to avoid peak frost periods in <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span></li>`;
+      // Only show planting recommendation if there is frost risk
+      if (maxFrostDays > 0) {
+        commentaryHTML += `<li>Schedule planting to avoid peak frost periods in <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span></li>`;
+      }
+      
       commentaryHTML += `<li>Select crop varieties that can tolerate dry conditions in <span class="highlight-month">${formatMonthList(minRainMonths)}</span></li>`;
       commentaryHTML += `</ul>`;
       
@@ -2132,10 +2306,12 @@
       return months.slice(0, -1).join(", ") + ", and " + months[months.length - 1];
     }
     
-    // Create monthly rainfall table
+    // Create monthly rainfall table with document fragment
     function createMonthlyRainTable(monthlyRain, monthlyFrost) {
       const tableBody = document.getElementById('month-rain-table-body');
       tableBody.innerHTML = '';
+      
+      const fragment = document.createDocumentFragment();
       
       monthlyRain.forEach((rain, index) => {
         const row = document.createElement('tr');
@@ -2180,8 +2356,10 @@
           row.className = rowClass;
         }
         
-        tableBody.appendChild(row);
+        fragment.appendChild(row);
       });
+      
+      tableBody.appendChild(fragment);
     }
     
     // Function to calculate and display risk rating
@@ -2218,6 +2396,8 @@
       } else if (maxFrost > 20) {
         riskScore += 1;
         riskFactors.push('Some frost days');
+      } else if (maxFrost === 0) {
+        riskFactors.push('No frost risk');
       }
       
       // Drought risk
@@ -2270,12 +2450,14 @@
       const riskFactorsContainer = document.getElementById('risk-factors');
       riskFactorsContainer.innerHTML = '';
       
+      const fragment = document.createDocumentFragment();
       riskFactors.forEach(factor => {
         const el = document.createElement('div');
         el.className = 'risk-factor';
         el.textContent = factor;
-        riskFactorsContainer.appendChild(el);
+        fragment.appendChild(el);
       });
+      riskFactorsContainer.appendChild(fragment);
       
       return riskScore;
     }
@@ -2427,6 +2609,16 @@
     window.addEventListener('load', function() {
       const rect = searchBox.getBoundingClientRect();
       positionIndicator.textContent = `Position: ${Math.round(rect.left)}px, ${Math.round(rect.top)}px`;
+    });
+    
+    // Cleanup event listeners when page unloads
+    window.addEventListener('beforeunload', function() {
+      document.removeEventListener('mousemove', drag);
+      document.removeEventListener('mouseup', dragEnd);
+      
+      if (currentRequest) {
+        currentRequest.abort();
+      }
     });
   </script>
 </body>
