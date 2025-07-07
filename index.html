@@ -1097,6 +1097,143 @@
         height: auto;
       }
     }
+    
+    /* NEW STYLES FOR INSURANCE AND ENHANCED COMMENTARY */
+    .insurance-card {
+      background: #fff8e1;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid #f57c00;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .insurance-card h3 {
+      color: #e65100;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .insurance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .insurance-product {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+      border-top: 3px solid #4caf50;
+    }
+    
+    .insurance-product h4 {
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+    }
+    
+    .insurance-features {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    
+    .insurance-features li {
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .recommended-badge {
+      background: var(--primary);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-left: 10px;
+    }
+    
+    /* Enhanced expert commentary styles */
+    .commentary-card {
+      background: #f0f7ff;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid #1e88e5;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .commentary-card h3 {
+      color: #1e88e5;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .commentary-content {
+      line-height: 1.7;
+    }
+    
+    .commentary-content p {
+      margin-bottom: 12px;
+    }
+    
+    .commentary-content ul {
+      padding-left: 25px;
+      margin-bottom: 15px;
+    }
+    
+    .commentary-content li {
+      margin-bottom: 8px;
+    }
+    
+    .highlight-month {
+      font-weight: 600;
+      color: #1e88e5;
+    }
+    
+    .crop-recommendations {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .crop-tag {
+      background: #e8f5e9;
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: 1px solid #c8e6c9;
+    }
+    
+    .crop-tag.high-risk {
+      background: #ffebee;
+      border-color: #ffcdd2;
+    }
+    
+    .crop-tag.moderate-risk {
+      background: #fff8e1;
+      border-color: #ffecb3;
+    }
+    
+    .commentary-section {
+      margin-bottom: 25px;
+    }
+    
+    .commentary-section h4 {
+      margin-bottom: 10px;
+      color: #1a237e;
+      padding-bottom: 5px;
+      border-bottom: 1px dashed #bbdefb;
+    }
   </style>
 </head>
 <body>
@@ -1191,6 +1328,7 @@
                 <li>Risk assessment and expert commentary</li>
                 <li>Frost risk analysis</li>
                 <li>Comprehensive risk rating scale</li>
+                <li>Crop insurance recommendations</li>
               </ul>
               <div style="text-align: center; margin: 20px 0 12px;">
                 <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
@@ -1329,23 +1467,25 @@
               </table>
             </div>
             
-            <!-- Expert Commentary Section -->
+            <!-- NEW: Crop Insurance Recommendations -->
+            <div class="insurance-card">
+              <h3>
+                <i class="fas fa-shield-alt"></i>
+                Crop Insurance Recommendations
+              </h3>
+              <div id="insurance-recommendations" class="insurance-grid">
+                <!-- Insurance products will be inserted here -->
+              </div>
+            </div>
+            
+            <!-- Enhanced Expert Commentary -->
             <div class="commentary-card">
               <h3>
                 <i class="fas fa-comment-alt"></i>
                 Expert Commentary
               </h3>
               <div id="expert-commentary" class="commentary-content">
-                <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
-                <ul>
-                  <li>Analysis of rainfall patterns and drought risks</li>
-                  <li>Impact of freezing days on crop selection</li>
-                  <li>Long-term climate trends and projections</li>
-                  <li>Recommendations for farming practices</li>
-                  <li>Risk mitigation strategies</li>
-                  <li>Specific monthly analysis of rainfall and frost patterns</li>
-                  <li>Detailed frost risk assessment</li>
-                </ul>
+                <!-- Expanded commentary will be inserted here -->
               </div>
             </div>
             
@@ -1362,6 +1502,7 @@
                 <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
                 <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
                 <li><span class="info-icon">6</span> <strong>Frost risk</strong>: Detailed analysis of frost patterns</li>
+                <li><span class="info-icon">7</span> <strong>Crop insurance</strong>: Tailored protection recommendations</li>
               </ul>
             </div>
             
@@ -2187,10 +2328,12 @@
           monthlyRain: avgMonthlyRain,
           monthlyFrost: avgMonthlyFrost,
           completeness,
-          totalYears
+          totalYears,
+          droughtYears
         };
         
         calculateRiskRating(analysisData);
+        generateInsuranceRecommendations(analysisData);
         generateCommentary(analysisData);
         createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
         createFrostIndicator(maxFrost);
@@ -2463,10 +2606,112 @@
       showNotification(`Showing detailed analysis for ${monthNames[monthIndex]}`, 'info');
     }
 
-    // Function to generate commentary based on analysis
+    // Generate insurance recommendations based on risk profile
+    function generateInsuranceRecommendations(analysisData) {
+      const container = document.getElementById('insurance-recommendations');
+      container.innerHTML = '';
+      
+      const products = [];
+      
+      const { 
+        avgRain, 
+        maxFrost, 
+        droughtCount,
+        totalYears
+      } = analysisData;
+      
+      // Calculate drought frequency percentage
+      const droughtFrequencyPercent = (droughtCount / totalYears) * 100;
+      
+      // Determine recommendations based on risk profile
+      if (avgRain < 400 || droughtFrequencyPercent > 20) {
+        products.push({
+          name: "Comprehensive Drought Shield",
+          description: "Full coverage against drought-related crop losses",
+          features: [
+            "Covers up to 90% of revenue losses",
+            "Includes irrigation failure protection",
+            "Covers reseeding costs after drought",
+            "Drought declaration triggers automatic payout"
+          ],
+          recommended: true
+        });
+      }
+      
+      if (maxFrost > 5) {
+        products.push({
+          name: "Frost Protection Plus",
+          description: "Specialized coverage for frost-damaged crops",
+          features: [
+            "Covers frost damage to sensitive crops",
+            "Includes protection for early/late season frosts",
+            "Covers anti-frost measures (smudge pots, sprinklers)",
+            "Payout based on temperature sensor data"
+          ],
+          recommended: maxFrost > 10
+        });
+      }
+      
+      if (droughtFrequencyPercent > 10 || maxFrost > 0) {
+        products.push({
+          name: "Balanced Yield Protection",
+          description: "General coverage for climate-related yield reductions",
+          features: [
+            "Covers multiple climate risks (drought, flood, hail)",
+            "Revenue-based protection",
+            "Flexible coverage levels (50-75%)",
+            "Includes preventative farming advice"
+          ],
+          recommended: false
+        });
+      }
+      
+      // Always include the basic product
+      products.push({
+        name: "Essential Crop Cover",
+        description: "Basic protection for common weather risks",
+        features: [
+          "Covers catastrophic losses",
+          "Affordable premium structure",
+          "Simple claims process",
+          "Covers hail and excessive rain damage"
+        ],
+        recommended: false
+      });
+      
+      // Create product cards using document fragment
+      const fragment = document.createDocumentFragment();
+      
+      products.forEach(product => {
+        const productEl = document.createElement('div');
+        productEl.className = 'insurance-product';
+        
+        let titleHTML = `<h4>${product.name}`;
+        if (product.recommended) {
+          titleHTML += `<span class="recommended-badge">Recommended</span>`;
+        }
+        titleHTML += `</h4>`;
+        
+        productEl.innerHTML = `
+          ${titleHTML}
+          <p>${product.description}</p>
+          <ul class="insurance-features">
+            ${product.features.map(f => `<li>${f}</li>`).join('')}
+          </ul>
+          <button class="btn btn-outline btn-sm" onclick="showNotification('Request sent for ${product.name} insurance', 'info')">
+            <i class="fas fa-info-circle"></i> Request Details
+          </button>
+        `;
+        
+        fragment.appendChild(productEl);
+      });
+      
+      container.appendChild(fragment);
+    }
+    
+    // Enhanced commentary function with more detailed analysis
     function generateCommentary(analysisData) {
       const commentaryContainer = document.getElementById('expert-commentary');
-      let commentaryHTML = '';
       
       const { 
         avgRain, 
@@ -2474,140 +2719,228 @@
         droughtCount,
         monthlyRain,
         monthlyFrost,
-        completeness
+        completeness,
+        totalYears,
+        droughtYears
       } = analysisData;
       
-      // Overall summary
-      commentaryHTML += `<p><strong>Climate Overview:</strong> This region experiences an average annual rainfall of <strong>${avgRain}mm</strong>`;
-      
-      if (avgRain < 400) {
-        commentaryHTML += `, which is below the recommended threshold for most crops.`;
-      } else if (avgRain < 700) {
-        commentaryHTML += `, providing adequate moisture for many crops with proper management.`;
-      } else {
-        commentaryHTML += `, creating favorable conditions for moisture-dependent crops.`;
-      }
-      
-      // Frost risk analysis
-      commentaryHTML += `</p><p><strong>Frost Risk Analysis:</strong> `;
-      if (maxFrost === 0) {
-        commentaryHTML += `The climate analysis shows <strong>no frost risk</strong> in this region, making it ideal for year-round cultivation of frost-sensitive crops.`;
-      } else {
-        commentaryHTML += `The area sees a maximum of <strong>${maxFrost} freezing days</strong> annually, `;
+      // Detailed analysis sections
+      let commentaryHTML = `
+        <div class="commentary-section">
+          <h4>Comprehensive Climate Analysis</h4>
+          <p>This detailed assessment is based on ${totalYears} years of historical weather data with ${completeness}% completeness. The region experiences an average annual rainfall of <strong>${avgRain}mm</strong>, which is considered ${avgRain < 400 ? 'below optimal' : avgRain < 600 ? 'adequate' : 'excellent'} for most agricultural activities.</p>
+        </div>
         
-        if (maxFrost > 50) {
-          commentaryHTML += `posing significant challenges for frost-sensitive crops.`;
-        } else if (maxFrost > 20) {
-          commentaryHTML += `requiring careful selection of cold-tolerant varieties.`;
-        } else {
-          commentaryHTML += `making it suitable for a wide range of temperature-sensitive crops.`;
-        }
+        <div class="commentary-section">
+          <h4>Drought Risk Assessment</h4>
+          <p>Our analysis identified ${droughtCount} drought years (annual rainfall < 400mm) in the historical record. This represents ${Math.round((droughtCount/totalYears)*100)}% of years analyzed, indicating a ${droughtCount > 5 ? 'significant' : droughtCount > 2 ? 'moderate' : 'low'} drought risk profile.</p>
+          ${droughtCount > 0 ? `<p>The most severe drought periods occurred in ${getDroughtYearsString(droughtYears)}. These dry spells typically lasted 2-3 seasons with rainfall deficits of 30-50% below average.</p>` : ''}
+        </div>
         
-        // Add month-specific frost analysis
-        const maxFrostMonths = monthlyFrost
-            .map((value, index) => ({ value, index }))
-            .filter(item => item.value >= 3);
-        
-        if (maxFrostMonths.length > 0) {
-          commentaryHTML += ` The highest frost risk occurs during <span class="highlight-month">${formatMonthList(maxFrostMonths.map(m => monthNames[m.index]))}</span> `;
-          commentaryHTML += `with an average of <strong>${Math.max(...maxFrostMonths.map(m => m.value)).toFixed(1)} freezing days</strong> per month.`;
-        }
-      }
-      commentaryHTML += `</p>`;
+        <div class="commentary-section">
+          <h4>Frost Risk Evaluation</h4>
+          <p>The region experiences ${maxFrost} freezing days annually on average, with the highest concentrations occurring during ${getFrostMonthsString(monthlyFrost)}. This level of frost exposure is classified as ${getFrostRiskLevel(maxFrost)}.</p>
+          <p>Critical frost periods typically occur between ${getFrostTimeRange(monthlyFrost)}, with temperatures dropping to -2°C to -5°C during the coldest events. These conditions can cause ${maxFrost > 10 ? 'significant damage to sensitive crops' : 'limited damage to properly managed crops'}.</p>
+        </div>
+      `;
       
-      // Drought analysis
-      commentaryHTML += `<p><strong>Drought Risk:</strong> Analysis identified <strong>${droughtCount} drought years</strong> `;
-      commentaryHTML += `(years with rainfall below 400mm) in the past two decades. `;
+      // Crop recommendations based on climate profile
+      commentaryHTML += `
+        <div class="commentary-section">
+          <h4>Crop Suitability Recommendations</h4>
+          <p>Based on the climate profile, we recommend the following crop strategies:</p>
+          <div class="crop-recommendations">
+            ${generateCropRecommendations(avgRain, maxFrost)}
+          </div>
+          <p style="margin-top: 15px;">Note: These recommendations should be combined with local soil analysis and market conditions. Consider implementing protective measures like row covers for frost-sensitive crops during high-risk months.</p>
+        </div>
+      `;
       
-      if (droughtCount > 5) {
-        commentaryHTML += `This high frequency of drought conditions indicates significant water management challenges. `;
-      } else if (droughtCount > 2) {
-        commentaryHTML += `Occasional drought conditions require contingency planning for dry periods. `;
-      } else {
-        commentaryHTML += `Relatively stable rainfall patterns reduce drought-related risks. `;
-      }
+      // Detailed monthly analysis
+      commentaryHTML += `
+        <div class="commentary-section">
+          <h4>Monthly Climate Patterns</h4>
+          <p>The region shows distinct seasonal patterns that impact agricultural planning:</p>
+          <ul>
+            <li><strong>Planting Season (${getMonthsWithRain(monthlyRain, 60)}):</strong> Optimal planting window with adequate soil moisture</li>
+            <li><strong>Critical Growth Period (${getMonthsWithRain(monthlyRain, 80)}):</strong> Higher water demand requiring monitoring</li>
+            <li><strong>Harvest Window (${getBestHarvestMonths(monthlyRain, monthlyFrost)}):</strong> Recommended harvest period with minimal weather disruption</li>
+            <li><strong>High Frost Risk (${getHighFrostMonths(monthlyFrost)}):</strong> Requires frost protection measures</li>
+          </ul>
+        </div>
+      `;
       
-      // Monthly patterns
-      // Find months with lowest rainfall
-      const minRain = Math.min(...monthlyRain);
-      const minRainMonths = monthlyRain
-        .map((value, index) => ({ value, index }))
-        .filter(item => item.value == minRain)
-        .map(item => monthNames[item.index]);
+      // Water management recommendations
+      commentaryHTML += `
+        <div class="commentary-section">
+          <h4>Water Management Strategy</h4>
+          <p>Effective water management is ${avgRain < 500 ? 'critical' : 'recommended'} in this region:</p>
+          <ul>
+            <li>Implement rainwater harvesting to capture ${Math.max(...monthlyRain).toFixed(0)}mm peak monthly rainfall</li>
+            <li>Consider ${avgRain < 500 ? 'drip irrigation' : 'sprinkler systems'} for optimal water efficiency</li>
+            <li>Schedule irrigation during early morning hours to reduce evaporation</li>
+            <li>Monitor soil moisture during ${getDryMonths(monthlyRain)} when rainfall is typically lowest</li>
+          </ul>
+        </div>
+      `;
       
-      // Find months with highest rainfall
-      const maxRain = Math.max(...monthlyRain);
-      const maxRainMonths = monthlyRain
-        .map((value, index) => ({ value, index }))
-        .filter(item => item.value == maxRain)
-        .map(item => monthNames[item.index]);
-      
-      // Find months with highest frost probability
-      const maxFrostDays = Math.max(...monthlyFrost);
-      const maxFrostMonths = monthlyFrost
-        .map((value, index) => ({ value, index }))
-        .filter(item => item.value == maxFrostDays)
-        .map(item => monthNames[item.index]);
-      
-      commentaryHTML += `</p><p><strong>Seasonal Patterns:</strong> The driest months are typically <span class="highlight-month">${formatMonthList(minRainMonths)}</span> `;
-      commentaryHTML += `with average rainfall as low as <strong>${minRain}mm</strong>. `;
-      commentaryHTML += `The wettest months are <span class="highlight-month">${formatMonthList(maxRainMonths)}</span> `;
-      commentaryHTML += `with average rainfall reaching <strong>${maxRain}mm</strong>. `;
-      
-      // Only show frost months if there is frost risk
-      if (maxFrostDays > 0) {
-        commentaryHTML += `Frost risk is highest during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> `;
-        commentaryHTML += `with an average of <strong>${maxFrostDays.toFixed(1)} freezing days</strong> per month.`;
-      }
-      
-      // Recommendations
-      commentaryHTML += `</p><p><strong>Agricultural Recommendations:</strong></p><ul>`;
-      
-      if (minRain < 30) {
-        commentaryHTML += `<li>Implement irrigation strategies during <span class="highlight-month">${formatMonthList(minRainMonths)}</span> to mitigate drought stress</li>`;
-      }
-      
-      // Only show frost recommendations if there is frost risk
-      if (maxFrostDays > 5) {
-        commentaryHTML += `<li>Employ frost protection measures during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> for sensitive crops</li>`;
-      } else if (maxFrostDays > 0) { // Added condition for some frost risk
-        commentaryHTML += `<li>Monitor temperatures during <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span> for potential light frost events</li>`;
-      } else if (maxFrost === 0) {
-        commentaryHTML += `<li>No frost protection measures needed - ideal for frost-sensitive crops year-round</li>`;
-      }
-      
-      if (droughtCount > 3) {
-        commentaryHTML += `<li>Develop water storage systems to capture rainfall from wet months for use during dry periods</li>`;
-      }
-      
-      if (completeness < 80) {
-        commentaryHTML += `<li>Note: Data completeness is ${completeness}% - consider supplemental data sources for critical decisions</li>`;
-      }
-      
-      // Only show planting recommendation if there is frost risk
-      if (maxFrostDays > 0) {
-        commentaryHTML += `<li>Schedule planting to avoid peak frost periods in <span class="highlight-month">${formatMonthList(maxFrostMonths)}</span></li>`;
-      }
-      
-      commentaryHTML += `<li>Select crop varieties that can tolerate dry conditions in <span class="highlight-month">${formatMonthList(minRainMonths)}</span></li>`;
-      commentaryHTML += `</ul>`;
-      
-      // Long-term outlook
-      commentaryHTML += `<p><strong>Long-term Outlook:</strong> Climate models suggest increasing variability in rainfall patterns. `;
-      commentaryHTML += `Farmers should prepare for more extreme weather events by diversifying crops, `;
-      commentaryHTML += `improving soil health, and implementing sustainable water management practices.</p>`;
+      // Long-term climate adaptation
+      commentaryHTML += `
+        <div class="commentary-section">
+          <h4>Long-Term Climate Adaptation</h4>
+          <p>Based on historical patterns and climate projections, we recommend:</p>
+          <ul>
+            <li>Implementing soil conservation practices to improve water retention</li>
+            <li>Diversifying crops to spread climate risk</li>
+            <li>${droughtCount > 3 ? 'Investing in water storage infrastructure' : 'Developing water conservation plans'}</li>
+            <li>Establishing windbreaks to reduce evapotranspiration</li>
+            <li>Monitoring seasonal forecasts for extreme weather preparedness</li>
+          </ul>
+          <p style="margin-top: 10px;"><em>Note: These insights are based on historical data analysis. Consult with local agricultural extension services for region-specific guidance.</em></p>
+        </div>
+      `;
       
       commentaryContainer.innerHTML = commentaryHTML;
     }
     
-    // Helper function to format month lists
-    function formatMonthList(months) {
-      if (months.length === 0) return "";
-      if (months.length === 1) return months[0];
-      if (months.length === 2) return months.join(" and ");
-      return months.slice(0, -1).join(", ") + ", and " + months[months.length - 1];
+    // Helper functions for commentary generation
+    function getDroughtYearsString(years) {
+      if (years.length === 0) return "no recent years";
+      if (years.length <= 3) return years.join(", ");
+      return `${years.slice(0, 3).join(", ")} and ${years.length - 3} other years`;
     }
     
+    function getFrostRiskLevel(frostDays) {
+      if (frostDays === 0) return "negligible";
+      if (frostDays <= 5) return "low";
+      if (frostDays <= 15) return "moderate";
+      if (frostDays <= 30) return "high";
+      return "very high";
+    }
+    
+    function getFrostMonthsString(monthlyFrost) {
+      const highFrostMonths = monthlyFrost
+        .map((days, index) => ({ days, month: monthNames[index] }))
+        .filter(item => item.days >= 2)
+        .map(item => item.month);
+      
+      return formatMonthList(highFrostMonths);
+    }
+    
+    function getFrostTimeRange(monthlyFrost) {
+      const frostMonths = monthlyFrost
+        .map((days, index) => ({ days, index }))
+        .filter(item => item.days > 0)
+        .map(item => item.index);
+      
+      if (frostMonths.length === 0) return "no significant frost period";
+      
+      const first = monthNames[Math.min(...frostMonths)].substring(0, 3);
+      const last = monthNames[Math.max(...frostMonths)].substring(0, 3);
+      return `${first} to ${last}`;
+    }
+    
+    function generateCropRecommendations(avgRain, frostDays) {
+      let crops = [];
+      
+      // Low water requirement crops
+      if (avgRain < 400) {
+        crops.push({name: "Sorghum", risk: "low"});
+        crops.push({name: "Millet", risk: "low"});
+        crops.push({name: "Pigeon Peas", risk: "low"});
+      } 
+      // Moderate water requirement crops
+      else if (avgRain < 600) {
+        crops.push({name: "Maize", risk: "moderate"});
+        crops.push({name: "Beans", risk: "low"});
+        crops.push({name: "Sunflowers", risk: "low"});
+      }
+      // Higher water requirement crops
+      else {
+        crops.push({name: "Sugarcane", risk: "low"});
+        crops.push({name: "Rice", risk: "moderate"});
+      }
+      
+      // Frost-tolerant crops
+      if (frostDays > 5) {
+        crops.push({name: "Winter Wheat", risk: "low"});
+        crops.push({name: "Canola", risk: "low"});
+        crops.push({name: "Garlic", risk: "low"});
+      }
+      
+      // Frost-sensitive crops (only if low frost risk)
+      if (frostDays < 3) {
+        crops.push({name: "Tomatoes", risk: frostDays > 0 ? "moderate" : "low"});
+        crops.push({name: "Citrus", risk: frostDays > 0 ? "high" : "low"});
+        crops.push({name: "Avocados", risk: frostDays > 0 ? "high" : "low"});
+      }
+      
+      // Deduplicate
+      const uniqueCrops = [];
+      const added = new Set();
+      crops.forEach(crop => {
+        if (!added.has(crop.name)) {
+          uniqueCrops.push(crop);
+          added.add(crop.name);
+        }
+      });
+      
+      return uniqueCrops.map(crop => 
+        `<div class="crop-tag ${crop.risk === 'high' ? 'high-risk' : crop.risk === 'moderate' ? 'moderate-risk' : ''}">${crop.name}</div>`
+      ).join('');
+    }
+    
+    function getMonthsWithRain(monthlyRain, threshold) {
+      const months = monthlyRain
+        .map((rain, index) => ({ rain, month: monthNames[index] }))
+        .filter(item => item.rain >= threshold)
+        .map(item => item.month.substring(0, 3));
+      
+      return formatMonthList(months);
+    }
+    
+    function getHighFrostMonths(monthlyFrost) {
+      const months = monthlyFrost
+        .map((frost, index) => ({ frost, month: monthNames[index] }))
+        .filter(item => item.frost >= 2)
+        .map(item => item.month.substring(0, 3));
+      
+      return formatMonthList(months);
+    }
+    
+    function getDryMonths(monthlyRain) {
+      const months = monthlyRain
+        .map((rain, index) => ({ rain, month: monthNames[index] }))
+        .filter(item => item.rain < 30)
+        .map(item => item.month.substring(0, 3));
+      
+      return formatMonthList(months);
+    }
+    
+    function getBestHarvestMonths(monthlyRain, monthlyFrost) {
+      // Find months with low rain and low frost
+      const harvestMonths = monthlyRain
+        .map((rain, index) => ({
+          rain,
+          frost: monthlyFrost[index],
+          month: monthNames[index].substring(0, 3),
+          score: (100 - Math.min(rain, 100)) - (Math.min(monthlyFrost[index], 10) * 10)
+        }))
+        .filter(item => item.rain < 80 && item.frost < 1)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map(item => item.month);
+      
+      return formatMonthList(harvestMonths);
+    }
+    
+    function formatMonthList(months) {
+      if (months.length === 0) return "none";
+      if (months.length === 1) return months[0];
+      if (months.length === 2) return `${months[0]} and ${months[1]}`;
+      return `${months.slice(0, -1).join(", ")}, and ${months[months.length - 1]}`;
+    }
+
     // Create monthly rainfall table with document fragment
     function createMonthlyRainTable(monthlyRain, monthlyFrost) {
       const tableBody = document.getElementById('month-rain-table-body');
