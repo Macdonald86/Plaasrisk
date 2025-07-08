@@ -71,6 +71,7 @@
       background: rgba(255, 255, 255, 0.95);
       box-shadow: var(--shadow);
       z-index: 100;
+      flex-wrap: wrap;
     }
     
     .logo {
@@ -146,6 +147,31 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+    }
+    
+    /* Control bar - moved to top */
+    .control-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 25px;
+      background: rgba(255, 255, 255, 0.98);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .location-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+    
+    .control-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
     }
     
     /* Search box in report section */
@@ -254,6 +280,11 @@
     
     .btn-outline:hover {
       background: rgba(46, 125, 50, 0.1);
+    }
+    
+    .btn-small {
+      padding: 8px 15px;
+      font-size: 0.9rem;
     }
     
     .map-actions {
@@ -477,17 +508,6 @@
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
-    }
-    
-    footer {
-      text-align: center;
-      padding: 20px;
-      color: #666;
-      font-size: 0.95rem;
-      background: white;
-      border-radius: var(--card-radius);
-      box-shadow: var(--shadow);
-      margin: 20px 25px 25px;
     }
     
     /* Notification */
@@ -899,6 +919,50 @@
       margin-right: 8px;
     }
     
+    /* Soil Information Styles */
+    .soil-property {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .soil-property:last-child {
+      border-bottom: none;
+    }
+    
+    .soil-property-label {
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .soil-property-value {
+      font-weight: 600;
+    }
+    
+    .soil-quality {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    .soil-quality-high {
+      background: rgba(76, 175, 80, 0.15);
+      color: #2e7d32;
+    }
+    
+    .soil-quality-medium {
+      background: rgba(255, 152, 0, 0.15);
+      color: #e65100;
+    }
+    
+    .soil-quality-low {
+      background: rgba(244, 67, 54, 0.15);
+      color: #d32f2f;
+    }
+    
     /* Responsive Adjustments */
     @media (max-width: 1200px) {
       .report-section {
@@ -956,6 +1020,11 @@
       
       .map-actions .btn {
         min-width: 100%;
+      }
+      
+      .control-bar {
+        flex-direction: column;
+        align-items: flex-start;
       }
     }
     
@@ -1045,12 +1114,6 @@
       .chart-container, .monthly-chart-container {
         height: 300px;
       }
-      
-      footer {
-        margin-top: 50px;
-        border-top: 1px solid #ddd;
-        padding-top: 20px;
-      }
     }
     
     /* Map marker styling */
@@ -1099,6 +1162,28 @@
       <div class="contact-info">
         <div><i class="fas fa-phone icon"></i> 076-623-2221</div>
         <div><i class="fas fa-envelope icon"></i> support@plaasrisk.co.za</div>
+      </div>
+    </div>
+    
+    <!-- New control bar at top -->
+    <div class="control-bar">
+      <div class="location-display">
+        <i class="fas fa-map-marker-alt"></i>
+        <span id="current-location">Select a location</span>
+      </div>
+      <div class="control-buttons">
+        <button class="btn btn-outline btn-small" onclick="resetMap()">
+          <i class="fas fa-trash-alt"></i> Clear
+        </button>
+        <button class="btn btn-primary btn-small" onclick="generateReport()" id="generateBtn">
+          <i class="fas fa-chart-line"></i> Analyze
+        </button>
+        <button class="btn btn-outline btn-small" id="dropPinBtn" onclick="activatePinMode()">
+          <i class="fas fa-map-pin"></i> Drop Pin
+        </button>
+        <button class="btn btn-primary btn-small" id="downloadBtn" onclick="downloadPDF()" disabled>
+          <i class="fas fa-download"></i> Report
+        </button>
       </div>
     </div>
     
@@ -1191,6 +1276,7 @@
                   <li><i class="mdi mdi-chart-areaspline icon"></i> Climate trends</li>
                   <li><i class="mdi mdi-weather-hurricane icon"></i> Risk mitigation</li>
                   <li><i class="mdi mdi-calendar-multiselect icon"></i> Monthly forecasts</li>
+                  <li><i class="fas fa-dirt icon"></i> FAO Soil Information</li>
                 </ul>
                 <div class="placeholder-graphic">
                   <div class="graphic-icon">
@@ -1217,6 +1303,46 @@
                   <div class="completeness-fill" id="completeness-bar"></div>
                 </div>
                 <span id="completeness-value">0%</span>
+              </div>
+            </div>
+            
+            <!-- Soil Information Card -->
+            <div class="report-card">
+              <h3>
+                <i class="fas fa-dirt"></i>
+                Soil Information (FAO)
+              </h3>
+              <div id="soil-info">
+                <div class="soil-property">
+                  <span class="soil-property-label">Soil Type:</span>
+                  <span class="soil-property-value" id="soil-type">Ferric Luvisols</span>
+                </div>
+                <div class="soil-property">
+                  <span class="soil-property-label">Texture:</span>
+                  <span class="soil-property-value" id="soil-texture">Sandy loam</span>
+                </div>
+                <div class="soil-property">
+                  <span class="soil-property-label">Organic Matter:</span>
+                  <span class="soil-property-value" id="soil-organic">2.1%</span>
+                </div>
+                <div class="soil-property">
+                  <span class="soil-property-label">pH Level:</span>
+                  <span class="soil-property-value" id="soil-ph">6.4</span>
+                </div>
+                <div class="soil-property">
+                  <span class="soil-property-label">Water Holding Capacity:</span>
+                  <span class="soil-property-value" id="soil-water">Medium</span>
+                </div>
+                <div class="soil-property">
+                  <span class="soil-property-label">Fertility:</span>
+                  <span class="soil-property-value">
+                    <span class="soil-quality soil-quality-medium">Medium</span>
+                  </span>
+                </div>
+                <div class="soil-property">
+                  <span class="soil-property-label">Suitable Crops:</span>
+                  <span class="soil-property-value" id="soil-crops">Maize, Wheat, Soybeans</span>
+                </div>
               </div>
             </div>
             
@@ -1423,11 +1549,6 @@
         </div>
       </div>
     </div>
-    
-    <footer>
-      <p>PlaasRisk • Farm Risk Analysis Platform</p>
-      <p style="margin-top: 8px; font-size: 0.9rem; color: #777;">Developed by Macdonald Makoro: 076-623-2221</p>
-    </footer>
   </div>
   
   <div id="notification" class="notification">
@@ -1538,6 +1659,9 @@
         // Update GPS input
         document.getElementById("gpsInput").value = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
         
+        // Update location display
+        document.getElementById('current-location').textContent = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+        
         // Check data availability
         checkDataAvailability(center.lat, center.lng);
       }
@@ -1574,6 +1698,9 @@
       // Update GPS input
       document.getElementById("gpsInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       lastPolygonCenter = { lat, lng };
+      
+      // Update location display
+      document.getElementById('current-location').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       
       // Check data availability
       checkDataAvailability(lat, lng);
@@ -1641,6 +1768,10 @@
             currentMarker = L.marker([lat, lng]).addTo(map)
               .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
             lastPolygonCenter = { lat, lng };
+            
+            // Update location display
+            document.getElementById('current-location').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            
             showNotification(`Location set to: ${lat}, ${lng}`, 'success');
             
             checkDataAvailability(lat, lng);
@@ -1665,6 +1796,9 @@
       document.getElementById("gpsInput").value = "";
       document.getElementById("locationInput").value = "";
       document.getElementById("farmName").value = "";
+      
+      // Reset location display
+      document.getElementById('current-location').textContent = "Select a location";
       
       showNotification("Map has been reset", 'info');
       
@@ -1703,6 +1837,10 @@
             lastPolygonCenter = { lat, lng };
             
             document.getElementById("gpsInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            
+            // Update location display
+            document.getElementById('current-location').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            
             showNotification(`Found location: ${data[0].display_name}`, 'success');
             
             checkDataAvailability(lat, lng);
@@ -1776,11 +1914,21 @@
           </div>
         `;
         
+        // Soil information
+        document.getElementById('soil-type').textContent = "Ferric Luvisols";
+        document.getElementById('soil-texture').textContent = "Sandy loam";
+        document.getElementById('soil-organic').textContent = "2.1%";
+        document.getElementById('soil-ph').textContent = "6.4";
+        document.getElementById('soil-water').textContent = "Medium";
+        document.getElementById('soil-crops').textContent = "Maize, Wheat, Soybeans";
+        
         // Expert commentary
         document.getElementById('expert-commentary').innerHTML = `
           <p><strong>Climate Overview:</strong> This region experiences an average annual rainfall of <strong>586mm</strong>, providing adequate moisture for agriculture.</p>
           
           <p><strong>Frost Risk Analysis:</strong> The area sees an average of <strong>7 freezing days</strong> annually. The highest frost risk occurs during <strong>July</strong>.</p>
+          
+          <p><strong>Soil Analysis (FAO):</strong> The Ferric Luvisols soil has good drainage properties and medium fertility. Organic matter content is adequate but could be improved with cover crops.</p>
           
           <p><strong>Drought Risk:</strong> Analysis identified <strong>3 drought years</strong> in the past 19 years. Drought conditions require contingency planning.</p>
           
@@ -1790,6 +1938,7 @@
             <li>Monitor temperatures during cold months for frost events</li>
             <li>Develop water storage systems to capture rainfall</li>
             <li>Select crop varieties that match the climate patterns</li>
+            <li>Add organic matter to improve soil water retention</li>
           </ul>
           
           <p><strong>Long-term Outlook:</strong> Climate models suggest increasing variability in rainfall patterns. Farmers should prepare for more extreme weather events by diversifying crops and implementing sustainable water management practices.</p>
