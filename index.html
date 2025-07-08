@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgroClimate Insight | Farm Climate Analysis</title>
+  <title>PlaasRisk | Farm Risk Analysis</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -12,6 +12,7 @@
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
   
   <style>
     :root {
@@ -45,19 +46,20 @@
     }
     
     body {
-      background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
+      background: linear-gradient(135deg, #f0f9f0 0%, #e0f2e1 100%);
       color: var(--text);
       min-height: 100vh;
-      padding: 20px;
-      line-height: 1.6;
       overflow-x: hidden;
       touch-action: manipulation;
     }
     
     .container {
-      max-width: 1800px;
+      max-width: 100%;
       margin: 0 auto;
-      padding: 0 15px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
     
     /* Header Styles */
@@ -65,9 +67,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 15px 25px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: var(--shadow);
+      z-index: 100;
     }
     
     .logo {
@@ -102,80 +105,37 @@
     }
     
     .app-container {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 25px;
-      margin-bottom: 25px;
-      height: calc(100vh - 120px);
-    }
-    
-    @media (max-width: 1200px) {
-      .app-container {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
-      
-      .map-section {
-        height: 500px;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .app-container {
-        gap: 20px;
-      }
-      
-      .map-section {
-        height: 400px;
-      }
-      
-      .header {
-        flex-direction: column;
-        gap: 15px;
-        align-items: flex-start;
-      }
-    }
-    
-    .map-section, .report-section {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: var(--card-radius);
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      backdrop-filter: blur(5px);
+      display: flex;
+      flex: 1;
       overflow: hidden;
-      transition: var(--transition);
-    }
-    
-    .map-section:hover, .report-section:hover {
-      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.12);
     }
     
     .map-section {
+      flex: 1;
       position: relative;
-      height: 100%;
+      background: #e8f5e9;
+      z-index: 1;
+      transition: var(--transition);
+    }
+    
+    .report-section {
+      width: 400px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: -5px 0 15px rgba(0,0,0,0.05);
       display: flex;
       flex-direction: column;
-    }
-    
-    .map-header {
-      padding: 20px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.9);
-    }
-    
-    .map-header h2 {
-      font-size: 1.4rem;
-      font-weight: 600;
-      color: var(--primary-dark);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      overflow: hidden;
+      z-index: 10;
+      transition: var(--transition);
     }
     
     #map {
-      flex: 1;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       z-index: 1;
-      background: #e8f5e9;
     }
     
     .search-box {
@@ -192,18 +152,6 @@
       backdrop-filter: blur(5px);
       border: 1px solid rgba(0, 0, 0, 0.05);
       transition: var(--transition);
-    }
-    
-    @media (max-width: 768px) {
-      .search-box {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 20px auto;
-        width: 100%;
-        max-width: 100%;
-        transform: none !important;
-      }
     }
     
     .search-box h2 {
@@ -314,19 +262,6 @@
       min-width: 140px;
     }
     
-    @media (max-width: 768px) {
-      .map-actions {
-        flex-direction: column;
-        gap: 10px;
-      }
-    }
-    
-    .report-section {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    
     .report-header {
       padding: 25px;
       text-align: center;
@@ -385,18 +320,6 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 15px;
       margin-bottom: 25px;
-    }
-    
-    @media (max-width: 1200px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
     }
     
     .stat-card {
@@ -490,12 +413,6 @@
       margin-top: 20px;
     }
     
-    @media (max-width: 768px) {
-      .monthly-analysis {
-        grid-template-columns: 1fr;
-      }
-    }
-    
     .monthly-card {
       background: white;
       border-radius: 10px;
@@ -519,13 +436,6 @@
       gap: 15px;
       margin-top: 25px;
       padding: 0 25px 25px;
-    }
-    
-    @media (max-width: 768px) {
-      .actions {
-        flex-direction: column;
-        gap: 12px;
-      }
     }
     
     .hidden {
@@ -571,7 +481,7 @@
       background: white;
       border-radius: var(--card-radius);
       box-shadow: var(--shadow);
-      margin-top: 20px;
+      margin: 20px 25px 25px;
     }
     
     /* Notification */
@@ -615,12 +525,6 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 15px;
       margin: 25px 0;
-    }
-    
-    @media (max-width: 1200px) {
-      .risk-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
     }
     
     .risk-category {
@@ -982,22 +886,66 @@
       color: var(--primary-dark);
     }
     
+    /* Modern Icons */
+    .icon {
+      font-size: 1.2em;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    
     /* Responsive Adjustments */
-    @media (max-width: 480px) {
-      .report-header {
-        padding: 20px 15px;
+    @media (max-width: 1200px) {
+      .report-section {
+        width: 380px;
+      }
+    }
+    
+    @media (max-width: 992px) {
+      .app-container {
+        flex-direction: column;
       }
       
-      .report-content {
-        padding: 15px;
+      .map-section {
+        height: 60vh;
       }
       
-      .report-card {
-        padding: 20px;
+      .report-section {
+        width: 100%;
+        height: 40vh;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
       }
       
-      .stat-card {
-        padding: 15px;
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .risk-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .risk-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .monthly-analysis {
+        grid-template-columns: 1fr;
+      }
+      
+      .actions {
+        flex-direction: column;
       }
     }
     
@@ -1031,6 +979,26 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #a1a1a1;
     }
+    
+    /* Toggle Report Button */
+    .toggle-report {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+      cursor: pointer;
+      border: none;
+      font-size: 1.2rem;
+      color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -1038,31 +1006,31 @@
     <div class="header">
       <div class="logo">
         <div class="logo-icon">
-          <i class="fas fa-leaf"></i>
+          <i class="fas fa-seedling"></i>
         </div>
-        <div class="logo-text">Agro<span>Climate</span> Insight</div>
+        <div class="logo-text">Plaas<span>Risk</span></div>
       </div>
       <div class="contact-info">
-        <div><i class="fas fa-phone"></i> 076-623-2221</div>
-        <div><i class="fas fa-envelope"></i> support@agroclimate.co.za</div>
+        <div><i class="fas fa-phone icon"></i> 076-623-2221</div>
+        <div><i class="fas fa-envelope icon"></i> support@plaasrisk.co.za</div>
       </div>
     </div>
     
     <div class="app-container">
       <div class="map-section">
-        <div class="map-header">
-          <h2><i class="fas fa-map-marked-alt"></i> Farm Location & Analysis</h2>
-        </div>
+        <button class="toggle-report" id="toggleReport">
+          <i class="fas fa-chart-bar"></i>
+        </button>
         
         <div class="search-box">
           <h2>
             <i class="fas fa-map-marker-alt"></i>
-            Select Farm Location
+            Farm Location
           </h2>
           
           <div class="search-type-toggle">
             <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
-            <div class="search-type-btn" id="locationToggle">Location Name</div>
+            <div class="search-type-btn" id="locationToggle">Location</div>
           </div>
           
           <div class="form-group">
@@ -1080,19 +1048,18 @@
             </div>
           </div>
           
-          <button class="btn btn-primary" onclick="searchLocation()">
-            <i class="fas fa-search-location"></i> Search Location
-          </button>
-          
           <div class="map-actions">
             <button class="btn btn-outline" onclick="resetMap()">
-              <i class="fas fa-trash-alt"></i> Clear Map
+              <i class="fas fa-trash-alt"></i> Clear
             </button>
             <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
-              <i class="fas fa-chart-line"></i> Generate Report
+              <i class="fas fa-chart-line"></i> Analyze
             </button>
             <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
               <i class="fas fa-map-pin"></i> Drop Pin
+            </button>
+            <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
+              <i class="fas fa-download"></i> Report
             </button>
           </div>
           
@@ -1111,10 +1078,10 @@
         <div id="map"></div>
       </div>
       
-      <div class="report-section">
+      <div class="report-section" id="reportSection">
         <div class="report-header">
-          <h2>Comprehensive Farm Climate Analysis</h2>
-          <p>Detailed historical weather patterns, risk assessment, and agricultural insights</p>
+          <h2>Farm Risk Analysis Report</h2>
+          <p>Detailed insights for informed agricultural decisions</p>
         </div>
         
         <div class="report-content">
@@ -1126,23 +1093,22 @@
               </h3>
               <div class="placeholder-content">
                 <div class="placeholder-text">
-                  <p>Draw your farm boundaries on the map or search for a location to generate a comprehensive climate report using real historical data.</p>
-                  <p>The enhanced report includes:</p>
+                  <p>Draw your farm boundaries on the map or search for a location to generate a comprehensive risk report.</p>
+                  <p>The report includes:</p>
                 </div>
                 <ul class="placeholder-list">
-                  <li><i class="fas fa-check-circle"></i> Annual rainfall and frost day analysis</li>
-                  <li><i class="fas fa-check-circle"></i> Monthly climate patterns visualization</li>
-                  <li><i class="fas fa-check-circle"></i> Freezing days analysis (temperatures below 0°C)</li>
-                  <li><i class="fas fa-check-circle"></i> Drought year identification</li>
-                  <li><i class="fas fa-check-circle"></i> Detailed seasonal insights</li>
-                  <li><i class="fas fa-check-circle"></i> Risk assessment and expert commentary</li>
-                  <li><i class="fas fa-check-circle"></i> Comprehensive risk rating scale</li>
+                  <li><i class="mdi mdi-weather-pouring icon"></i> Rainfall analysis</li>
+                  <li><i class="mdi mdi-snowflake icon"></i> Frost risk assessment</li>
+                  <li><i class="mdi mdi-fire icon"></i> Drought patterns</li>
+                  <li><i class="mdi mdi-chart-areaspline icon"></i> Climate trends</li>
+                  <li><i class="mdi mdi-weather-hurricane icon"></i> Risk mitigation</li>
+                  <li><i class="mdi mdi-calendar-multiselect icon"></i> Monthly forecasts</li>
                 </ul>
                 <div class="placeholder-graphic">
                   <div class="graphic-icon">
-                    <i class="fas fa-cloud-sun"></i>
+                    <i class="mdi mdi-weather-cloudy" style="font-size: 3.5rem; color: #b3e5fc;"></i>
                   </div>
-                  <p>Your detailed climate analysis will appear here</p>
+                  <p>Your detailed risk analysis will appear here</p>
                 </div>
               </div>
             </div>
@@ -1151,7 +1117,7 @@
           <div id="report" class="hidden">
             <div class="report-card">
               <h3>
-                <i class="fas fa-map-marked-alt"></i>
+                <i class="mdi mdi-map-marker-outline"></i>
                 Location Details
               </h3>
               <p id="location-text"></p>
@@ -1169,8 +1135,8 @@
             <!-- Risk Rating Section -->
             <div class="report-card">
               <h3>
-                <i class="fas fa-exclamation-triangle"></i>
-                Climate Risk Rating
+                <i class="mdi mdi-alert-octagram-outline"></i>
+                Risk Rating
               </h3>
               <div class="risk-grid">
                 <div class="risk-category">
@@ -1202,28 +1168,28 @@
             <!-- Rating Scale Section -->
             <div class="rating-scale-container">
               <h3>
-                <i class="fas fa-ruler"></i>
-                Risk Rating Scale
+                <i class="mdi mdi-ruler"></i>
+                Risk Scale
               </h3>
-              <p>Our risk rating system evaluates climate threats on a scale from 0 to 3, with higher values indicating greater risk:</p>
+              <p>Our risk rating evaluates threats on a scale from 0 to 3:</p>
               
               <div class="rating-scale-grid">
                 <div class="rating-scale-item low-risk">
-                  <div class="rating-scale-label">Low Risk (0-1)</div>
+                  <div class="rating-scale-label">Low (0-1)</div>
                   <div class="rating-scale-value">0-1</div>
-                  <div class="rating-scale-description">Minimal impact expected. Normal farming practices should be sufficient.</div>
+                  <div class="rating-scale-description">Minimal impact. Normal farming sufficient.</div>
                 </div>
                 
                 <div class="rating-scale-item moderate-risk">
-                  <div class="rating-scale-label">Moderate Risk (1-2)</div>
+                  <div class="rating-scale-label">Moderate (1-2)</div>
                   <div class="rating-scale-value">1-2</div>
-                  <div class="rating-scale-description">Some risk present. Implement precautionary measures and monitoring.</div>
+                  <div class="rating-scale-description">Precautionary measures needed.</div>
                 </div>
                 
                 <div class="rating-scale-item high-risk">
-                  <div class="rating-scale-label">High Risk (2-3)</div>
+                  <div class="rating-scale-label">High (2-3)</div>
                   <div class="rating-scale-value">2-3</div>
-                  <div class="rating-scale-description">Significant risk. Requires mitigation strategies and contingency planning.</div>
+                  <div class="rating-scale-description>Significant risk. Requires mitigation.</div>
                 </div>
               </div>
             </div>
@@ -1231,53 +1197,44 @@
             <!-- Expert Commentary Section -->
             <div class="commentary-card">
               <h3>
-                <i class="fas fa-comment-alt"></i>
-                Expert Commentary
+                <i class="mdi mdi-comment-text-outline"></i>
+                Expert Analysis
               </h3>
               <div id="expert-commentary" class="commentary-content">
-                <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
-                <ul>
-                  <li>Analysis of rainfall patterns and drought risks</li>
-                  <li>Impact of freezing days on crop selection</li>
-                  <li>Long-term climate trends and projections</li>
-                  <li>Recommendations for farming practices</li>
-                  <li>Risk mitigation strategies</li>
-                  <li>Specific monthly analysis of rainfall and frost patterns</li>
-                  <li>Detailed frost risk assessment</li>
-                </ul>
+                <p>Detailed commentary will be provided after analyzing your farm's climate data.</p>
               </div>
             </div>
             
             <div class="report-card">
               <h3>
-                <i class="fas fa-chart-bar"></i>
+                <i class="mdi mdi-chart-bar"></i>
                 Climate Statistics
               </h3>
               <div class="stats-grid">
                 <div class="stat-card">
                   <div class="stat-icon">
-                    <i class="fas fa-calendar-alt"></i>
+                    <i class="mdi mdi-calendar"></i>
                   </div>
                   <div class="stat-value" id="years-count">19</div>
-                  <div class="stat-label">Years Analyzed</div>
+                  <div class="stat-label">Years</div>
                 </div>
                 <div class="stat-card">
                   <div class="stat-icon">
-                    <i class="fas fa-cloud-rain"></i>
+                    <i class="mdi mdi-weather-pouring"></i>
                   </div>
                   <div class="stat-value" id="avg-rain">0</div>
-                  <div class="stat-label">Avg. Rainfall (mm)</div>
+                  <div class="stat-label">Avg. Rainfall</div>
                 </div>
                 <div class="stat-card">
                   <div class="stat-icon">
-                    <i class="fas fa-temperature-low"></i>
+                    <i class="mdi mdi-snowflake"></i>
                   </div>
                   <div class="stat-value" id="max-frost">0</div>
-                  <div class="stat-label">Max Freezing Days</div>
+                  <div class="stat-label">Frost Days</div>
                 </div>
                 <div class="stat-card">
                   <div class="stat-icon">
-                    <i class="fas fa-fire"></i>
+                    <i class="mdi mdi-fire"></i>
                   </div>
                   <div class="stat-value" id="drought-count">0</div>
                   <div class="stat-label">Drought Years</div>
@@ -1291,8 +1248,8 @@
             
             <div class="report-card">
               <h3>
-                <i class="fas fa-snowflake"></i>
-                Freezing Days Analysis
+                <i class="mdi mdi-snowflake-alert"></i>
+                Frost Analysis
               </h3>
               <div id="frost-indicator-container">
                 <!-- Frost indicator will be inserted here -->
@@ -1304,7 +1261,7 @@
             
             <div class="drought-summary">
               <h4>
-                <i class="fas fa-exclamation-triangle"></i>
+                <i class="mdi mdi-fire-alert"></i>
                 Drought Analysis
               </h4>
               <p id="drought-summary"></p>
@@ -1313,15 +1270,15 @@
             
             <div class="report-card">
               <h3>
-                <i class="fas fa-calendar-alt"></i>
-                Monthly Climate Patterns
+                <i class="mdi mdi-chart-areaspline"></i>
+                Monthly Patterns
               </h3>
               
               <div class="monthly-analysis">
                 <div class="monthly-card">
                   <h4>
-                    <i class="fas fa-cloud-rain"></i>
-                    Monthly Rainfall
+                    <i class="mdi mdi-weather-rainy"></i>
+                    Rainfall
                   </h4>
                   <div class="monthly-chart-container">
                     <canvas id="monthlyRainChart"></canvas>
@@ -1330,8 +1287,8 @@
                 
                 <div class="monthly-card">
                   <h4>
-                    <i class="fas fa-snowflake"></i>
-                    Monthly Freezing Days
+                    <i class="mdi mdi-weather-snowy"></i>
+                    Frost Days
                   </h4>
                   <div class="monthly-chart-container">
                     <canvas id="monthlyFrostChart"></canvas>
@@ -1341,14 +1298,14 @@
               
               <!-- Monthly Rainfall Table -->
               <h4 style="margin-top: 25px; margin-bottom: 15px;">
-                <i class="fas fa-table"></i>
-                Monthly Rainfall Analysis
+                <i class="mdi mdi-table"></i>
+                Monthly Analysis
               </h4>
               <table class="month-rain-table" id="month-rain-table">
                 <thead>
                   <tr>
                     <th>Month</th>
-                    <th>Avg. Rainfall (mm)</th>
+                    <th>Rainfall (mm)</th>
                     <th>Classification</th>
                   </tr>
                 </thead>
@@ -1361,7 +1318,7 @@
           
           <div id="loading" class="loading hidden">
             <div class="spinner"></div>
-            <div class="loading-text">Analyzing climate patterns...</div>
+            <div class="loading-text">Analyzing farm risk patterns...</div>
             
             <!-- Processing Progress Bar -->
             <div class="progress-container" style="width: 80%;">
@@ -1376,21 +1333,12 @@
             </div>
           </div>
         </div>
-        
-        <div class="actions">
-          <button class="btn btn-outline" onclick="resetReport()">
-            <i class="fas fa-sync-alt"></i> Reset
-          </button>
-          <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
-            <i class="fas fa-download"></i> Download Report
-          </button>
-        </div>
       </div>
     </div>
     
     <footer>
-      <p>AgroClimate Insight • Data provided by Open-Meteo Historical Weather API</p>
-      <p style="margin-top: 8px; font-size: 0.9rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
+      <p>PlaasRisk • Farm Risk Analysis Platform</p>
+      <p style="margin-top: 8px; font-size: 0.9rem; color: #777;">Developed by Macdonald Makoro: 076-623-2221</p>
     </footer>
   </div>
   
@@ -1453,6 +1401,14 @@
       document.getElementById('gpsToggle').classList.remove('active');
       document.getElementById('locationInput').classList.remove('hidden');
       document.getElementById('gpsInput').classList.add('hidden');
+    });
+    
+    // Toggle report visibility
+    document.getElementById('toggleReport').addEventListener('click', function() {
+      const reportSection = document.getElementById('reportSection');
+      reportSection.classList.toggle('hidden');
+      this.innerHTML = reportSection.classList.contains('hidden') ? 
+        '<i class="fas fa-chart-bar"></i>' : '<i class="fas fa-times"></i>';
     });
     
     // Event handlers for map drawing
@@ -1535,14 +1491,11 @@
     
     // Function to check data availability
     function checkDataAvailability(lat, lng) {
-      const availabilityEl = document.querySelector('.data-availability');
-      if (!availabilityEl) return;
-      
       // Simulate progress
       let progress = 0;
       const interval = setInterval(() => {
         progress += 10;
-        updateProgress('progress', progress, `Checking data availability... ${progress}%`);
+        updateProgress('progress', progress, `Checking data... ${progress}%`);
         
         if (progress >= 100) {
           clearInterval(interval);
@@ -1679,7 +1632,7 @@
         // Create frost indicator
         document.getElementById('frost-indicator-container').innerHTML = `
           <div class="frost-indicator frost-low">
-            <i class="fas fa-exclamation-circle"></i> Low frost risk - suitable for most crops
+            <i class="mdi mdi-snowflake-alert"></i> Low frost risk - suitable for most crops
           </div>
         `;
         
@@ -1967,12 +1920,20 @@
       downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
       downloadBtn.disabled = true;
       
-      // Simulate PDF generation
-      setTimeout(() => {
+      // Create PDF
+      const options = {
+        margin: 10,
+        filename: 'plaasrisk-report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      html2pdf().set(options).from(reportElement).save().then(() => {
         downloadBtn.innerHTML = originalText;
         downloadBtn.disabled = false;
         showNotification("PDF report downloaded!", 'success');
-      }, 1500);
+      });
     }
 
     // Reset report
@@ -2017,6 +1978,11 @@
         }, 100);
       }
     });
+    
+    // Initialize the map properly
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 300);
   </script>
 </body>
 </html>
