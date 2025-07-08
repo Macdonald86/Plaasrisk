@@ -1,2559 +1,954 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Enhanced Farm Climate Analysis</title>
-  
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  
-  <!-- Fonts & Icons -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <style>
-    :root {
-      --primary: #2e7d32;
-      --primary-light: #4caf50;
-      --primary-dark: #1b5e20;
-      --secondary: #388e3c;
-      --accent: #f57c00;
-      --accent-dark: #e65100;
-      --light: #f5f9f5;
-      --light-gray: #f8f9fa;
-      --dark: #2d3748;
-      --text: #333333;
-      --border: #e0e0e0;
-      --success: #4caf50;
-      --warning: #ff9800;
-      --danger: #f44336;
-      --hail-color: #9c27b0;
-      --frost-blue: #1e88e5;
-      --frost-light: #bbdefb;
-      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Poppins', sans-serif;
-    }
-    
-    body {
-      background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 10px;
-      line-height: 1.6;
-      overflow-x: hidden;
-      touch-action: manipulation;
-    }
-    
-    .container {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 0 15px;
-    }
-    
-    .app-container {
-      display: grid;
-      grid-template-columns: 65% 35%;
-      gap: 15px;
-      margin-bottom: 15px;
-      height: calc(100vh - 30px);
-    }
-    
-    @media (max-width: 992px) {
-      .app-container {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
-      
-      .map-section {
-        height: 450px;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .app-container {
-        gap: 10px;
-        height: auto;
-      }
-      
-      .map-section {
-        height: 400px;
-      }
-      
-      .report-section {
-        height: auto;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .map-section {
-        height: 350px;
-      }
-      
-      .app-container {
-        height: auto;
-      }
-    }
-    
-    .map-section, .report-section {
-      background: white;
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-    
-    .map-section {
-      overflow: hidden;
-      height: 100%;
-      position: relative;
-    }
-    
-    #map {
-      height: 100%;
-      z-index: 1;
-      background: #e8f5e9;
-    }
-    
-    .search-box {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-      width: 280px;
-      max-width: calc(100% - 30px);
-      backdrop-filter: blur(5px);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
-      cursor: move;
-    }
-    
-    @media (max-width: 768px) {
-      .search-box {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 15px auto;
-        width: 100%;
-        max-width: 100%;
-        transform: none !important;
-      }
-      
-      .position-indicator {
-        display: none;
-      }
-    }
-    
-    .search-box h2 {
-      font-size: 1.1rem;
-      margin-bottom: 12px;
-      color: var(--primary-dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      position: relative;
-      padding-bottom: 8px;
-    }
-    
-    .search-box h2::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 20px;
-      height: 2px;
-      background: var(--accent);
-    }
-    
-    .data-availability {
-      background: #e8f5e9;
-      padding: 8px 12px;
-      border-radius: 8px;
-      margin-top: 10px;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .data-availability.warning {
-      background: #fff8e1;
-    }
-    
-    .data-availability.error {
-      background: #ffebee;
-    }
-    
-    .data-availability i {
-      color: var(--success);
-    }
-    
-    .data-availability.warning i {
-      color: var(--warning);
-    }
-    
-    .data-availability.error i {
-      color: var(--danger);
-    }
-    
-    .form-group {
-      margin-bottom: 12px;
-      position: relative;
-    }
-    
-    .input-with-icon {
-      position: relative;
-    }
-    
-    .input-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--primary);
-      font-size: 0.95rem;
-    }
-    
-    .form-control {
-      width: 100%;
-      padding: 10px 12px 10px 35px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.9rem;
-      transition: all 0.3s;
-      background: var(--light-gray);
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
-    }
-    
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
-      background: white;
-    }
-    
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s;
-      gap: 8px;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 12px rgba(46, 125, 50, 0.25);
-    }
-    
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--primary);
-      color: var(--primary);
-      font-weight: 500;
-    }
-    
-    .btn-outline:hover {
-      background: rgba(46, 125, 50, 0.08);
-    }
-    
-    .btn-sm {
-      padding: 6px 10px;
-      font-size: 0.8rem;
-    }
-    
-    .btn-block {
-      width: 100%;
-    }
-    
-    .map-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-    
-    .map-actions .btn {
-      flex: 1;
-      min-width: 120px;
-    }
-    
-    @media (max-width: 768px) {
-      .map-actions {
-        flex-direction: column;
-        gap: 8px;
-      }
-      
-      .map-actions .btn {
-        width: 100%;
-        min-width: auto;
-      }
-    }
-    
-    .report-section {
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    
-    .report-header {
-      text-align: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .report-header h2 {
-      font-size: 1.3rem;
-      color: var(--primary-dark);
-      margin-bottom: 5px;
-    }
-    
-    .report-header p {
-      color: #666;
-      font-size: 0.85rem;
-    }
-    
-    .report-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 3px;
-    }
-    
-    .report-card {
-      background: var(--light-gray);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-left: 3px solid var(--primary);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    }
-    
-    .report-card h3 {
-      font-size: 1.1rem;
-      margin-bottom: 12px;
-      color: var(--dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-      margin-bottom: 15px;
-    }
-    
-    @media (max-width: 1200px) {
-      .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .stats-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .stat-card {
-      background: white;
-      border-radius: 10px;
-      padding: 12px;
-      text-align: center;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
-      transition: transform 0.3s, box-shadow 0.3s;
-      border-top: 2px solid var(--primary-light);
-    }
-    
-    .stat-card.frost-stat {
-      border-top: 2px solid var(--frost-blue);
-    }
-    
-    .stat-card.hail-stat {
-      border-top: 2px solid var(--hail-color);
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
-    }
-    
-    .stat-icon {
-      font-size: 1.3rem;
-      margin-bottom: 6px;
-    }
-    
-    .stat-icon.frost {
-      color: var(--frost-blue);
-    }
-    
-    .stat-icon.hail {
-      color: var(--hail-color);
-    }
-    
-    .stat-value {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--primary-dark);
-      margin: 6px 0;
-    }
-    
-    .stat-value.frost {
-      color: var(--frost-blue);
-    }
-    
-    .stat-value.hail {
-      color: var(--hail-color);
-    }
-    
-    .stat-label {
-      color: #666;
-      font-size: 0.8rem;
-    }
-    
-    .chart-container, .monthly-chart-container {
-      position: relative;
-      height: 180px;
-      margin: 10px 0 15px;
-    }
-    
-    .drought-summary {
-      background: #fff8e1;
-      border-radius: 10px;
-      padding: 12px;
-      border-left: 3px solid var(--warning);
-      margin: 12px 0;
-    }
-    
-    .frost-summary {
-      background: #e3f2fd;
-      border-radius: 10px;
-      padding: 12px;
-      border-left: 4px solid var(--frost-blue);
-      margin: 12px 0;
-    }
-    
-    .hail-summary {
-      background: #f3e5f5;
-      border-radius: 10px;
-      padding: 12px;
-      border-left: 3px solid var(--hail-color);
-      margin: 12px 0;
-    }
-    
-    .drought-summary h4, .frost-summary h4, .hail-summary h4 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      font-size: 1rem;
-    }
-    
-    .drought-summary h4 {
-      color: #e65100;
-    }
-    
-    .frost-summary h4 {
-      color: var(--frost-blue);
-    }
-    
-    .hail-summary h4 {
-      color: var(--hail-color);
-    }
-    
-    .drought-years, .frost-years, .hail-years {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-    }
-    
-    .drought-year {
-      background: #ffecb3;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-    
-    .frost-year {
-      background: #bbdefb;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-    
-    .hail-year {
-      background: #e1bee7;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.8rem;
-      font-weight: 500;
-    }
-    
-    .monthly-analysis {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-top: 15px;
-    }
-    
-    @media (max-width: 768px) {
-      .monthly-analysis {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .monthly-card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-      border-top: 3px solid var(--primary-light);
-    }
-    
-    .monthly-card.frost-card {
-      border-top: 3px solid var(--frost-blue);
-    }
-    
-    .monthly-card.hail-card {
-      border-top: 3px solid var(--hail-color);
-    }
-    
-    .monthly-card h4 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 15px;
-      color: var(--dark);
-      font-size: 0.9rem;
-    }
-    
-    .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    
-    @media (max-width: 768px) {
-      .actions {
-        flex-direction: column;
-        gap: 8px;
-      }
-      
-      .actions .btn {
-        width: 100%;
-      }
-    }
-    
-    .hidden {
-      display: none;
-    }
-    
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      flex-direction: column;
-      gap: 15px;
-    }
-    
-    .spinner {
-      width: 35px;
-      height: 35px;
-      border: 4px solid rgba(46, 125, 50, 0.2);
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1.2s linear infinite;
-    }
-    
-    .loading-text {
-      font-size: 1rem;
-      color: var(--dark);
-      text-align: center;
-      font-weight: 500;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    footer {
-      text-align: center;
-      padding: 10px;
-      color: #666;
-      font-size: 0.85rem;
-      background: white;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-    }
-    
-    .notification {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      z-index: 2000;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transform: translateX(200%);
-      transition: transform 0.4s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.9rem;
-    }
-    
-    @media (max-width: 768px) {
-      .notification {
-        top: auto;
-        bottom: 15px;
-        left: 15px;
-        right: 15px;
-        width: calc(100% - 30px);
-      }
-    }
-    
-    .notification.show {
-      transform: translateX(0);
-    }
-    
-    .notification.success {
-      background: var(--success);
-    }
-    
-    .notification.error {
-      background: var(--danger);
-    }
-    
-    .notification.info {
-      background: var(--primary);
-    }
-    
-    .notification.hail {
-      background: var(--hail-color);
-    }
-    
-    .error-message {
-      background: #ffebee;
-      border-radius: 10px;
-      padding: 20px;
-      text-align: center;
-      border-left: 4px solid var(--danger);
-      margin: 20px 0;
-    }
-    
-    .explanation {
-      background: #e8f5e9;
-      border-radius: 10px;
-      padding: 20px;
-      margin: 20px 0;
-      border-left: 4px solid var(--primary);
-    }
-    
-    .explanation h3 {
-      color: var(--primary-dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 15px;
-    }
-    
-    .explanation ul {
-      padding-left: 20px;
-      margin: 15px 0;
-    }
-    
-    .explanation li {
-      margin-bottom: 10px;
-      line-height: 1.5;
-    }
-    
-    .info-icon {
-      background: var(--primary);
-      color: white;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 10px;
-    }
-    
-    .completeness-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-      font-size: 0.9rem;
-    }
-    
-    .completeness-bar {
-      flex-grow: 1;
-      height: 8px;
-      background: #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    
-    .completeness-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 4px;
-    }
-    
-    /* Progress bar styles */
-    .progress-container {
-      width: 100%;
-      margin: 15px 0;
-    }
-    
-    .progress-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-      font-size: 0.85rem;
-      color: var(--dark);
-    }
-    
-    .progress-bar {
-      height: 12px;
-      background: #e0e0e0;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .progress-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 6px;
-      width: 0%;
-      transition: width 0.5s ease;
-    }
-    
-    .progress-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 0.7rem;
-      font-weight: 500;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
-    }
-    
-    /* Status messages */
-    .status-message {
-      background: rgba(255, 255, 255, 0.9);
-      padding: 10px 15px;
-      border-radius: 8px;
-      margin: 10px 0;
-      border-left: 3px solid var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .status-message i {
-      color: var(--primary);
-    }
-    
-    .status-message.warning {
-      border-left-color: var(--warning);
-    }
-    
-    .status-message.warning i {
-      color: var(--warning);
-    }
-    
-    .status-message.error {
-      border-left-color: var(--danger);
-    }
-    
-    .status-message.error i {
-      color: var(--danger);
-    }
-    
-    .status-message.success {
-      border-left-color: var(--success);
-    }
-    
-    .status-message.success i {
-      color: var(--success);
-    }
-    
-    .status-message.hail {
-      border-left-color: var(--hail-color);
-    }
-    
-    .status-message.hail i {
-      color: var(--hail-color);
-    }
-    
-    .search-type-toggle {
-      display: flex;
-      background: var(--light-gray);
-      border-radius: 8px;
-      padding: 4px;
-      margin-bottom: 10px;
-    }
-    
-    .search-type-btn {
-      flex: 1;
-      padding: 6px;
-      text-align: center;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-    }
-    
-    .search-type-btn.active {
-      background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      font-weight: 500;
-      color: var(--primary-dark);
-    }
-    
-    .suggestions-box {
-      position: absolute;
-      width: calc(100% - 30px);
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      max-height: 200px;
-      overflow-y: auto;
-      z-index: 1001;
-      margin-top: 5px;
-      display: none;
-    }
-    
-    .suggestion-item {
-      padding: 10px 15px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.2s;
-    }
-    
-    .suggestion-item:hover {
-      background: var(--light);
-    }
-    
-    .suggestion-item:last-child {
-      border-bottom: none;
-    }
-    
-    /* Added for monthly selector buttons - matching drought-year style */
-    .month-btn {
-      background: #e8f5e9;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      border: none;
-      cursor: pointer;
-      margin: 0 2px 5px 0;
-      transition: all 0.2s;
-    }
-    
-    .month-btn:hover {
-      background: #c8e6c9;
-    }
-    
-    .month-btn.active {
-      background: var(--primary);
-      color: white;
-    }
-    
-    .month-selector {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 15px;
-    }
-    
-    /* Draggable cursor */
-    .draggable {
-      cursor: move;
-    }
-    
-    /* Reduced font size for report preview */
-    .report-preview-text {
-      font-size: 0.85rem;
-      margin: 10px 0;
-      color: #555;
-      line-height: 1.6;
-    }
-    
-    .report-preview-list {
-      margin: 10px 0 10px 18px;
-      font-size: 0.85rem;
-    }
-    
-    .report-preview-list li {
-      margin-bottom: 8px;
-    }
-    
-    /* Positioning indicator */
-    .position-indicator {
-      position: absolute;
-      bottom: 5px;
-      right: 5px;
-      font-size: 0.7rem;
-      color: #888;
-      background: rgba(255, 255, 255, 0.7);
-      padding: 2px 5px;
-      border-radius: 3px;
-    }
-    
-    /* Enhanced Risk Rating Styles */
-    .risk-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-      margin: 15px 0;
-    }
-    
-    @media (max-width: 1200px) {
-      .risk-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-      
-      .risk-overall {
-        grid-column: span 3;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .risk-grid {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto auto;
-      }
-      
-      .risk-overall {
-        grid-column: span 2;
-      }
-    }
-    
-    .risk-category {
-      text-align: center;
-      padding: 12px;
-      border-radius: 10px;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    
-    .risk-category.frost {
-      border-top: 3px solid var(--frost-blue);
-    }
-    
-    .risk-category.hail {
-      border-top: 3px solid var(--hail-color);
-    }
-    
-    .risk-category-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #555;
-    }
-    
-    .risk-category-value {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin: 5px 0;
-    }
-    
-    .risk-category-label {
-      font-size: 0.75rem;
-      padding: 3px 8px;
-      border-radius: 12px;
-      display: inline-block;
-    }
-    
-    .risk-overall {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 10px;
-    }
-    
-    .risk-overall-value {
-      font-size: 2.8rem;
-      font-weight: 800;
-      margin: 5px 0;
-    }
-    
-    .risk-overall-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-top: 5px;
-    }
-    
-    /* Rating Scale Section */
-    .rating-scale-container {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin: 20px 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      border-left: 4px solid #1e88e5;
-    }
-    
-    .rating-scale-container h3 {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      color: #1e88e5;
-    }
-    
-    .rating-scale-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
-    }
-    
-    .rating-scale-item {
-      background: #f8f9fa;
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      border-left: 4px solid #ccc;
-    }
-    
-    .rating-scale-item.low-risk {
-      border-left-color: #4caf50;
-    }
-    
-    .rating-scale-item.moderate-risk {
-      border-left-color: #ff9800;
-    }
-    
-    .rating-scale-item.high-risk {
-      border-left-color: #f44336;
-    }
-    
-    .rating-scale-item.hail-risk {
-      border-left-color: var(--hail-color);
-    }
-    
-    .rating-scale-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 8px 0;
-    }
-    
-    .rating-scale-label {
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    
-    .rating-scale-description {
-      font-size: 0.85rem;
-      color: #555;
-    }
-    
-    /* Risk Rating Scale Table */
-    .rating-scale-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .rating-scale-table th {
-      background-color: #e8f5e9;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    
-    .rating-scale-table td {
-      padding: 12px;
-      border-bottom: 1px solid #e0e0e0;
-      font-size: 0.9rem;
-    }
-    
-    .rating-scale-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .rating-scale-table tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-    
-    .risk-level-low {
-      background-color: #e8f5e9 !important;
-      color: #2e7d32;
-      font-weight: 600;
-    }
-    
-    .risk-level-moderate {
-      background-color: #fff8e1 !important;
-      color: #e65100;
-      font-weight: 600;
-    }
-    
-    .risk-level-high {
-      background-color: #ffebee !important;
-      color: #d32f2f;
-      font-weight: 600;
-    }
-    
-    .risk-level-hail {
-      background-color: #f3e5f5 !important;
-      color: #7b1fa2;
-      font-weight: 600;
-    }
-    
-    /* Mobile menu button */
-    .mobile-menu-toggle {
-      display: none;
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      z-index: 1010;
-      background: white;
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      border: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      cursor: pointer;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 5px;
-    }
-    
-    .mobile-menu-toggle span {
-      display: block;
-      width: 22px;
-      height: 2px;
-      background: var(--primary);
-      border-radius: 1px;
-      transition: all 0.3s;
-    }
-    
-    @media (max-width: 768px) {
-      .mobile-menu-toggle {
-        display: flex;
-      }
-      
-      .search-box {
-        top: -1000px;
-        transition: top 0.3s ease;
-      }
-      
-      .search-box.mobile-visible {
-        top: 70px;
-      }
-    }
-    
-    /* Touch-friendly adjustments */
-    .btn, .month-btn, .drought-year, .frost-year, .hail-year {
-      min-height: 44px;
-      touch-action: manipulation;
-    }
-    
-    .form-control {
-      min-height: 44px;
-    }
-    
-    /* Zoom prevention for iOS */
-    input, textarea, select {
-      font-size: 16px;
-    }
-    
-    /* Fix for mobile viewport */
-    @media (max-width: 768px) {
-      body, html {
-        overflow: auto;
-        height: auto;
-      }
-    }
-    
-    /* Enhanced expert commentary styles */
-    .commentary-card {
-      background: #f0f7ff;
-      border-radius: 12px;
-      padding: 20px;
-      margin: 20px 0;
-      border-left: 4px solid #1e88e5;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    
-    .commentary-card h3 {
-      color: #1e88e5;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    
-    .commentary-content {
-      line-height: 1.7;
-    }
-    
-    .commentary-content p {
-      margin-bottom: 12px;
-    }
-    
-    .commentary-content ul {
-      padding-left: 25px;
-      margin-bottom: 15px;
-    }
-    
-    .commentary-content li {
-      margin-bottom: 8px;
-    }
-    
-    .highlight-month {
-      font-weight: 600;
-      color: #1e88e5;
-    }
-    
-    .crop-recommendations {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    .crop-tag {
-      background: #e8f5e9;
-      padding: 5px 12px;
-      border-radius: 16px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      border: 1px solid #c8e6c9;
-    }
-    
-    .crop-tag.high-risk {
-      background: #ffebee;
-      border-color: #ffcdd2;
-    }
-    
-    .crop-tag.moderate-risk {
-      background: #fff8e1;
-      border-color: #ffecb3;
-    }
-    
-    .crop-tag.hail-risk {
-      background: #f3e5f5;
-      border-color: #ce93d8;
-    }
-    
-    .commentary-section {
-      margin-bottom: 25px;
-    }
-    
-    .commentary-section h4 {
-      margin-bottom: 10px;
-      color: #1a237e;
-      padding-bottom: 5px;
-      border-bottom: 1px dashed #bbdefb;
-    }
-    
-    /* Frost-specific styles */
-    .frost-indicator {
-      background: #e3f2fd;
-      border-radius: 10px;
-      padding: 12px;
-      margin: 12px 0;
-      border-left: 4px solid var(--frost-blue);
-    }
-    
-    .frost-indicator h4 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      color: var(--frost-blue);
-    }
-    
-    .frost-severity {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    
-    .frost-severity-bar {
-      height: 8px;
-      flex-grow: 1;
-      background: #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    
-    .frost-severity-fill {
-      height: 100%;
-      background: var(--frost-blue);
-      border-radius: 4px;
-    }
-    
-    .frost-risk-map {
-      height: 200px;
-      background: #e3f2fd;
-      border-radius: 10px;
-      margin: 15px 0;
-      position: relative;
-      overflow: hidden;
-      border: 1px solid #bbdefb;
-    }
-    
-    .frost-risk-map-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(to bottom, rgba(30, 136, 229, 0.1), rgba(30, 136, 229, 0.4));
-    }
-    
-    .frost-risk-map-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.9);
-      padding: 8px 15px;
-      border-radius: 20px;
-      font-weight: 600;
-      color: #0d47a1;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .frost-risk-categories {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    .frost-category {
-      padding: 12px;
-      border-radius: 8px;
-      text-align: center;
-      font-weight: 500;
-      font-size: 0.9rem;
-    }
-    
-    .frost-category.low {
-      background: rgba(30, 136, 229, 0.1);
-      border: 1px solid rgba(30, 136, 229, 0.3);
-    }
-    
-    .frost-category.medium {
-      background: rgba(30, 136, 229, 0.3);
-      border: 1px solid rgba(30, 136, 229, 0.5);
-    }
-    
-    .frost-category.high {
-      background: rgba(30, 136, 229, 0.5);
-      border: 1px solid rgba(30, 136, 229, 0.7);
-      color: white;
-    }
-    
-    .frost-timeline {
-      display: flex;
-      height: 60px;
-      margin: 15px 0;
-      position: relative;
-    }
-    
-    .frost-timeline-period {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-    }
-    
-    .frost-timeline-bar {
-      width: 60%;
-      border-radius: 3px 3px 0 0;
-      background: #1e88e5;
-    }
-    
-    .frost-timeline-label {
-      margin-top: 5px;
-      font-size: 0.7rem;
-      text-align: center;
-    }
-    
-    .frost-comparison {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin: 15px 0;
-    }
-    
-    .frost-comparison-item {
-      padding: 15px;
-      border-radius: 10px;
-      background: #e3f2fd;
-      text-align: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .frost-comparison-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 5px 0;
-      color: #0d47a1;
-    }
-    
-    .frost-comparison-label {
-      font-size: 0.85rem;
-      color: #1565c0;
-    }
-    
-    .protection-recommendations .frost-protection {
-      border-left: 4px solid #1e88e5;
-    }
-    
-    .crop-frost-tolerance {
-      margin: 20px 0;
-    }
-    
-    .tolerance-scale {
-      display: flex;
-      height: 30px;
-      background: linear-gradient(to right, #e3f2fd, #bbdefb, #90caf9, #64b5f6, #42a5f5, #2196f3, #1e88e5, #1976d2, #1565c0);
-      border-radius: 15px;
-      overflow: hidden;
-      position: relative;
-      margin: 10px 0;
-    }
-    
-    .tolerance-marker {
-      position: absolute;
-      top: -5px;
-      width: 2px;
-      height: 40px;
-      background: #333;
-    }
-    
-    .tolerance-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.8rem;
-      margin-top: 5px;
-    }
-    
-    .tolerance-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    .tolerance-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 0.85rem;
-    }
-    
-    .tolerance-color {
-      width: 15px;
-      height: 15px;
-      border-radius: 3px;
-    }
-    
-    /* Frost protection recommendations */
-    .protection-item {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 20px;
-      padding: 15px;
-      border-radius: 10px;
-      background: #f8f9fa;
-    }
-    
-    .protection-icon {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: white;
-      font-size: 1.5rem;
-    }
-    
-    .protection-content {
-      flex: 1;
-    }
-    
-    .protection-content h4 {
-      margin-top: 0;
-      margin-bottom: 8px;
-      color: var(--dark);
-    }
-    
-    .protection-content p {
-      margin: 0;
-      color: #555;
-      font-size: 0.9rem;
-    }
-    
-    .protection-item.frost-protection .protection-icon {
-      background: #1e88e5;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Climate Risk Analysis | Advanced Tool</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-light: #4caf50;
+            --primary-dark: #1b5e20;
+            --secondary: #388e3c;
+            --accent: #f57c00;
+            --accent-dark: #e65100;
+            --light: #f5f9f5;
+            --light-gray: #f8f9fa;
+            --dark: #2d3748;
+            --text: #333333;
+            --border: #e0e0e0;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --drought-color: #ff9800;
+            --rain-color: #2196f3;
+            --frost-color: #1e88e5;
+            --hail-color: #9c27b0;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 10px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+        
+        header h1 {
+            color: var(--primary-dark);
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            color: var(--text);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 992px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            height: 550px;
+        }
+        
+        #map-container {
+            position: relative;
+        }
+        
+        #map {
+            height: 100%;
+            z-index: 1;
+            background: #e8f5e9;
+        }
+        
+        .map-controls {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            width: 280px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .map-controls h2 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        .input-with-icon {
+            position: relative;
+        }
+        
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 12px 10px 35px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            background: var(--light-gray);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+            background: white;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            gap: 8px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(46, 125, 50, 0.25);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .btn-outline:hover {
+            background: rgba(46, 125, 50, 0.08);
+        }
+        
+        .map-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .map-actions .btn {
+            flex: 1;
+        }
+        
+        .risk-indicators {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .risk-indicator {
+            flex: 1;
+            min-width: 120px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            border-top: 3px solid var(--primary);
+        }
+        
+        .risk-indicator.drought {
+            border-top-color: var(--drought-color);
+        }
+        
+        .risk-indicator.rain {
+            border-top-color: var(--rain-color);
+        }
+        
+        .risk-indicator.frost {
+            border-top-color: var(--frost-color);
+        }
+        
+        .risk-indicator.hail {
+            border-top-color: var(--hail-color);
+        }
+        
+        .risk-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+        
+        .risk-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .report-section {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .report-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .report-header h2 {
+            font-size: 1.5rem;
+            color: var(--primary-dark);
+            margin-bottom: 5px;
+        }
+        
+        .report-card {
+            background: var(--light-gray);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        
+        .report-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin: 20px 0;
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .analysis-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .analysis-card.drought {
+            border-top: 4px solid var(--drought-color);
+        }
+        
+        .analysis-card.rain {
+            border-top: 4px solid var(--rain-color);
+        }
+        
+        .analysis-card.frost {
+            border-top: 4px solid var(--frost-color);
+        }
+        
+        .analysis-card.hail {
+            border-top: 4px solid var(--hail-color);
+        }
+        
+        .analysis-card h4 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .expert-commentary {
+            background: #f0f7ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #1e88e5;
+        }
+        
+        .expert-commentary h3 {
+            color: #1e88e5;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .recommendations {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .recommendations {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .recommendation-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .recommendation-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .recommendation-card.drought h4 {
+            color: var(--drought-color);
+        }
+        
+        .recommendation-card.rain h4 {
+            color: var(--rain-color);
+        }
+        
+        .recommendation-card.frost h4 {
+            color: var(--frost-color);
+        }
+        
+        .recommendation-card.hail h4 {
+            color: var(--hail-color);
+        }
+        
+        .years-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .year-tag {
+            background: #e8f5e9;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .year-tag.drought {
+            background: #fff3e0;
+        }
+        
+        .year-tag.rain {
+            background: #e3f2fd;
+        }
+        
+        .year-tag.frost {
+            background: #e1f5fe;
+        }
+        
+        .year-tag.hail {
+            background: #f3e5f5;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-top: 20px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateX(200%);
+            transition: transform 0.4s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: var(--success);
+        }
+        
+        .notification.error {
+            background: var(--danger);
+        }
+        
+        .notification.info {
+            background: var(--primary);
+        }
+        
+        .tabs {
+            display: flex;
+            background: var(--light-gray);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .tab.active {
+            background: white;
+            color: var(--primary-dark);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .panel {
+                height: 450px;
+            }
+            
+            .map-controls {
+                position: relative;
+                top: auto;
+                left: auto;
+                width: 100%;
+                margin-bottom: 15px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="app-container">
-      <div class="map-section">
-        <button class="mobile-menu-toggle" id="mobileMenuToggle">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-seedling"></i> Agricultural Climate Risk Analysis</h1>
+            <p>Comprehensive risk assessment for drought, excessive rainfall, frost, and hail</p>
+        </header>
         
-        <div class="search-box draggable" id="searchBox">
-          <div class="position-indicator" id="positionIndicator">Position: 15px, 15px</div>
-          <h2>
-            <i class="fas fa-map-marker-alt"></i>
-            Farm Location
-          </h2>
-          
-          <div class="search-type-toggle">
-            <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
-            <div class="search-type-btn" id="locationToggle">Location Name</div>
-          </div>
-          
-          <div class="form-group">
-            <div class="input-with-icon">
-              <i class="fas fa-search input-icon"></i>
-              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
-              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
-            </div>
-          </div>
-          
-          <div id="suggestions" class="suggestions-box"></div>
-          
-          <div id="data-availability" class="data-availability">
-            <i class="fas fa-info-circle"></i>
-            <span>Data availability: Select a location</span>
-          </div>
-          
-          <button class="btn btn-primary" onclick="searchLocation()">
-            <i class="fas fa-search-location btn-icon"></i> Search
-          </button>
-          
-          <div class="map-actions">
-            <button class="btn btn-outline" onclick="resetMap()">
-              <i class="fas fa-trash-alt btn-icon"></i> Clear Map
-            </button>
-            <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
-              <i class="fas fa-chart-line btn-icon"></i> Analyze
-            </button>
-            <button class="btn btn-outline btn-sm" id="dropPinBtn" onclick="activatePinMode()">
-              <i class="fas fa-map-pin"></i> Drop Pin
-            </button>
-          </div>
-          
-          <!-- Data Fetching Progress Bar -->
-          <div class="progress-container">
-            <div class="progress-header">
-              <span>Data Retrieval</span>
-              <span id="progress-percentage">0%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progress-fill"></div>
-              <div class="progress-label" id="progress-label">Starting</div>
-            </div>
-          </div>
-        </div>
-        <div id="map"></div>
-      </div>
-      
-      <div class="report-section">
-        <div class="report-header">
-          <h2>Comprehensive Climate Report</h2>
-          <p>Detailed analysis with enhanced frost risk assessment</p>
-        </div>
-        
-        <div class="report-content">
-          <div id="report-placeholder">
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-file-alt"></i>
-                Report Preview
-              </h3>
-              <p class="report-preview-text">Draw your farm boundaries on the map or search for a location to generate a comprehensive climate report using real historical data.</p>
-              <p class="report-preview-text">The enhanced report includes:</p>
-              <ul class="report-preview-list">
-                <li>Annual rainfall and frost day analysis</li>
-                <li>Monthly climate patterns visualization</li>
-                <li>Detailed frost risk assessment</li>
-                <li>Drought year identification</li>
-                <li>Detailed seasonal insights</li>
-                <li>Advanced hail risk assessment model</li>
-                <li>Comprehensive risk rating scale</li>
-                <li>Frost protection recommendations</li>
-              </ul>
-              <div style="text-align: center; margin: 20px 0 12px;">
-                <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
-                  <i class="fas fa-snowflake"></i>
-                </div>
-                <p style="color: #888; font-size: 0.85rem;">Your detailed climate analysis will appear here</p>
-              </div>
-            </div>
-          </div>
-          
-          <div id="report" class="hidden">
-            <!-- Location details section -->
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-map-marked-alt"></i>
-                Location Details
-              </h3>
-              <p id="location-text"></p>
-              <p id="data-status" style="margin-top: 8px; font-size: 0.9rem;"></p>
-              
-              <div class="completeness-indicator" id="completeness-container">
-                <span>Data Completeness:</span>
-                <div class="completeness-bar">
-                  <div class="completeness-fill" id="completeness-bar"></div>
-                </div>
-                <span id="completeness-value">0%</span>
-              </div>
-            </div>
-            
-            <!-- Risk rating section -->
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-exclamation-triangle"></i>
-                Climate Risk Rating
-              </h3>
-              <div class="risk-grid">
-                <div class="risk-category">
-                  <div class="risk-category-title">Frost Risk</div>
-                  <div class="risk-category-value">4.2</div>
-                  <div class="risk-category-label" style="background: #e3f2fd; color: #0d47a1;">Moderate</div>
-                </div>
-                <div class="risk-category">
-                  <div class="risk-category-title">Hail Risk</div>
-                  <div class="risk-category-value">2.8</div>
-                  <div class="risk-category-label" style="background: #f3e5f5; color: #7b1fa2;">Low</div>
-                </div>
-                <div class="risk-category">
-                  <div class="risk-category-title">Drought Risk</div>
-                  <div class="risk-category-value">3.5</div>
-                  <div class="risk-category-label" style="background: #fff8e1; color: #e65100;">Moderate</div>
-                </div>
-                <div class="risk-category">
-                  <div class="risk-category-title">Heat Stress</div>
-                  <div class="risk-category-value">1.9</div>
-                  <div class="risk-category-label" style="background: #e8f5e9; color: #2e7d32;">Low</div>
-                </div>
-                <div class="risk-overall">
-                  <div class="risk-overall-value">3.1</div>
-                  <div class="risk-overall-title">Overall Risk Rating</div>
-                  <div class="risk-category-label" style="background: #fff8e1; color: #e65100;">Moderate</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Detailed Frost Analysis Section -->
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-snowflake"></i>
-                Detailed Frost Risk Analysis
-              </h3>
-              
-              <div class="frost-comparison">
-                <div class="frost-comparison-item">
-                  <div class="frost-comparison-value" id="frost-days">12</div>
-                  <div class="frost-comparison-label">Annual Frost Days</div>
-                </div>
-                <div class="frost-comparison-item">
-                  <div class="frost-comparison-value" id="min-temp">-5.2°C</div>
-                  <div class="frost-comparison-label">Record Low Temperature</div>
-                </div>
-              </div>
-              
-              <div class="frost-risk-map">
-                <div class="frost-risk-map-overlay"></div>
-                <div class="frost-risk-map-label">Moderate Frost Risk Area</div>
-              </div>
-              
-              <div class="frost-risk-categories">
-                <div class="frost-category low">
-                  <div>Low Risk</div>
-                  <div>0-5 days/year</div>
-                </div>
-                <div class="frost-category medium">
-                  <div>Medium Risk</div>
-                  <div>6-15 days/year</div>
-                </div>
-                <div class="frost-category high">
-                  <div>High Risk</div>
-                  <div>16+ days/year</div>
-                </div>
-              </div>
-              
-              <h4 style="margin-top: 20px;">Frost Occurrence Timeline</h4>
-              <div class="frost-timeline" id="frost-timeline">
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 20px;"></div>
-                  <div class="frost-timeline-label">Jan</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 40px;"></div>
-                  <div class="frost-timeline-label">Feb</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 35px;"></div>
-                  <div class="frost-timeline-label">Mar</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 25px;"></div>
-                  <div class="frost-timeline-label">Apr</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 5px;"></div>
-                  <div class="frost-timeline-label">May</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 0px;"></div>
-                  <div class="frost-timeline-label">Jun</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 0px;"></div>
-                  <div class="frost-timeline-label">Jul</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 0px;"></div>
-                  <div class="frost-timeline-label">Aug</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 0px;"></div>
-                  <div class="frost-timeline-label">Sep</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 8px;"></div>
-                  <div class="frost-timeline-label">Oct</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 18px;"></div>
-                  <div class="frost-timeline-label">Nov</div>
-                </div>
-                <div class="frost-timeline-period">
-                  <div class="frost-timeline-bar" style="height: 30px;"></div>
-                  <div class="frost-timeline-label">Dec</div>
-                </div>
-              </div>
-              
-              <div class="frost-summary">
-                <h4>
-                  <i class="fas fa-temperature-low"></i>
-                  Frost Risk Analysis
-                </h4>
-                <p id="frost-summary">This location experiences 12 frost days annually on average, with the highest risk during winter months. Frost events are most frequent in February and December.</p>
-                <div id="frost-indicator-container">
-                  <div class="frost-severity">
-                    <div>Frost Severity: Moderate</div>
-                    <div class="frost-severity-bar">
-                      <div class="frost-severity-fill" style="width: 60%"></div>
+        <div class="app-container">
+            <div class="panel" id="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <h2><i class="fas fa-map-marker-alt"></i> Farm Location</h2>
+                    
+                    <div class="form-group">
+                        <div class="input-with-icon">
+                            <i class="fas fa-search input-icon"></i>
+                            <input type="text" id="locationInput" class="form-control" placeholder="Enter location or coordinates">
+                        </div>
                     </div>
-                    <div>12 max freezing days in a year</div>
-                  </div>
+                    
+                    <div class="map-actions">
+                        <button class="btn btn-outline" onclick="resetMap()">
+                            <i class="fas fa-trash-alt"></i> Clear
+                        </button>
+                        <button class="btn btn-primary" onclick="searchLocation()">
+                            <i class="fas fa-search-location"></i> Search
+                        </button>
+                    </div>
+                    
+                    <div class="risk-indicators">
+                        <div class="risk-indicator drought">
+                            <div class="risk-value">3.8</div>
+                            <div class="risk-label">Drought Risk</div>
+                        </div>
+                        <div class="risk-indicator rain">
+                            <div class="risk-value">4.2</div>
+                            <div class="risk-label">Rain Risk</div>
+                        </div>
+                        <div class="risk-indicator frost">
+                            <div class="risk-value">2.5</div>
+                            <div class="risk-label">Frost Risk</div>
+                        </div>
+                        <div class="risk-indicator hail">
+                            <div class="risk-value">1.9</div>
+                            <div class="risk-label">Hail Risk</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="frost-years" id="frost-years">
-                  <div class="frost-year">2015</div>
-                  <div class="frost-year">2017</div>
-                  <div class="frost-year">2019</div>
-                  <div class="frost-year">2021</div>
-                </div>
-              </div>
-              
-              <div class="crop-frost-tolerance">
-                <h4>
-                  <i class="fas fa-seedling"></i>
-                  Crop Frost Tolerance Guide
-                </h4>
-                <p>This scale shows the relative frost tolerance of common crops:</p>
-                
-                <div class="tolerance-scale">
-                  <div class="tolerance-marker" style="left: 10%;"></div>
-                  <div class="tolerance-marker" style="left: 30%;"></div>
-                  <div class="tolerance-marker" style="left: 50%;"></div>
-                  <div class="tolerance-marker" style="left: 70%;"></div>
-                  <div class="tolerance-marker" style="left: 90%;"></div>
-                </div>
-                
-                <div class="tolerance-labels">
-                  <span>Very Sensitive</span>
-                  <span>Sensitive</span>
-                  <span>Moderate</span>
-                  <span>Tolerant</span>
-                  <span>Very Tolerant</span>
-                </div>
-                
-                <div class="tolerance-legend">
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #e3f2fd;"></div>
-                    <span>Tomatoes, Peppers</span>
-                  </div>
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #bbdefb;"></div>
-                    <span>Beans, Squash</span>
-                  </div>
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #90caf9;"></div>
-                    <span>Potatoes, Peas</span>
-                  </div>
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #64b5f6;"></div>
-                    <span>Carrots, Broccoli</span>
-                  </div>
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #42a5f5;"></div>
-                    <span>Lettuce, Spinach</span>
-                  </div>
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #2196f3;"></div>
-                    <span>Onions, Garlic</span>
-                  </div>
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #1e88e5;"></div>
-                    <span>Cabbage, Kale</span>
-                  </div>
-                  <div class="tolerance-item">
-                    <div class="tolerance-color" style="background: #1976d2;"></div>
-                    <span>Winter Wheat</span>
-                  </div>
-                </div>
-              </div>
             </div>
             
-            <!-- Enhanced Expert Commentary -->
-            <div class="commentary-card">
-              <h3>
-                <i class="fas fa-comment-alt"></i>
-                Expert Commentary
-              </h3>
-              <div id="expert-commentary" class="commentary-content">
-                <div class="commentary-section">
-                  <h4>Comprehensive Frost Risk Analysis</h4>
-                  <p>This region experiences <strong>12 frost days</strong> annually on average, classified as <strong>moderate risk</strong>. Frost events primarily occur during February, March, April, November, and December, with the highest risk in January through March.</p>
-                  
-                  <p>The record low temperature of <strong>-5.2°C</strong> indicates potential for severe frost damage. Our analysis shows 4 significant frost years in the past 10 years, representing 40% of years analyzed.</p>
+            <div class="panel">
+                <div class="report-section">
+                    <div class="report-header">
+                        <h2>Climate Risk Analysis Report</h2>
+                        <p>Detailed assessment for [-25.0, 30.0] - South Africa</p>
+                    </div>
+                    
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('overview')">Overview</div>
+                        <div class="tab" onclick="switchTab('drought')">Drought</div>
+                        <div class="tab" onclick="switchTab('rain')">Excessive Rain</div>
+                        <div class="tab" onclick="switchTab('frost')">Frost</div>
+                        <div class="tab" onclick="switchTab('hail')">Hail</div>
+                    </div>
+                    
+                    <div class="tab-content active" id="overview-tab">
+                        <div class="report-card">
+                            <h3><i class="fas fa-chart-line"></i> Climate Risk Summary</h3>
+                            <div class="chart-container">
+                                <canvas id="riskComparisonChart"></canvas>
+                            </div>
+                            <p>This location experiences moderate drought risk and significant excessive rainfall risk during certain seasons. Frost risk is low while hail risk is minimal.</p>
+                        </div>
+                        
+                        <div class="analysis-grid">
+                            <div class="analysis-card drought">
+                                <h4><i class="fas fa-sun"></i> Drought Analysis</h4>
+                                <p>Drought occurs every 4-5 years on average. Most severe drought years:</p>
+                                <div class="years-container">
+                                    <div class="year-tag drought">2015</div>
+                                    <div class="year-tag drought">2017</div>
+                                    <div class="year-tag drought">2019</div>
+                                    <div class="year-tag drought">2021</div>
+                                </div>
+                            </div>
+                            
+                            <div class="analysis-card rain">
+                                <h4><i class="fas fa-cloud-rain"></i> Excessive Rainfall</h4>
+                                <p>Heavy rainfall events are increasing in frequency. Significant flood years:</p>
+                                <div class="years-container">
+                                    <div class="year-tag rain">2016</div>
+                                    <div class="year-tag rain">2018</div>
+                                    <div class="year-tag rain">2020</div>
+                                    <div class="year-tag rain">2022</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="drought-tab">
+                        <div class="report-card">
+                            <h3><i class="fas fa-sun"></i> Drought Risk Analysis</h3>
+                            <div class="chart-container">
+                                <canvas id="droughtChart"></canvas>
+                            </div>
+                            
+                            <div class="expert-commentary">
+                                <h3><i class="fas fa-comment"></i> Expert Commentary</h3>
+                                <p>This region experiences moderate drought risk with significant events occurring every 4-5 years. The most vulnerable period is from August to November when soil moisture is typically lowest. Climate models suggest drought frequency may increase by 15-20% over the next decade.</p>
+                                <p>Maize and soybean crops are most affected during drought years, with yield reductions of 25-40% observed in severe cases. Soil types in this region have moderate water retention capacity, which somewhat mitigates drought impact during short dry spells.</p>
+                            </div>
+                            
+                            <div class="recommendations">
+                                <div class="recommendation-card drought">
+                                    <h4><i class="fas fa-tint"></i> Water Management</h4>
+                                    <p>Implement drip irrigation systems to reduce water usage by 30-50%. Collect rainwater during wet seasons for use during dry periods. Schedule irrigation during early morning or evening to minimize evaporation.</p>
+                                </div>
+                                
+                                <div class="recommendation-card drought">
+                                    <h4><i class="fas fa-leaf"></i> Crop Selection</h4>
+                                    <p>Plant drought-resistant varieties like sorghum, millet, and cowpeas. Use short-season varieties that mature before peak drought periods. Rotate crops to maintain soil health and moisture retention.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="rain-tab">
+                        <div class="report-card">
+                            <h3><i class="fas fa-cloud-showers-heavy"></i> Excessive Rainfall Analysis</h3>
+                            <div class="chart-container">
+                                <canvas id="rainChart"></canvas>
+                            </div>
+                            
+                            <div class="expert-commentary">
+                                <h3><i class="fas fa-comment"></i> Expert Commentary</h3>
+                                <p>This region receives an average of 850mm rainfall annually, with 20% of years experiencing excessive rainfall events. The most vulnerable period is from December to March when tropical systems can bring intense rainfall. Flooding risk has increased by 12% over the past 20 years.</p>
+                                <p>Excessive rainfall causes soil erosion, nutrient leaching, and increased disease pressure. Low-lying fields are particularly vulnerable to waterlogging, which can reduce oxygen availability to roots and cause crop losses of 15-30%.</p>
+                            </div>
+                            
+                            <div class="recommendations">
+                                <div class="recommendation-card rain">
+                                    <h4><i class="fas fa-water"></i> Drainage Solutions</h4>
+                                    <p>Install subsurface drainage systems in vulnerable fields. Create contour drains to redirect excess water. Build raised beds for sensitive crops. Maintain drainage ditches before rainy seasons.</p>
+                                </div>
+                                
+                                <div class="recommendation-card rain">
+                                    <h4><i class="fas fa-shield-alt"></i> Crop Protection</h4>
+                                    <p>Plant cover crops to reduce soil erosion. Apply fungicides preventatively before heavy rains. Select flood-tolerant varieties like rice or taro for low-lying areas. Implement no-till farming to improve soil structure.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="frost-tab">
+                        <div class="report-card">
+                            <h3><i class="fas fa-snowflake"></i> Frost Risk Analysis</h3>
+                            <div class="chart-container">
+                                <canvas id="frostChart"></canvas>
+                            </div>
+                            
+                            <div class="expert-commentary">
+                                <h3><i class="fas fa-comment"></i> Expert Commentary</h3>
+                                <p>Frost occurs primarily from May to August, with an average of 8 frost days per year. The most severe frost events happen during temperature inversions when clear skies allow rapid heat loss. Sensitive crops like tomatoes and peppers can experience 50-100% damage during unexpected frost events.</p>
+                                <p>Frost risk is increasing due to changing climate patterns, with later autumn frosts and earlier spring frosts disrupting traditional growing seasons. Microclimate variations can create frost pockets where temperatures are 2-4°C colder than surrounding areas.</p>
+                            </div>
+                            
+                            <div class="recommendations">
+                                <div class="recommendation-card frost">
+                                    <h4><i class="fas fa-wind"></i> Frost Protection</h4>
+                                    <p>Use wind machines to disrupt temperature inversions. Install overhead irrigation to create protective ice coating. Cover sensitive crops with frost cloths. Apply anti-transpirants to reduce moisture loss from plants.</p>
+                                </div>
+                                
+                                <div class="recommendation-card frost">
+                                    <h4><i class="fas fa-tree"></i> Crop Management</h4>
+                                    <p>Plant frost-tolerant varieties on slopes where cold air drains away. Delay planting until after last frost dates. Use thermal belts for sensitive crops. Apply potassium-rich fertilizers to increase plant hardiness.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="hail-tab">
+                        <div class="report-card">
+                            <h3><i class="fas fa-cloud-meatball"></i> Hail Risk Analysis</h3>
+                            <div class="chart-container">
+                                <canvas id="hailChart"></canvas>
+                            </div>
+                            
+                            <div class="expert-commentary">
+                                <h3><i class="fas fa-comment"></i> Expert Commentary</h3>
+                                <p>Hail events occur primarily during spring thunderstorms, with an average of 1-2 significant events per year. The most vulnerable period is from September to November when crops are in vulnerable growth stages. Hail damage can reduce yields by 20-100% depending on storm intensity and crop development stage.</p>
+                                <p>Hail risk is concentrated in specific corridors where topography enhances thunderstorm development. Hailstones larger than 2cm in diameter can cause significant damage to fruits, vegetables, and field crops.</p>
+                            </div>
+                            
+                            <div class="recommendations">
+                                <div class="recommendation-card hail">
+                                    <h4><i class="fas fa-shield-alt"></i> Physical Protection</h4>
+                                    <p>Install hail nets over high-value crops. Build protective structures for sensitive crops. Use crop insurance to mitigate financial losses. Time plantings to avoid vulnerable stages during peak hail seasons.</p>
+                                </div>
+                                
+                                <div class="recommendation-card hail">
+                                    <h4><i class="fas fa-cloud-sun"></i> Weather Monitoring</h4>
+                                    <p>Subscribe to hail warning services. Monitor radar during thunderstorm season. Develop emergency response plans for hail events. Plant cover crops to protect soil from hail impact erosion.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="commentary-section">
-                  <h4>Frost Impact on Agriculture</h4>
-                  <p>Frost can cause significant damage to crops at different growth stages:</p>
-                  <ul>
-                    <li><strong>Seedlings</strong> are most vulnerable to frost damage with temperatures below 2°C</li>
-                    <li><strong>Flowering crops</strong> can experience blossom damage at temperatures below 0°C</li>
-                    <li><strong>Fruit development</strong> stages are sensitive to temperatures below -2°C</li>
-                    <li><strong>Root crops</strong> can withstand brief frosts but suffer from extended freezing</li>
-                  </ul>
-                  <p>The most vulnerable periods for your region are February and March when crops are transitioning between growth stages.</p>
-                </div>
-                
-                <div class="commentary-section">
-                  <h4>Crop-Specific Frost Tolerance</h4>
-                  <p>Different crops have varying tolerance to frost conditions:</p>
-                  <ul>
-                    <li><strong>Highly Tolerant (-8°C to -12°C):</strong> Winter wheat, kale, collards, Brussels sprouts</li>
-                    <li><strong>Moderately Tolerant (-4°C to -7°C):</strong> Carrots, beets, broccoli, cabbage</li>
-                    <li><strong>Slightly Tolerant (-2°C to -3°C):</strong> Lettuce, peas, potatoes, radishes</li>
-                    <li><strong>Frost Sensitive (0°C to 2°C):</strong> Beans, cucumbers, tomatoes, peppers</li>
-                  </ul>
-                  <p>Based on your frost profile, we recommend focusing on frost-tolerant vegetables like carrots, beets, broccoli, and cabbage which have appropriate tolerance levels.</p>
-                </div>
-              </div>
             </div>
-            
-            <!-- Frost Protection Recommendations -->
-            <div class="protection-recommendations">
-              <h3>
-                <i class="fas fa-icicles"></i>
-                Frost Protection Recommendations
-              </h3>
-              
-              <div class="protection-item frost-protection">
-                <div class="protection-icon">
-                  <i class="fas fa-wind"></i>
-                </div>
-                <div class="protection-content">
-                  <h4>Wind Machines & Frost Fans</h4>
-                  <p>Install wind machines to mix warmer upper air with colder air near the ground. These are most effective in radiation frost conditions with temperature inversions.</p>
-                </div>
-              </div>
-              
-              <div class="protection-item frost-protection">
-                <div class="protection-icon">
-                  <i class="fas fa-tint"></i>
-                </div>
-                <div class="protection-content">
-                  <h4>Overhead Irrigation</h4>
-                  <p>Use sprinkler systems to create an insulating ice layer that protects buds and blossoms. This method is effective down to -7°C but requires significant water resources.</p>
-                </div>
-              </div>
-              
-              <div class="protection-item frost-protection">
-                <div class="protection-icon">
-                  <i class="fas fa-fire"></i>
-                </div>
-                <div class="protection-content">
-                  <h4>Frost Cloths & Row Covers</h4>
-                  <p>Install protective fabrics over sensitive crops. These provide 2-5°C of protection and are reusable for multiple seasons. Ensure proper ventilation during sunny days.</p>
-                </div>
-              </div>
-              
-              <div class="protection-item frost-protection">
-                <div class="protection-icon">
-                  <i class="fas fa-tree"></i>
-                </div>
-                <div class="protection-content">
-                  <h4>Site Selection & Microclimate Management</h4>
-                  <p>Plant frost-sensitive crops on north-facing slopes where cold air drains away. Establish windbreaks to reduce wind chill and maintain ground cover to retain soil heat.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <div class="loading-text">Generating climate report...</div>
-          </div>
         </div>
         
-        <div class="actions">
-          <button class="btn btn-outline" onclick="resetReport()">
-            <i class="fas fa-sync-alt btn-icon"></i> Reset
-          </button>
-          <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
-            <i class="fas fa-download btn-icon"></i> Download Report
-          </button>
-        </div>
-      </div>
+        <footer>
+            <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
+        </footer>
     </div>
     
-    <footer>
-      <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
-      <p style="margin-top: 8px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
-    </footer>
-  </div>
-  
-  <div id="notification" class="notification">
-    <i class="fas fa-check-circle"></i>
-    <span id="notification-text">Notification message</span>
-  </div>
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notification-text">Report generated successfully</span>
+    </div>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-  <script>
-    // Month names for display
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    
-    const shortMonthNames = monthNames.map(m => m.substring(0, 3));
-    
-    // Initialize map
-    const map = L.map('map').setView([-25.0, 30.0], 5); // Set to South Africa coordinates
-    
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-    
-    // Add a marker to South Africa
-    L.marker([-25.0, 30.0]).addTo(map)
-      .bindPopup('South Africa')
-      .openPopup();
-
-    // Initialize layers and controls
-    let drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-    let lastPolygonCenter = null;
-    let currentMarker = null;
-    let dataAvailable = false;
-    let monthlyData = null;
-    let selectedMonth = 0;
-    let pinModeActive = false;
-    let geocodeTimeout = null;
-    let currentRequest = null;
-    
-    const dataAvailabilityLayer = L.layerGroup().addTo(map);
-
-    const drawControl = new L.Control.Draw({
-      draw: {
-        polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#2e7d32' } },
-        polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false
-      },
-      edit: { featureGroup: drawnItems }
-    });
-    map.addControl(drawControl);
-
-    // Mobile menu toggle
-    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-    const searchBox = document.getElementById('searchBox');
-    
-    mobileMenuToggle.addEventListener('click', function() {
-      searchBox.classList.toggle('mobile-visible');
-      // Invalidate map size after transition
-      setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 350);
-    });
-    
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!searchBox.contains(e.target) && e.target !== mobileMenuToggle) {
-        searchBox.classList.remove('mobile-visible');
-        // Invalidate map size when closing mobile menu
-        setTimeout(() => {
-          if (map) map.invalidateSize();
-        }, 50);
-      }
-    });
-
-    // Fix for mobile devices - invalidate map size after initialization
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
-
-    // Optimized progress bar function
-    let lastProgressUpdate = 0;
-    function updateProgress(percentage, text) {
-      const now = Date.now();
-      // Throttle updates to max 10 per second
-      if (now - lastProgressUpdate < 100) return;
-      lastProgressUpdate = now;
-      
-      const fill = document.getElementById('progress-fill');
-      const label = document.getElementById('progress-label');
-      const percentageDisplay = document.getElementById('progress-percentage');
-      
-      if (fill) fill.style.width = `${percentage}%`;
-      if (label) label.textContent = text;
-      if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
-    }
-    
-    // Show notification
-    function showNotification(message, type = 'info') {
-      const notification = document.getElementById('notification');
-      const text = document.getElementById('notification-text');
-      text.textContent = message;
-      
-      notification.className = `notification ${type}`;
-      notification.classList.add('show');
-      
-      setTimeout(() => {
-        notification.classList.remove('show');
-      }, 3000);
-    }
-    
-    // Update status message
-    function updateStatus(message, type = 'info') {
-      const statusEl = document.createElement('div');
-      statusEl.className = `status-message ${type}`;
-      statusEl.innerHTML = `
-        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
-                         type === 'warning' ? 'exclamation-circle' : 
-                         type === 'success' ? 'check-circle' : 
-                         type === 'hail' ? 'cloud-showers-heavy' : 'info-circle'}"></i>
-        <span>${message}</span>
-      `;
-      
-      const reportContent = document.querySelector('.report-content');
-      if (reportContent) {
-        reportContent.appendChild(statusEl);
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([-25.0, 30.0], 5);
         
-        // Auto-scroll to new message
-        statusEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }
-
-    // Event handlers
-    map.on(L.Draw.Event.CREATED, function (e) {
-      if (e.layerType === 'polygon') {
-        const layer = e.layer;
-        const latlngs = layer.getLatLngs()[0];
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
         
-        if (latlngs.length < 3) {
-          showNotification("Please draw a valid polygon with at least 3 points", "error");
-          return;
+        // Add a marker to South Africa
+        L.marker([-25.0, 30.0]).addTo(map)
+            .bindPopup('South Africa')
+            .openPopup();
+        
+        // Draw a sample farm polygon
+        const farmPolygon = L.polygon([
+            [-25.1, 29.9],
+            [-25.1, 30.1],
+            [-24.9, 30.1],
+            [-24.9, 29.9]
+        ], {color: '#2e7d32', fillOpacity: 0.2}).addTo(map);
+        farmPolygon.bindPopup('Sample Farm Boundary');
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notification-text');
+            text.textContent = message;
+            
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
         }
         
-        drawnItems.clearLayers();
-        drawnItems.addLayer(layer);
-
-        const latSum = latlngs.reduce((sum, pt) => sum + pt.lat, 0);
-        const lngSum = latlngs.reduce((sum, pt) => sum + pt.lng, 0);
-        const center = {
-          lat: latSum / latlngs.length,
-          lng: lngSum / latlngs.length
-        };
-        lastPolygonCenter = center;
-        showNotification(`Farm boundary drawn at ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, 'success');
-        
-        checkDataAvailability(center.lat, center.lng);
-      }
-    });
-    
-    // Function to check data availability
-    function checkDataAvailability(lat, lng) {
-      const availabilityEl = document.getElementById('data-availability');
-      availabilityEl.innerHTML = '<i class="fas fa-sync fa-spin"></i> Checking data availability...';
-      availabilityEl.className = 'data-availability';
-      
-      // Simulate progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        updateProgress(progress, `Checking data availability... ${progress}%`);
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          
-          const isLand = !(lat < -60 || lat > 60 || Math.abs(lng) > 170);
-          const isRemote = Math.abs(lat) > 55 || Math.abs(lng) > 140;
-          
-          if (!isLand) {
-            availabilityEl.innerHTML = '<i class="fas fa-times-circle"></i> No data available (ocean location)';
-            availabilityEl.className = 'data-availability error';
-            dataAvailable = false;
-          } else if (isRemote) {
-            availabilityEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Limited data available (remote area)';
-            availabilityEl.className = 'data-availability warning';
-            dataAvailable = true;
-          } else {
-            availabilityEl.innerHTML = '<i class="fas fa-check-circle"></i> Reliable data available';
-            availabilityEl.className = 'data-availability';
-            dataAvailable = true;
-          }
-        }
-      }, 200);
-    }
-
-    // Activate pin drop mode
-    function activatePinMode() {
-      pinModeActive = true;
-      document.getElementById('dropPinBtn').classList.add('btn-primary');
-      document.getElementById('dropPinBtn').classList.remove('btn-outline');
-      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Click on Map';
-      
-      // Add event listener for map click
-      map.on('click', handleMapClick);
-      
-      showNotification("Click on the map to drop a pin", 'info');
-    }
-    
-    // Handle map click for pin drop
-    function handleMapClick(e) {
-      if (!pinModeActive) return;
-      
-      const lat = e.latlng.lat;
-      const lng = e.latlng.lng;
-      
-      // Clear any existing markers
-      if (currentMarker) map.removeLayer(currentMarker);
-      
-      // Add new marker
-      currentMarker = L.marker([lat, lng]).addTo(map)
-        .bindPopup("Dropped Pin: " + lat.toFixed(4) + ", " + lng.toFixed(4))
-        .openPopup();
-      
-      // Update GPS input
-      document.getElementById("gpsInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-      lastPolygonCenter = { lat, lng };
-      
-      // Check data availability
-      checkDataAvailability(lat, lng);
-      
-      // Deactivate pin mode
-      pinModeActive = false;
-      document.getElementById('dropPinBtn').classList.remove('btn-primary');
-      document.getElementById('dropPinBtn').classList.add('btn-outline');
-      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
-      
-      // Remove event listener
-      map.off('click', handleMapClick);
-      
-      showNotification(`Pin dropped at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
-    }
-    
-    // Toggle search type
-    document.getElementById('gpsToggle').addEventListener('click', () => {
-      document.getElementById('gpsToggle').classList.add('active');
-      document.getElementById('locationToggle').classList.remove('active');
-      document.getElementById('gpsInput').classList.remove('hidden');
-      document.getElementById('locationInput').classList.add('hidden');
-    });
-    
-    document.getElementById('locationToggle').addEventListener('click', () => {
-      document.getElementById('locationToggle').classList.add('active');
-      document.getElementById('gpsToggle').classList.remove('active');
-      document.getElementById('locationInput').classList.remove('hidden');
-      document.getElementById('gpsInput').classList.add('hidden');
-    });
-    
-    // Search location by text or coordinates
-    function searchLocation() {
-      if (document.getElementById('gpsInput').classList.contains('hidden')) {
-        // Search by location name
-        const query = document.getElementById('locationInput').value;
-        if (!query) {
-          showNotification("Enter a location name to search", 'error');
-          return;
-        }
-        geocodeLocation(query);
-      } else {
-        // Search by coordinates
-        const input = document.getElementById("gpsInput").value;
-        const parts = input.split(',');
-        if (parts.length === 2) {
-          const lat = parseFloat(parts[0].trim());
-          const lng = parseFloat(parts[1].trim());
-          if (!isNaN(lat) && !isNaN(lng)) {
-            map.setView([lat, lng], 13);
-            
-            if (currentMarker) map.removeLayer(currentMarker);
-            
-            currentMarker = L.marker([lat, lng]).addTo(map)
-              .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
-            lastPolygonCenter = { lat, lng };
-            showNotification(`Location set to: ${lat}, ${lng}`, 'success');
-            
-            checkDataAvailability(lat, lng);
-          } else {
-            showNotification("Invalid coordinates. Please enter in 'latitude, longitude' format.", 'error');
-          }
-        } else {
-          showNotification("Enter coordinates in 'lat, lng' format.", 'error');
-        }
-      }
-    }
-    
-    // Geocode location using OpenStreetMap Nominatim API
-    function geocodeLocation(query, forSuggestions = false) {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`;
-      
-      // Cancel previous request if any
-      if (currentRequest) {
-        currentRequest.abort();
-      }
-      
-      const controller = new AbortController();
-      const signal = controller.signal;
-      currentRequest = controller;
-      
-      fetch(url, { signal })
-        .then(response => {
-          if (!response.ok) throw new Error('Network response was not ok');
-          return response.json();
-        })
-        .then(data => {
-          if (forSuggestions) {
-            // Show suggestions
-            const suggestions = document.getElementById('suggestions');
-            suggestions.innerHTML = '';
-            
-            if (data.length === 0) {
-              suggestions.style.display = 'none';
-              return;
-            }
-            
-            // Use document fragment for efficient DOM updates
-            const fragment = document.createDocumentFragment();
-            data.forEach(item => {
-              const suggestion = document.createElement('div');
-              suggestion.className = 'suggestion-item';
-              suggestion.textContent = item.display_name;
-              suggestion.onclick = () => {
-                document.getElementById('locationInput').value = item.display_name;
-                suggestions.style.display = 'none';
-                
-                // Set the location on the map
-                const lat = parseFloat(item.lat);
-                const lon = parseFloat(item.lon);
-                map.setView([lat, lon], 13);
-                
-                if (currentMarker) map.removeLayer(currentMarker);
-                currentMarker = L.marker([lat, lon]).addTo(map)
-                  .bindPopup(item.display_name)
-                  .openPopup();
-                
-                lastPolygonCenter = { lat, lng: lon };
-                checkDataAvailability(lat, lon);
-                
-                showNotification(`Location set to: ${item.display_name}`, 'success');
-              };
-              fragment.appendChild(suggestion);
+        // Switch tabs
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
             });
             
-            suggestions.appendChild(fragment);
-            suggestions.style.display = 'block';
-          } else {
-            // Process actual search
-            if (data.length === 0) {
-              showNotification("Location not found. Please try a different name.", 'error');
-              return;
-            }
+            // Deactivate all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
             
-            const item = data[0];
-            const lat = parseFloat(item.lat);
-            const lon = parseFloat(item.lon);
-            
-            map.setView([lat, lon], 13);
-            
-            if (currentMarker) map.removeLayer(currentMarker);
-            currentMarker = L.marker([lat, lon]).addTo(map)
-              .bindPopup(item.display_name)
-              .openPopup();
-            
-            lastPolygonCenter = { lat, lng: lon };
-            checkDataAvailability(lat, lon);
-            
-            showNotification(`Location set to: ${item.display_name}`, 'success');
-          }
-        })
-        .catch(error => {
-          if (error.name === 'AbortError') {
-            console.log('Request aborted');
-          } else {
-            console.error('Geocoding error:', error);
-            if (!forSuggestions) {
-              showNotification("Error finding location. Please try again.", 'error');
-            }
-          }
-        })
-        .finally(() => {
-          currentRequest = null;
-        });
-    }
-
-    // Reset map
-    function resetMap() {
-      drawnItems.clearLayers();
-      lastPolygonCenter = null;
-      if (currentMarker) {
-        map.removeLayer(currentMarker);
-        currentMarker = null;
-      }
-      map.setView([-25.0, 30.0], 5);
-      document.getElementById("gpsInput").value = "";
-      document.getElementById("locationInput").value = "";
-      document.getElementById('suggestions').style.display = 'none';
-      
-      const availabilityEl = document.getElementById('data-availability');
-      availabilityEl.innerHTML = '<i class="fas fa-info-circle"></i> Data availability: Select a location';
-      availabilityEl.className = 'data-availability';
-      
-      showNotification("Map has been reset", 'info');
-      
-      // Reset progress bar
-      updateProgress(0, 'Ready');
-      
-      // Reset pin mode if active
-      if (pinModeActive) {
-        pinModeActive = false;
-        map.off('click', handleMapClick);
-        document.getElementById('dropPinBtn').classList.remove('btn-primary');
-        document.getElementById('dropPinBtn').classList.add('btn-outline');
-        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
-      }
-    }
-    
-    // Reset report
-    function resetReport() {
-      document.getElementById('report').classList.add('hidden');
-      document.getElementById('report-placeholder').classList.remove('hidden');
-      document.getElementById('downloadBtn').disabled = true;
-      showNotification("Report has been reset", 'info');
-    }
-
-    // Generate report with real climate data
-    async function generateReport() {
-      if (!lastPolygonCenter) {
-        showNotification("Draw a farm boundary or search a location first.", 'error');
-        return;
-      }
-      
-      if (!dataAvailable) {
-        showNotification("No data available for this location. Please choose another location.", 'error');
-        return;
-      }
-
-      // Show loading indicator
-      document.getElementById('report-placeholder').classList.add('hidden');
-      document.getElementById('report').classList.add('hidden');
-      document.getElementById('loading').classList.remove('hidden');
-      document.getElementById('generateBtn').disabled = true;
-      
-      const lat = lastPolygonCenter.lat.toFixed(4);
-      const lon = lastPolygonCenter.lng.toFixed(4);
-      
-      // Simulate report generation
-      setTimeout(() => {
-        // Update report content
-        document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
-        document.getElementById("data-status").innerText = "Reliable data available for this location";
-        document.getElementById("data-status").style.color = "var(--success)";
-        
-        // Update completeness indicator
-        document.getElementById('completeness-bar').style.width = "95%";
-        document.getElementById('completeness-value').textContent = "95%";
-        
-        // Hide loading and show report
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('report').classList.remove('hidden');
-        document.getElementById('downloadBtn').disabled = false;
-        document.getElementById('generateBtn').disabled = false;
-        
-        showNotification("Report generated successfully!", 'success');
-      }, 2000);
-    }
-    
-    // Download PDF
-    function downloadPDF() {
-      const element = document.getElementById('report');
-      const options = {
-        margin: 10,
-        filename: 'farm-climate-report.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      
-      showNotification("Generating PDF report...", 'info');
-      
-      // Generate PDF
-      html2pdf()
-        .set(options)
-        .from(element)
-        .save()
-        .then(() => {
-          showNotification("PDF report downloaded successfully", 'success');
-        });
-    }
-    
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-      // Set up event listeners
-      document.getElementById('locationInput').addEventListener('input', function(e) {
-        const query = e.target.value;
-        if (query.length < 3) {
-          document.getElementById('suggestions').style.display = 'none';
-          return;
+            // Activate selected tab
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
         }
         
-        // Clear any existing timeout
-        if (geocodeTimeout) clearTimeout(geocodeTimeout);
+        // Search location
+        function searchLocation() {
+            const input = document.getElementById('locationInput').value;
+            if (!input) {
+                showNotification('Please enter a location', 'error');
+                return;
+            }
+            
+            // Simulate search
+            showNotification('Location updated to South Africa');
+        }
         
-        // Set timeout to avoid too many requests
-        geocodeTimeout = setTimeout(() => {
-          geocodeLocation(query, true);
-        }, 500);
-      });
-      
-      // Make search box draggable
-      const searchBox = document.getElementById('searchBox');
-      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-      
-      searchBox.onmousedown = dragMouseDown;
-      
-      function dragMouseDown(e) {
-        e = e || window.event;
-        e.preventDefault();
-        // Get the mouse cursor position at startup
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        document.onmouseup = closeDragElement;
-        // Call a function whenever the cursor moves
-        document.onmousemove = elementDrag;
-      }
-      
-      function elementDrag(e) {
-        e = e || window.event;
-        e.preventDefault();
-        // Calculate the new cursor position
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        // Set the element's new position
-        searchBox.style.top = (searchBox.offsetTop - pos2) + "px";
-        searchBox.style.left = (searchBox.offsetLeft - pos1) + "px";
+        // Reset map
+        function resetMap() {
+            map.setView([-25.0, 30.0], 5);
+            document.getElementById('locationInput').value = '';
+            showNotification('Map has been reset');
+        }
         
-        // Update position indicator
-        document.getElementById('positionIndicator').textContent = 
-          `Position: ${Math.max(0, parseInt(searchBox.style.top || 15))}px, ${Math.max(0, parseInt(searchBox.style.left || 15))}px`;
-      }
-      
-      function closeDragElement() {
-        // Stop moving when mouse button is released
-        document.onmouseup = null;
-        document.onmousemove = null;
-      }
-    });
-  </script>
+        // Initialize charts
+        function initCharts() {
+            // Risk comparison chart
+            const riskCtx = document.getElementById('riskComparisonChart').getContext('2d');
+            new Chart(riskCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Drought', 'Excessive Rain', 'Frost', 'Hail', 'Heat Stress'],
+                    datasets: [{
+                        label: 'Risk Level',
+                        data: [3.8, 4.2, 2.5, 1.9, 3.1],
+                        backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                        borderColor: '#2e7d32',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#2e7d32'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 5
+                        }
+                    }
+                }
+            });
+            
+            // Drought chart
+            const droughtCtx = document.getElementById('droughtChart').getContext('2d');
+            new Chart(droughtCtx, {
+                type: 'line',
+                data: {
+                    labels: ['2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023'],
+                    datasets: [{
+                        label: 'Drought Index',
+                        data: [4.2, 2.1, 4.5, 1.8, 4.1, 2.3, 4.7, 1.9, 3.8],
+                        borderColor: '#ff9800',
+                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 5
+                        }
+                    }
+                }
+            });
+            
+            // Rain chart
+            const rainCtx = document.getElementById('rainChart').getContext('2d');
+            new Chart(rainCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Rainfall (mm)',
+                        data: [120, 110, 95, 60, 30, 15, 10, 15, 35, 75, 100, 115],
+                        backgroundColor: [
+                            '#2196f3', '#2196f3', '#2196f3', 
+                            '#64b5f6', '#64b5f6', '#bbdefb',
+                            '#bbdefb', '#bbdefb', '#64b5f6',
+                            '#64b5f6', '#2196f3', '#2196f3'
+                        ]
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Frost chart
+            const frostCtx = document.getElementById('frostChart').getContext('2d');
+            new Chart(frostCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Frost Days',
+                        data: [0.1, 0.2, 0.5, 1.2, 3.5, 6.2, 8.5, 7.1, 2.5, 0.8, 0.2, 0.1],
+                        borderColor: '#1e88e5',
+                        backgroundColor: 'rgba(30, 136, 229, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Hail chart
+            const hailCtx = document.getElementById('hailChart').getContext('2d');
+            new Chart(hailCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023'],
+                    datasets: [{
+                        label: 'Hail Events',
+                        data: [1, 3, 2, 4, 1, 2, 1, 3, 2],
+                        backgroundColor: '#9c27b0'
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initialize when page loads
+        window.onload = function() {
+            initCharts();
+            showNotification('Welcome to Farm Climate Risk Analysis Tool');
+        };
+    </script>
 </body>
 </html>
