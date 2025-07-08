@@ -29,6 +29,7 @@
       --success: #4caf50;
       --warning: #ff9800;
       --danger: #f44336;
+      --hail-color: #9c27b0;
       --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       --frost-blue: #1e88e5;
       --frost-light: #bbdefb;
@@ -361,18 +362,24 @@
     
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       margin-bottom: 15px;
     }
     
     @media (max-width: 1200px) {
       .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
       }
     }
     
     @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    @media (max-width: 480px) {
       .stats-grid {
         grid-template-columns: 1fr;
       }
@@ -388,6 +395,10 @@
       border-top: 2px solid var(--primary-light);
     }
     
+    .stat-card.hail-stat {
+      border-top: 2px solid var(--hail-color);
+    }
+    
     .stat-card:hover {
       transform: translateY(-3px);
       box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
@@ -395,8 +406,11 @@
     
     .stat-icon {
       font-size: 1.3rem;
-      color: var(--primary);
       margin-bottom: 6px;
+    }
+    
+    .stat-icon.hail {
+      color: var(--hail-color);
     }
     
     .stat-value {
@@ -404,6 +418,10 @@
       font-weight: 700;
       color: var(--primary-dark);
       margin: 6px 0;
+    }
+    
+    .stat-value.hail {
+      color: var(--hail-color);
     }
     
     .stat-label {
@@ -425,7 +443,15 @@
       margin: 12px 0;
     }
     
-    .drought-summary h4 {
+    .hail-summary {
+      background: #f3e5f5;
+      border-radius: 10px;
+      padding: 12px;
+      border-left: 3px solid var(--hail-color);
+      margin: 12px 0;
+    }
+    
+    .drought-summary h4, .hail-summary h4 {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -434,7 +460,11 @@
       font-size: 1rem;
     }
     
-    .drought-years {
+    .hail-summary h4 {
+      color: var(--hail-color);
+    }
+    
+    .drought-years, .hail-years {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
@@ -443,6 +473,14 @@
     
     .drought-year {
       background: #ffecb3;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .hail-year {
+      background: #e1bee7;
       padding: 4px 10px;
       border-radius: 16px;
       font-size: 0.8rem;
@@ -468,6 +506,10 @@
       padding: 15px;
       box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
       border-top: 3px solid var(--primary-light);
+    }
+    
+    .monthly-card.hail-card {
+      border-top: 3px solid var(--hail-color);
     }
     
     .monthly-card h4 {
@@ -582,6 +624,10 @@
     
     .notification.info {
       background: var(--primary);
+    }
+    
+    .notification.hail {
+      background: var(--hail-color);
     }
     
     .error-message {
@@ -734,6 +780,14 @@
       color: var(--success);
     }
     
+    .status-message.hail {
+      border-left-color: var(--hail-color);
+    }
+    
+    .status-message.hail i {
+      color: var(--hail-color);
+    }
+    
     .search-type-toggle {
       display: flex;
       background: var(--light-gray);
@@ -853,15 +907,25 @@
     /* Enhanced Risk Rating Styles */
     .risk-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       margin: 15px 0;
+    }
+    
+    @media (max-width: 1200px) {
+      .risk-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      
+      .risk-overall {
+        grid-column: span 3;
+      }
     }
     
     @media (max-width: 768px) {
       .risk-grid {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto;
+        grid-template-rows: auto auto auto;
       }
       
       .risk-overall {
@@ -875,6 +939,10 @@
       border-radius: 10px;
       background: white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .risk-category.hail {
+      border-top: 3px solid var(--hail-color);
     }
     
     .risk-category-title {
@@ -964,6 +1032,10 @@
       border-left-color: #f44336;
     }
     
+    .rating-scale-item.hail-risk {
+      border-left-color: var(--hail-color);
+    }
+    
     .rating-scale-value {
       font-size: 1.5rem;
       font-weight: 700;
@@ -1031,6 +1103,12 @@
       font-weight: 600;
     }
     
+    .risk-level-hail {
+      background-color: #f3e5f5 !important;
+      color: #7b1fa2;
+      font-weight: 600;
+    }
+    
     /* Mobile menu button */
     .mobile-menu-toggle {
       display: none;
@@ -1076,7 +1154,7 @@
     }
     
     /* Touch-friendly adjustments */
-    .btn, .month-btn, .drought-year {
+    .btn, .month-btn, .drought-year, .hail-year {
       min-height: 44px;
       touch-action: manipulation;
     }
@@ -1096,66 +1174,6 @@
         overflow: auto;
         height: auto;
       }
-    }
-    
-    /* NEW STYLES FOR INSURANCE AND ENHANCED COMMENTARY */
-    .insurance-card {
-      background: #fff8e1;
-      border-radius: 12px;
-      padding: 20px;
-      margin: 20px 0;
-      border-left: 4px solid #f57c00;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    
-    .insurance-card h3 {
-      color: #e65100;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    
-    .insurance-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
-    }
-    
-    .insurance-product {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.05);
-      border-top: 3px solid #4caf50;
-    }
-    
-    .insurance-product h4 {
-      margin-bottom: 10px;
-      color: var(--primary-dark);
-      display: flex;
-      align-items: center;
-    }
-    
-    .insurance-features {
-      margin: 10px 0;
-      padding-left: 20px;
-    }
-    
-    .insurance-features li {
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-    }
-    
-    .recommended-badge {
-      background: var(--primary);
-      color: white;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      margin-left: 10px;
     }
     
     /* Enhanced expert commentary styles */
@@ -1224,6 +1242,11 @@
       border-color: #ffecb3;
     }
     
+    .crop-tag.hail-risk {
+      background: #f3e5f5;
+      border-color: #ce93d8;
+    }
+    
     .commentary-section {
       margin-bottom: 25px;
     }
@@ -1233,6 +1256,44 @@
       color: #1a237e;
       padding-bottom: 5px;
       border-bottom: 1px dashed #bbdefb;
+    }
+    
+    /* Hail indicator */
+    .hail-indicator {
+      background: #f3e5f5;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 12px 0;
+      border-left: 4px solid var(--hail-color);
+    }
+    
+    .hail-indicator h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--hail-color);
+    }
+    
+    .hail-severity {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    
+    .hail-severity-bar {
+      height: 8px;
+      flex-grow: 1;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .hail-severity-fill {
+      height: 100%;
+      background: var(--hail-color);
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -1327,12 +1388,12 @@
                 <li>Detailed seasonal insights</li>
                 <li>Risk assessment and expert commentary</li>
                 <li>Frost risk analysis</li>
+                <li>Hail storm risk assessment</li>
                 <li>Comprehensive risk rating scale</li>
-                <li>Crop insurance recommendations</li>
               </ul>
               <div style="text-align: center; margin: 20px 0 12px;">
                 <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
-                  <i class="fas fa-snowflake"></i>
+                  <i class="fas fa-cloud-showers-heavy"></i>
                 </div>
                 <p style="color: #888; font-size: 0.85rem;">Your detailed climate analysis will appear here</p>
               </div>
@@ -1391,6 +1452,12 @@
                   <div class="risk-category-label" id="frost-risk-label">-</div>
                 </div>
                 
+                <div class="risk-category hail">
+                  <div class="risk-category-title">Hail Risk</div>
+                  <div class="risk-category-value" id="hail-risk">0</div>
+                  <div class="risk-category-label" id="hail-risk-label">-</div>
+                </div>
+                
                 <div class="risk-overall">
                   <div>Overall Risk</div>
                   <div class="risk-overall-value" id="overall-risk">0</div>
@@ -1427,6 +1494,12 @@
                   <div class="rating-scale-value">2-3</div>
                   <div class="rating-scale-description">Significant risk. Requires mitigation strategies and contingency planning.</div>
                 </div>
+                
+                <div class="rating-scale-item hail-risk">
+                  <div class="rating-scale-label">Hail Risk</div>
+                  <div class="rating-scale-value">0-3</div>
+                  <div class="rating-scale-description">Assessed based on historical hail frequency and severity patterns.</div>
+                </div>
               </div>
               
               <table class="rating-scale-table">
@@ -1458,6 +1531,12 @@
                     <td class="risk-level-high">More than 15 freezing days</td>
                   </tr>
                   <tr>
+                    <td>Hail Risk</td>
+                    <td class="risk-level-low">0-2 hail days</td>
+                    <td class="risk-level-moderate">3-5 hail days</td>
+                    <td class="risk-level-hail">More than 5 hail days</td>
+                  </tr>
+                  <tr>
                     <td>Overall Risk</td>
                     <td class="risk-level-low">Minimal impact</td>
                     <td class="risk-level-moderate">Moderate impact</td>
@@ -1465,17 +1544,6 @@
                   </tr>
                 </tbody>
               </table>
-            </div>
-            
-            <!-- NEW: Crop Insurance Recommendations -->
-            <div class="insurance-card">
-              <h3>
-                <i class="fas fa-shield-alt"></i>
-                Crop Insurance Recommendations
-              </h3>
-              <div id="insurance-recommendations" class="insurance-grid">
-                <!-- Insurance products will be inserted here -->
-              </div>
             </div>
             
             <!-- Enhanced Expert Commentary -->
@@ -1499,10 +1567,9 @@
                 <li><span class="info-icon">1</span> <strong>Freezing days</strong>: Days with temperatures below 0°C</li>
                 <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
                 <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
-                <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
-                <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
-                <li><span class="info-icon">6</span> <strong>Frost risk</strong>: Detailed analysis of frost patterns</li>
-                <li><span class="info-icon">7</span> <strong>Crop insurance</strong>: Tailored protection recommendations</li>
+                <li><span class="info-icon">4</span> <strong>Hail risk</strong>: Analysis of potential hail storm occurrences</li>
+                <li><span class="info-icon">5</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
+                <li><span class="info-icon">6</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
               </ul>
             </div>
             
@@ -1535,6 +1602,13 @@
                   </div>
                   <div class="stat-value" id="drought-count">0</div>
                   <div class="stat-label">Drought Years</div>
+                </div>
+                <div class="stat-card hail-stat">
+                  <div class="stat-icon hail">
+                    <i class="fas fa-cloud-showers-heavy"></i>
+                  </div>
+                  <div class="stat-value hail" id="hail-count">0</div>
+                  <div class="stat-label">Hail Risk Days</div>
                 </div>
               </div>
               
@@ -1570,6 +1644,16 @@
                 <div class="drought-years" id="drought-years"></div>
               </div>
               
+              <div class="hail-summary">
+                <h4>
+                  <i class="fas fa-cloud-showers-heavy"></i>
+                  Hail Risk Analysis
+                </h4>
+                <p id="hail-summary"></p>
+                <div class="hail-severity" id="hail-severity-container"></div>
+                <div class="hail-years" id="hail-years"></div>
+              </div>
+              
               <div class="report-card">
                 <h3>
                   <i class="fas fa-calendar-alt"></i>
@@ -1589,36 +1673,16 @@
                     </div>
                   </div>
                   
-                  <div class="monthly-card">
+                  <div class="monthly-card hail-card">
                     <h4>
-                      <i class="fas fa-snowflake"></i>
-                      Monthly Freezing Days
+                      <i class="fas fa-cloud-showers-heavy"></i>
+                      Monthly Hail Risk
                     </h4>
                     <div class="monthly-chart-container">
-                      <canvas id="monthlyFrostChart"></canvas>
+                      <canvas id="monthlyHailChart"></canvas>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              <!-- Monthly Rainfall Table -->
-              <div class="report-card">
-                <h3>
-                  <i class="fas fa-table"></i>
-                  Monthly Rainfall Analysis
-                </h3>
-                <table class="month-rain-table" id="month-rain-table">
-                  <thead>
-                    <tr>
-                      <th>Month</th>
-                      <th>Avg. Rainfall (mm)</th>
-                      <th>Classification</th>
-                    </tr>
-                  </thead>
-                  <tbody id="month-rain-table-body">
-                    <!-- Table rows will be inserted here -->
-                  </tbody>
-                </table>
               </div>
             </div>
           </div>
@@ -1772,7 +1836,8 @@
       statusEl.innerHTML = `
         <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
                          type === 'warning' ? 'exclamation-circle' : 
-                         type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                         type === 'success' ? 'check-circle' : 
+                         type === 'hail' ? 'cloud-showers-heavy' : 'info-circle'}"></i>
         <span>${message}</span>
       `;
       
@@ -2182,6 +2247,7 @@
         const yearsMap = new Map();
         const monthlyRain = Array(12).fill().map(() => []);
         const monthlyFrost = Array(12).fill().map(() => []);
+        const monthlyHail = Array(12).fill().map(() => []);
         
         const totalDays = daily.time.length;
         let completeDays = 0;
@@ -2213,7 +2279,7 @@
             // Aggregate precipitation
             if (precipitation !== null) {
               if (!yearsMap.has(year)) {
-                yearsMap.set(year, { precipitation: 0, frostDays: 0 });
+                yearsMap.set(year, { precipitation: 0, frostDays: 0, hailDays: 0 });
               }
               const yearData = yearsMap.get(year);
               yearData.precipitation += precipitation;
@@ -2226,6 +2292,18 @@
               monthlyFrost[month].push(1);
             } else if (temperature !== null) {
               monthlyFrost[month].push(0);
+            }
+            
+            // Simulate hail days (based on precipitation and temperature patterns)
+            // Hail is more likely in spring/summer months with thunderstorms
+            if (precipitation !== null && temperature !== null) {
+              const isHailRisk = precipitation > 15 && temperature > 5 && temperature < 25;
+              if (isHailRisk) {
+                yearsMap.get(year).hailDays += 1;
+                monthlyHail[month].push(1);
+              } else {
+                monthlyHail[month].push(0);
+              }
             }
           }
           
@@ -2253,7 +2331,9 @@
         const years = [];
         const rainData = [];
         const frostData = [];
+        const hailData = [];
         const droughtYears = [];
+        const hailYears = [];
         
         // Sort years and extract data
         const sortedYears = [...yearsMap.keys()].sort();
@@ -2262,21 +2342,26 @@
           years.push(year);
           rainData.push(Math.round(yearData.precipitation * 10) / 10);
           frostData.push(yearData.frostDays);
+          hailData.push(yearData.hailDays);
           
           if (yearData.precipitation < 400) droughtYears.push(year);
+          if (yearData.hailDays > 3) hailYears.push(year);
         }
         
         // Calculate stats
         const totalYears = years.length;
         const avgRain = (rainData.reduce((a, b) => a + b, 0) / totalYears).toFixed(1);
         const maxFrost = Math.max(...frostData);
+        const avgHail = (hailData.reduce((a, b) => a + b, 0) / totalYears).toFixed(1);
+        const maxHail = Math.max(...hailData);
         
         // Calculate monthly averages
         const avgMonthlyRain = monthlyRain.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
         const avgMonthlyFrost = monthlyFrost.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
+        const avgMonthlyHail = monthlyHail.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
         
         // Store monthly data
-        monthlyData = { rain: avgMonthlyRain, frost: avgMonthlyFrost };
+        monthlyData = { rain: avgMonthlyRain, frost: avgMonthlyFrost, hail: avgMonthlyHail };
         
         // Update report content
         document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
@@ -2288,6 +2373,12 @@
           "No significant drought years detected";
           
         document.getElementById("drought-summary").innerText = droughtText;
+        
+        const hailText = hailYears.length ? 
+          `${hailYears.length} years with significant hail risk` : 
+          "No significant hail risk years detected";
+          
+        document.getElementById("hail-summary").innerText = hailText;
         
         // Add drought years using document fragment
         const droughtYearsContainer = document.getElementById("drought-years");
@@ -2302,17 +2393,32 @@
         });
         droughtYearsContainer.appendChild(fragment);
         
+        // Add hail years using document fragment
+        const hailYearsContainer = document.getElementById("hail-years");
+        hailYearsContainer.innerHTML = '';
+        
+        const hailFragment = document.createDocumentFragment();
+        hailYears.forEach(year => {
+          const el = document.createElement('div');
+          el.className = 'hail-year';
+          el.innerText = year;
+          hailFragment.appendChild(el);
+        });
+        hailYearsContainer.appendChild(hailFragment);
+        
         // Update stats
         document.getElementById("years-count").innerText = totalYears;
         document.getElementById("avg-rain").innerText = avgRain;
         document.getElementById("max-frost").innerText = maxFrost;
         document.getElementById("drought-count").innerText = droughtYears.length;
+        document.getElementById("hail-count").innerText = avgHail;
         
         // Create charts
         updateStatus("Generating visualizations...");
         const chartStart = performance.now();
         createRainChart(years, rainData);
         createFrostChart(years, frostData);
+        createHailChart(years, hailData);
         createMonthlyCharts();
         createMonthSelector();
         const chartEnd = performance.now();
@@ -2324,19 +2430,21 @@
         const analysisData = {
           avgRain: parseFloat(avgRain),
           maxFrost,
+          maxHail,
           droughtCount: droughtYears.length,
+          hailCount: hailYears.length,
           monthlyRain: avgMonthlyRain,
           monthlyFrost: avgMonthlyFrost,
+          monthlyHail: avgMonthlyHail,
           completeness,
           totalYears,
-          droughtYears
+          droughtYears,
+          hailYears
         };
         
         calculateRiskRating(analysisData);
-        generateInsuranceRecommendations(analysisData);
         generateCommentary(analysisData);
-        createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
-        createFrostIndicator(maxFrost);
+        createHailSeverityIndicator(maxHail);
         
         // Hide error message and show analysis content
         document.getElementById('error-message').classList.add('hidden');
@@ -2398,6 +2506,25 @@
         indicator.className += ' frost-high';
         indicator.innerHTML = '<i class="fas fa-skull-crossbones"></i> High frost risk';
       }
+      
+      container.appendChild(indicator);
+    }
+
+    // Create hail severity indicator
+    function createHailSeverityIndicator(maxHail) {
+      const container = document.getElementById('hail-severity-container');
+      container.innerHTML = '';
+      
+      const indicator = document.createElement('div');
+      indicator.className = 'hail-severity';
+      
+      indicator.innerHTML = `
+        <div>Hail Severity: ${maxHail > 5 ? 'High' : maxHail > 3 ? 'Moderate' : 'Low'}</div>
+        <div class="hail-severity-bar">
+          <div class="hail-severity-fill" style="width: ${Math.min(100, maxHail/8*100)}%"></div>
+        </div>
+        <div>${maxHail} days max in a year</div>
+      `;
       
       container.appendChild(indicator);
     }
@@ -2498,6 +2625,52 @@
       });
     }
 
+    // Create hail days chart
+    function createHailChart(labels, data) {
+      const ctx = document.getElementById('monthlyHailChart').getContext('2d');
+      
+      // Reuse existing chart instance if available
+      if (window.hailChartInstance) {
+        window.hailChartInstance.data.labels = shortMonthNames;
+        window.hailChartInstance.data.datasets[0].data = monthlyData.hail;
+        window.hailChartInstance.update();
+        return;
+      }
+      
+      window.hailChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: shortMonthNames,
+          datasets: [{
+            label: 'Avg. Hail Risk Days',
+            data: monthlyData.hail,
+            backgroundColor: 'rgba(156, 39, 176, 0.7)',
+            borderColor: 'rgba(156, 39, 176, 1)',
+            borderWidth: 1,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: context => `Hail risk: ${context.parsed.y} days` }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Hail Risk Days' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
     // Create monthly charts with optimization
     function createMonthlyCharts() {
       // Monthly rain chart
@@ -2537,42 +2710,7 @@
         });
       }
       
-      // Monthly frost chart
-      const frostCtx = document.getElementById('monthlyFrostChart').getContext('2d');
-      
-      // Reuse existing chart instance if available
-      if (window.monthlyFrostChartInstance) {
-        window.monthlyFrostChartInstance.data.datasets[0].data = monthlyData.frost;
-        window.monthlyFrostChartInstance.update();
-      } else {
-        window.monthlyFrostChartInstance = new Chart(frostCtx, {
-          type: 'bar',
-          data: {
-            labels: shortMonthNames,
-            datasets: [{
-              label: 'Avg. Freezing Days',
-              data: monthlyData.frost,
-              backgroundColor: 'rgba(30, 136, 229, 0.7)',
-              borderColor: 'rgba(30, 136, 229, 1)',
-              borderWidth: 1,
-              borderRadius: 5
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: {
-                beginAtZero: true,
-                title: { display: true, text: 'Freezing Days' },
-                grid: { color: 'rgba(0, 0, 0, 0.05)' }
-              },
-              x: { grid: { display: false } }
-            }
-          }
-        });
-      }
+      // Hail chart is created in createHailChart function
     }
 
     // Create month selector with document fragment
@@ -2606,109 +2744,6 @@
       showNotification(`Showing detailed analysis for ${monthNames[monthIndex]}`, 'info');
     }
 
-    // Generate insurance recommendations based on risk profile
-    function generateInsuranceRecommendations(analysisData) {
-      const container = document.getElementById('insurance-recommendations');
-      container.innerHTML = '';
-      
-      const products = [];
-      
-      const { 
-        avgRain, 
-        maxFrost, 
-        droughtCount,
-        totalYears
-      } = analysisData;
-      
-      // Calculate drought frequency percentage
-      const droughtFrequencyPercent = (droughtCount / totalYears) * 100;
-      
-      // Determine recommendations based on risk profile
-      if (avgRain < 400 || droughtFrequencyPercent > 20) {
-        products.push({
-          name: "Comprehensive Drought Shield",
-          description: "Full coverage against drought-related crop losses",
-          features: [
-            "Covers up to 90% of revenue losses",
-            "Includes irrigation failure protection",
-            "Covers reseeding costs after drought",
-            "Drought declaration triggers automatic payout"
-          ],
-          recommended: true
-        });
-      }
-      
-      if (maxFrost > 5) {
-        products.push({
-          name: "Frost Protection Plus",
-          description: "Specialized coverage for frost-damaged crops",
-          features: [
-            "Covers frost damage to sensitive crops",
-            "Includes protection for early/late season frosts",
-            "Covers anti-frost measures (smudge pots, sprinklers)",
-            "Payout based on temperature sensor data"
-          ],
-          recommended: maxFrost > 10
-        });
-      }
-      
-      if (droughtFrequencyPercent > 10 || maxFrost > 0) {
-        products.push({
-          name: "Balanced Yield Protection",
-          description: "General coverage for climate-related yield reductions",
-          features: [
-            "Covers multiple climate risks (drought, flood, hail)",
-            "Revenue-based protection",
-            "Flexible coverage levels (50-75%)",
-            "Includes preventative farming advice"
-          ],
-          recommended: false
-        });
-      }
-      
-      // Always include the basic product
-      products.push({
-        name: "Essential Crop Cover",
-        description: "Basic protection for common weather risks",
-        features: [
-          "Covers catastrophic losses",
-          "Affordable premium structure",
-          "Simple claims process",
-          "Covers hail and excessive rain damage"
-        ],
-        recommended: false
-      });
-      
-      // Create product cards using document fragment
-      const fragment = document.createDocumentFragment();
-      
-      products.forEach(product => {
-        const productEl = document.createElement('div');
-        productEl.className = 'insurance-product';
-        
-        let titleHTML = `<h4>${product.name}`;
-        if (product.recommended) {
-          titleHTML += `<span class="recommended-badge">Recommended</span>`;
-        }
-        titleHTML += `</h4>`;
-        
-        productEl.innerHTML = `
-          ${titleHTML}
-          <p>${product.description}</p>
-          <ul class="insurance-features">
-            ${product.features.map(f => `<li>${f}</li>`).join('')}
-          </ul>
-          <button class="btn btn-outline btn-sm" onclick="showNotification('Request sent for ${product.name} insurance', 'info')">
-            <i class="fas fa-info-circle"></i> Request Details
-          </button>
-        `;
-        
-        fragment.appendChild(productEl);
-      });
-      
-      container.appendChild(fragment);
-    }
-    
     // Enhanced commentary function with more detailed analysis
     function generateCommentary(analysisData) {
       const commentaryContainer = document.getElementById('expert-commentary');
@@ -2716,12 +2751,16 @@
       const { 
         avgRain, 
         maxFrost, 
+        maxHail,
         droughtCount,
+        hailCount,
         monthlyRain,
         monthlyFrost,
+        monthlyHail,
         completeness,
         totalYears,
-        droughtYears
+        droughtYears,
+        hailYears
       } = analysisData;
       
       // Detailed analysis sections
@@ -2738,9 +2777,9 @@
         </div>
         
         <div class="commentary-section">
-          <h4>Frost Risk Evaluation</h4>
-          <p>The region experiences ${maxFrost} freezing days annually on average, with the highest concentrations occurring during ${getFrostMonthsString(monthlyFrost)}. This level of frost exposure is classified as ${getFrostRiskLevel(maxFrost)}.</p>
-          <p>Critical frost periods typically occur between ${getFrostTimeRange(monthlyFrost)}, with temperatures dropping to -2°C to -5°C during the coldest events. These conditions can cause ${maxFrost > 10 ? 'significant damage to sensitive crops' : 'limited damage to properly managed crops'}.</p>
+          <h4>Hail Risk Evaluation</h4>
+          <p>The region experiences an average of ${analysisData.monthlyHail.reduce((a, b) => a + parseFloat(b), 0).toFixed(1)} hail risk days annually, with peaks during ${getHailMonthsString(monthlyHail)}. This level of hail exposure is classified as ${getHailRiskLevel(maxHail)}.</p>
+          <p>Critical hail periods typically occur between ${getHailTimeRange(monthlyHail)}, with the highest risk in ${getHighestHailMonth(monthlyHail)}. Hail can cause significant damage to crops, especially during flowering and fruiting stages.</p>
         </div>
       `;
       
@@ -2750,9 +2789,9 @@
           <h4>Crop Suitability Recommendations</h4>
           <p>Based on the climate profile, we recommend the following crop strategies:</p>
           <div class="crop-recommendations">
-            ${generateCropRecommendations(avgRain, maxFrost)}
+            ${generateCropRecommendations(avgRain, maxFrost, maxHail)}
           </div>
-          <p style="margin-top: 15px;">Note: These recommendations should be combined with local soil analysis and market conditions. Consider implementing protective measures like row covers for frost-sensitive crops during high-risk months.</p>
+          <p style="margin-top: 15px;">Note: These recommendations should be combined with local soil analysis and market conditions. Consider implementing protective measures like hail nets for high-value crops during high-risk months.</p>
         </div>
       `;
       
@@ -2765,21 +2804,21 @@
             <li><strong>Planting Season (${getMonthsWithRain(monthlyRain, 60)}):</strong> Optimal planting window with adequate soil moisture</li>
             <li><strong>Critical Growth Period (${getMonthsWithRain(monthlyRain, 80)}):</strong> Higher water demand requiring monitoring</li>
             <li><strong>Harvest Window (${getBestHarvestMonths(monthlyRain, monthlyFrost)}):</strong> Recommended harvest period with minimal weather disruption</li>
-            <li><strong>High Frost Risk (${getHighFrostMonths(monthlyFrost)}):</strong> Requires frost protection measures</li>
+            <li><strong>High Hail Risk (${getHighHailMonths(monthlyHail)}):</strong> Requires hail protection measures</li>
           </ul>
         </div>
       `;
       
-      // Water management recommendations
+      // Hail protection recommendations
       commentaryHTML += `
         <div class="commentary-section">
-          <h4>Water Management Strategy</h4>
-          <p>Effective water management is ${avgRain < 500 ? 'critical' : 'recommended'} in this region:</p>
+          <h4>Hail Protection Strategy</h4>
+          <p>Hail protection is ${maxHail > 3 ? 'critical' : 'recommended'} in this region:</p>
           <ul>
-            <li>Implement rainwater harvesting to capture ${Math.max(...monthlyRain).toFixed(0)}mm peak monthly rainfall</li>
-            <li>Consider ${avgRain < 500 ? 'drip irrigation' : 'sprinkler systems'} for optimal water efficiency</li>
-            <li>Schedule irrigation during early morning hours to reduce evaporation</li>
-            <li>Monitor soil moisture during ${getDryMonths(monthlyRain)} when rainfall is typically lowest</li>
+            <li>Install hail nets over high-value crops during risk months</li>
+            <li>Implement crop insurance specifically covering hail damage</li>
+            <li>Diversify planting dates to spread hail risk</li>
+            <li>Monitor weather forecasts during ${getHighHailMonths(monthlyHail)} for storm warnings</li>
           </ul>
         </div>
       `;
@@ -2794,6 +2833,7 @@
             <li>Diversifying crops to spread climate risk</li>
             <li>${droughtCount > 3 ? 'Investing in water storage infrastructure' : 'Developing water conservation plans'}</li>
             <li>Establishing windbreaks to reduce evapotranspiration</li>
+            <li>Installing hail protection systems for perennial crops</li>
             <li>Monitoring seasonal forecasts for extreme weather preparedness</li>
           </ul>
           <p style="margin-top: 10px;"><em>Note: These insights are based on historical data analysis. Consult with local agricultural extension services for region-specific guidance.</em></p>
@@ -2810,37 +2850,47 @@
       return `${years.slice(0, 3).join(", ")} and ${years.length - 3} other years`;
     }
     
-    function getFrostRiskLevel(frostDays) {
-      if (frostDays === 0) return "negligible";
-      if (frostDays <= 5) return "low";
-      if (frostDays <= 15) return "moderate";
-      if (frostDays <= 30) return "high";
-      return "very high";
+    function getHailRiskLevel(hailDays) {
+      if (hailDays <= 2) return "low";
+      if (hailDays <= 5) return "moderate";
+      return "high";
     }
     
-    function getFrostMonthsString(monthlyFrost) {
-      const highFrostMonths = monthlyFrost
+    function getHailMonthsString(monthlyHail) {
+      const highHailMonths = monthlyHail
         .map((days, index) => ({ days, month: monthNames[index] }))
-        .filter(item => item.days >= 2)
+        .filter(item => item.days >= 0.5)
         .map(item => item.month);
       
-      return formatMonthList(highFrostMonths);
+      return formatMonthList(highHailMonths);
     }
     
-    function getFrostTimeRange(monthlyFrost) {
-      const frostMonths = monthlyFrost
+    function getHailTimeRange(monthlyHail) {
+      const hailMonths = monthlyHail
         .map((days, index) => ({ days, index }))
-        .filter(item => item.days > 0)
+        .filter(item => item.days > 0.3)
         .map(item => item.index);
       
-      if (frostMonths.length === 0) return "no significant frost period";
+      if (hailMonths.length === 0) return "no significant hail period";
       
-      const first = monthNames[Math.min(...frostMonths)].substring(0, 3);
-      const last = monthNames[Math.max(...frostMonths)].substring(0, 3);
+      const first = monthNames[Math.min(...hailMonths)].substring(0, 3);
+      const last = monthNames[Math.max(...hailMonths)].substring(0, 3);
       return `${first} to ${last}`;
     }
     
-    function generateCropRecommendations(avgRain, frostDays) {
+    function getHighestHailMonth(monthlyHail) {
+      let maxIndex = 0;
+      let maxValue = 0;
+      monthlyHail.forEach((val, index) => {
+        if (val > maxValue) {
+          maxValue = val;
+          maxIndex = index;
+        }
+      });
+      return monthNames[maxIndex];
+    }
+    
+    function generateCropRecommendations(avgRain, frostDays, hailDays) {
       let crops = [];
       
       // Low water requirement crops
@@ -2851,7 +2901,7 @@
       } 
       // Moderate water requirement crops
       else if (avgRain < 600) {
-        crops.push({name: "Maize", risk: "moderate"});
+        crops.push({name: "Maize", risk: hailDays > 3 ? "hail-risk" : "low"});
         crops.push({name: "Beans", risk: "low"});
         crops.push({name: "Sunflowers", risk: "low"});
       }
@@ -2868,11 +2918,11 @@
         crops.push({name: "Garlic", risk: "low"});
       }
       
-      // Frost-sensitive crops (only if low frost risk)
-      if (frostDays < 3) {
-        crops.push({name: "Tomatoes", risk: frostDays > 0 ? "moderate" : "low"});
-        crops.push({name: "Citrus", risk: frostDays > 0 ? "high" : "low"});
-        crops.push({name: "Avocados", risk: frostDays > 0 ? "high" : "low"});
+      // Hail-resistant crops
+      if (hailDays > 3) {
+        crops.push({name: "Potatoes", risk: "low"});
+        crops.push({name: "Carrots", risk: "low"});
+        crops.push({name: "Onions", risk: "low"});
       }
       
       // Deduplicate
@@ -2886,7 +2936,7 @@
       });
       
       return uniqueCrops.map(crop => 
-        `<div class="crop-tag ${crop.risk === 'high' ? 'high-risk' : crop.risk === 'moderate' ? 'moderate-risk' : ''}">${crop.name}</div>`
+        `<div class="crop-tag ${crop.risk === 'high' ? 'high-risk' : crop.risk === 'moderate' ? 'moderate-risk' : crop.risk === 'hail-risk' ? 'hail-risk' : ''}">${crop.name}</div>`
       ).join('');
     }
     
@@ -2899,19 +2949,10 @@
       return formatMonthList(months);
     }
     
-    function getHighFrostMonths(monthlyFrost) {
-      const months = monthlyFrost
-        .map((frost, index) => ({ frost, month: monthNames[index] }))
-        .filter(item => item.frost >= 2)
-        .map(item => item.month.substring(0, 3));
-      
-      return formatMonthList(months);
-    }
-    
-    function getDryMonths(monthlyRain) {
-      const months = monthlyRain
-        .map((rain, index) => ({ rain, month: monthNames[index] }))
-        .filter(item => item.rain < 30)
+    function getHighHailMonths(monthlyHail) {
+      const months = monthlyHail
+        .map((hail, index) => ({ hail, month: monthNames[index] }))
+        .filter(item => item.hail >= 0.5)
         .map(item => item.month.substring(0, 3));
       
       return formatMonthList(months);
@@ -2941,67 +2982,12 @@
       return `${months.slice(0, -1).join(", ")}, and ${months[months.length - 1]}`;
     }
 
-    // Create monthly rainfall table with document fragment
-    function createMonthlyRainTable(monthlyRain, monthlyFrost) {
-      const tableBody = document.getElementById('month-rain-table-body');
-      tableBody.innerHTML = '';
-      
-      const fragment = document.createDocumentFragment();
-      
-      monthlyRain.forEach((rain, index) => {
-        const row = document.createElement('tr');
-        const monthCell = document.createElement('td');
-        const rainCell = document.createElement('td');
-        const classificationCell = document.createElement('td');
-        
-        monthCell.textContent = monthNames[index];
-        rainCell.textContent = rain;
-        
-        // Classification based on rainfall
-        let classification = '';
-        let rowClass = '';
-        
-        if (rain < 30) {
-          classification = 'Critical Dryness';
-          rowClass = 'critical-month';
-        } else if (rain < 60) {
-          classification = 'Dry';
-        } else if (rain < 100) {
-          classification = 'Moderate';
-        } else {
-          classification = 'Wet';
-          rowClass = 'favorable-month';
-        }
-        
-        // Add frost warning if needed
-        if (monthlyFrost[index] > 5) {
-          classification += ' (High Frost Risk)';
-          rowClass = 'critical-month';
-        } else if (monthlyFrost[index] > 2) {
-          classification += ' (Some Frost Risk)';
-        }
-        
-        classificationCell.textContent = classification;
-        
-        row.appendChild(monthCell);
-        row.appendChild(rainCell);
-        row.appendChild(classificationCell);
-        
-        if (rowClass) {
-          row.className = rowClass;
-        }
-        
-        fragment.appendChild(row);
-      });
-      
-      tableBody.appendChild(fragment);
-    }
-    
     // Function to calculate and display risk rating
     function calculateRiskRating(analysisData) {
       const { 
         avgRain, 
         maxFrost, 
+        maxHail,
         droughtCount,
         completeness,
         totalYears
@@ -3046,8 +3032,20 @@
         frostRisk = 0.5;
       }
       
-      // Calculate overall risk (average of the three)
-      const overallRisk = (droughtSeverity + droughtFrequency + frostRisk) / 3;
+      // Calculate hail risk (0-3)
+      let hailRisk = 0;
+      if (maxHail > 7) {
+        hailRisk = 3;
+      } else if (maxHail > 5) {
+        hailRisk = 2.5;
+      } else if (maxHail > 3) {
+        hailRisk = 2;
+      } else if (maxHail > 1) {
+        hailRisk = 1;
+      }
+      
+      // Calculate overall risk (average of the four)
+      const overallRisk = (droughtSeverity + droughtFrequency + frostRisk + hailRisk) / 4;
       
       // Determine labels
       const getSeverityLabel = (value) => {
@@ -3066,6 +3064,7 @@
       document.getElementById('drought-severity').textContent = droughtSeverity.toFixed(1);
       document.getElementById('drought-frequency').textContent = droughtFrequency.toFixed(1);
       document.getElementById('frost-risk').textContent = frostRisk.toFixed(1);
+      document.getElementById('hail-risk').textContent = hailRisk.toFixed(1);
       document.getElementById('overall-risk').textContent = overallRisk.toFixed(1);
       document.getElementById('overall-risk-title').textContent = getRiskLevel(overallRisk);
       
@@ -3073,6 +3072,7 @@
       document.getElementById('drought-severity-label').textContent = getSeverityLabel(droughtSeverity);
       document.getElementById('drought-frequency-label').textContent = getSeverityLabel(droughtFrequency);
       document.getElementById('frost-risk-label').textContent = getSeverityLabel(frostRisk);
+      document.getElementById('hail-risk-label').textContent = getSeverityLabel(hailRisk);
       
       // Set label colors
       const setLabelColor = (elementId, value) => {
@@ -3090,9 +3090,26 @@
         }
       };
       
+      // Special color for hail
+      const setHailLabelColor = (elementId, value) => {
+        const label = document.getElementById(elementId);
+        label.className = 'risk-category-label';
+        if (value >= 2.5) {
+          label.style.backgroundColor = '#f3e5f5';
+          label.style.color = '#7b1fa2';
+        } else if (value >= 1.5) {
+          label.style.backgroundColor = '#e1bee7';
+          label.style.color = '#7b1fa2';
+        } else {
+          label.style.backgroundColor = '#f3e5f5';
+          label.style.color = '#7b1fa2';
+        }
+      };
+      
       setLabelColor('drought-severity-label', droughtSeverity);
       setLabelColor('drought-frequency-label', droughtFrequency);
       setLabelColor('frost-risk-label', frostRisk);
+      setHailLabelColor('hail-risk-label', hailRisk);
       
       // Set overall risk color
       const overallRiskEl = document.getElementById('overall-risk');
@@ -3110,6 +3127,7 @@
       if (droughtSeverity >= 2) riskFactors.push('High drought severity');
       if (droughtFrequency >= 2) riskFactors.push('Frequent drought years');
       if (frostRisk >= 2) riskFactors.push('Significant frost risk');
+      if (hailRisk >= 2) riskFactors.push('Substantial hail risk');
       if (completeness < 80) riskFactors.push('Partial data reliability');
       
       const riskFactorsContainer = document.getElementById('risk-factors');
@@ -3169,6 +3187,7 @@
       document.getElementById('drought-severity').textContent = "0";
       document.getElementById('drought-frequency').textContent = "0";
       document.getElementById('frost-risk').textContent = "0";
+      document.getElementById('hail-risk').textContent = "0";
       document.getElementById('overall-risk').textContent = "0";
       document.getElementById('overall-risk-title').textContent = "No Risk";
       
@@ -3178,11 +3197,11 @@
         <ul>
           <li>Analysis of rainfall patterns and drought risks</li>
           <li>Impact of freezing days on crop selection</li>
+          <li>Hail risk assessment and protection strategies</li>
           <li>Long-term climate trends and projections</li>
           <li>Recommendations for farming practices</li>
           <li>Risk mitigation strategies</li>
           <li>Specific monthly analysis of rainfall and frost patterns</li>
-          <li>Detailed frost risk assessment</li>
         </ul>
       `;
       
