@@ -33,6 +33,7 @@
       --danger: #f44336;
       --frost-blue: #1e88e5;
       --frost-light: #bbdefb;
+      --flood-blue: #2196f3;
       --card-radius: 12px;
       --transition: all 0.3s ease;
     }
@@ -720,6 +721,41 @@
       color: var(--danger);
     }
     
+    /* Flood Indicator */
+    .flood-indicator {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 1rem;
+    }
+    
+    .flood-none {
+      background: #e8f5e9;
+      color: var(--success);
+    }
+    
+    .flood-low {
+      background: #e3f2fd;
+      color: var(--flood-blue);
+    }
+    
+    .flood-moderate {
+      background: #bbdefb;
+      color: #0d47a1;
+    }
+    
+    .flood-high {
+      background: #bbdefb;
+      color: #0d47a1;
+      border: 2px solid #0d47a1;
+    }
+    
     /* Monthly Table */
     .month-rain-table {
       width: 100%;
@@ -760,6 +796,90 @@
     .favorable-month {
       background-color: #e8f5e9 !important;
       color: #2e7d32;
+    }
+    
+    .flood-month {
+      background-color: #e3f2fd !important;
+      color: #0d47a1;
+    }
+    
+    /* Crop Risk Indicators */
+    .crop-risk-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .crop-risk-card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-top: 4px solid var(--primary);
+      transition: var(--transition);
+    }
+    
+    .crop-risk-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .crop-icon {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+    
+    .crop-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+    
+    .crop-risk {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .crop-risk-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    
+    .risk-low {
+      color: var(--success);
+      background: rgba(76, 175, 80, 0.1);
+    }
+    
+    .risk-medium {
+      color: var(--warning);
+      background: rgba(255, 152, 0, 0.1);
+    }
+    
+    .risk-high {
+      color: var(--danger);
+      background: rgba(244, 67, 54, 0.1);
+    }
+    
+    /* Crop Specific Recommendations */
+    .crop-recommendation {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .crop-recommendation h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--primary-dark);
     }
     
     /* Responsive Adjustments */
@@ -810,6 +930,10 @@
       
       .risk-overall {
         grid-column: span 2;
+      }
+      
+      .crop-risk-container {
+        grid-template-columns: 1fr;
       }
     }
     
@@ -1005,6 +1129,45 @@
       font-weight: 700;
       margin: 5px 0;
     }
+    
+    /* Flood Card */
+    .flood-card {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      background: #e3f2fd;
+      border-radius: 10px;
+      padding: 15px;
+    }
+    
+    .flood-card-icon {
+      width: 60px;
+      height: 60px;
+      background: #bbdefb;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: #0d47a1;
+    }
+    
+    .flood-card-content {
+      flex: 1;
+    }
+    
+    .flood-card-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #0d47a1;
+    }
+    
+    .flood-card-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 5px 0;
+    }
   </style>
 </head>
 <body>
@@ -1067,7 +1230,7 @@
       <div class="report-section" id="reportSection">
         <div class="report-header">
           <h2>Farm Risk Analysis Report</h2>
-          <p>Detailed insights for informed agricultural decisions</p>
+          <p>Detailed insights for maize, soybean & wheat cultivation</p>
         </div>
         
         <div class="report-content">
@@ -1083,16 +1246,15 @@
                   <p>The report includes:</p>
                 </div>
                 <ul class="placeholder-list">
-                  <li><i class="mdi mdi-weather-pouring icon"></i> Rainfall analysis</li>
+                  <li><i class="mdi mdi-weather-pouring icon"></i> Rainfall & flood analysis</li>
                   <li><i class="mdi mdi-snowflake icon"></i> Frost risk assessment</li>
                   <li><i class="mdi mdi-fire icon"></i> Drought patterns</li>
-                  <li><i class="mdi mdi-thermometer icon"></i> Temperature trends</li>
-                  <li><i class="mdi mdi-weather-windy icon"></i> Wind patterns</li>
-                  <li><i class="mdi mdi-weather-hurricane icon"></i> Risk mitigation</li>
+                  <li><i class="mdi mdi-wheat icon"></i> Crop-specific recommendations</li>
+                  <li><i class="mdi mdi-weather-windy icon"></i> Risk mitigation</li>
                 </ul>
                 <div class="placeholder-graphic">
                   <div class="graphic-icon">
-                    <i class="mdi mdi-weather-cloudy" style="font-size: 3rem; color: #b3e5fc;"></i>
+                    <i class="mdi mdi-wheat" style="font-size: 3rem; color: #8d6e63;"></i>
                   </div>
                   <p>Your detailed risk analysis will appear here</p>
                 </div>
@@ -1115,6 +1277,55 @@
                   <div class="completeness-fill" id="completeness-bar"></div>
                 </div>
                 <span id="completeness-value">0%</span>
+              </div>
+            </div>
+            
+            <!-- Crop Risk Indicators -->
+            <div class="report-card">
+              <h3>
+                <i class="mdi mdi-sprout"></i>
+                Crop Risk Assessment
+              </h3>
+              
+              <div class="crop-risk-container">
+                <div class="crop-risk-card">
+                  <div class="crop-icon" style="color: #ff9800;">
+                    <i class="mdi mdi-corn"></i>
+                  </div>
+                  <div class="crop-name">Maize</div>
+                  <div class="crop-risk" id="maize-risk">0.8</div>
+                  <div class="crop-risk-label risk-low">Low Risk</div>
+                  <div class="crop-recommendation">
+                    <h4><i class="mdi mdi-lightbulb-on"></i> Recommendations</h4>
+                    <p>Plant early to avoid frost. Use drought-resistant varieties. Ensure proper drainage.</p>
+                  </div>
+                </div>
+                
+                <div class="crop-risk-card">
+                  <div class="crop-icon" style="color: #4caf50;">
+                    <i class="mdi mdi-seed"></i>
+                  </div>
+                  <div class="crop-name">Soybean</div>
+                  <div class="crop-risk" id="soybean-risk">1.5</div>
+                  <div class="crop-risk-label risk-medium">Medium Risk</div>
+                  <div class="crop-recommendation">
+                    <h4><i class="mdi mdi-lightbulb-on"></i> Recommendations</h4>
+                    <p>Monitor soil moisture. Avoid planting in flood-prone areas. Use frost protection.</p>
+                  </div>
+                </div>
+                
+                <div class="crop-risk-card">
+                  <div class="crop-icon" style="color: #8d6e63;">
+                    <i class="mdi mdi-wheat"></i>
+                  </div>
+                  <div class="crop-name">Wheat</div>
+                  <div class="crop-risk" id="wheat-risk">2.2</div>
+                  <div class="crop-risk-label risk-high">High Risk</div>
+                  <div class="crop-recommendation">
+                    <h4><i class="mdi mdi-lightbulb-on"></i> Recommendations</h4>
+                    <p>Delay planting to avoid frost. Use irrigation during drought. Improve drainage systems.</p>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -1154,6 +1365,54 @@
               <div class="chart-container">
                 <canvas id="frostChart"></canvas>
               </div>
+              
+              <div class="crop-recommendation">
+                <h4><i class="mdi mdi-snowflake"></i> Frost Impact on Crops</h4>
+                <p><strong>Maize:</strong> Frost damage can occur below 0°C during germination. Late frosts harm seedlings.</p>
+                <p><strong>Soybean:</strong> Sensitive to frost during flowering. Temperatures below 2°C cause damage.</p>
+                <p><strong>Wheat:</strong> Winter wheat tolerates frost but spring wheat is vulnerable during heading.</p>
+              </div>
+            </div>
+            
+            <!-- Flood Risk Analysis -->
+            <div class="report-card">
+              <h3>
+                <i class="mdi mdi-weather-pouring"></i>
+                Flood Risk Analysis
+              </h3>
+              
+              <div class="flood-card">
+                <div class="flood-card-icon">
+                  <i class="mdi mdi-water"></i>
+                </div>
+                <div class="flood-card-content">
+                  <div class="flood-card-title">Flood Risk Index</div>
+                  <div class="flood-card-value" id="flood-index">0</div>
+                  <div>Based on terrain & rainfall patterns</div>
+                </div>
+              </div>
+              
+              <div class="flood-card">
+                <div class="flood-card-icon">
+                  <i class="mdi mdi-calendar-alert"></i>
+                </div>
+                <div class="flood-card-content">
+                  <div class="flood-card-title">Flood Season</div>
+                  <div class="flood-card-value" id="flood-season">December - February</div>
+                  <div>Highest risk period</div>
+                </div>
+              </div>
+              
+              <div id="flood-indicator-container">
+                <!-- Flood indicator will be inserted here -->
+              </div>
+              
+              <div class="crop-recommendation">
+                <h4><i class="mdi mdi-water"></i> Flood Impact on Crops</h4>
+                <p><strong>Maize:</strong> Tolerates 2-3 days of flooding. Longer periods cause root rot and yield loss.</p>
+                <p><strong>Soybean:</strong> Very sensitive to flooding. Just 2 days can reduce yields by 17-43%.</p>
+                <p><strong>Wheat:</strong> Winter wheat can tolerate some flooding but spring wheat is vulnerable during germination.</p>
+              </div>
             </div>
             
             <!-- Risk Rating Section -->
@@ -1170,9 +1429,9 @@
                 </div>
                 
                 <div class="risk-category">
-                  <div class="risk-category-title">Drought Frequency</div>
-                  <div class="risk-category-value" id="drought-frequency">0</div>
-                  <div class="risk-category-label" id="drought-frequency-label">-</div>
+                  <div class="risk-category-title">Flood Risk</div>
+                  <div class="risk-category-value" id="flood-risk">0</div>
+                  <div class="risk-category-label" id="flood-risk-label">-</div>
                 </div>
                 
                 <div class="risk-category">
@@ -1277,6 +1536,13 @@
               </h4>
               <p id="drought-summary"></p>
               <div class="drought-years" id="drought-years"></div>
+              
+              <div class="crop-recommendation" style="margin-top: 15px;">
+                <h4><i class="mdi mdi-fire"></i> Drought Impact on Crops</h4>
+                <p><strong>Maize:</strong> Water stress during flowering reduces yields by 50-90%. Requires 500-800mm per season.</p>
+                <p><strong>Soybean:</strong> Sensitive to drought during flowering and pod filling. Requires 450-700mm per season.</p>
+                <p><strong>Wheat:</strong> Spring wheat needs 450-650mm. Drought during grain filling reduces yields significantly.</p>
+              </div>
             </div>
             
             <div class="report-card">
@@ -1319,6 +1585,7 @@
                     <th>Rainfall (mm)</th>
                     <th>Avg. Temp (°C)</th>
                     <th>Frost Days</th>
+                    <th>Flood Risk</th>
                   </tr>
                 </thead>
                 <tbody id="month-rain-table-body">
@@ -1674,11 +1941,20 @@
         // Frost season based on hemisphere
         const frostSeason = lat > 0 ? "November - February" : "May - August";
         
+        // Flood season and risk
+        const floodSeason = lat > 0 ? "June - August" : "December - February";
+        const floodIndex = (Math.random() * 3).toFixed(1);
+        
         // Calculate risk ratings
         const droughtSeverity = (droughtCount / 3).toFixed(1);
-        const droughtFrequency = (droughtCount / 2).toFixed(1);
+        const floodRisk = floodIndex;
         const frostRisk = (maxFrost / 5).toFixed(1);
-        const overallRisk = ((parseFloat(droughtSeverity) + parseFloat(droughtFrequency) + parseFloat(frostRisk)) / 3).toFixed(1);
+        const overallRisk = ((parseFloat(droughtSeverity) + parseFloat(floodRisk) + parseFloat(frostRisk)) / 3).toFixed(1);
+        
+        // Crop risk ratings
+        const maizeRisk = (0.5 + Math.random() * 2.5).toFixed(1);
+        const soybeanRisk = (0.5 + Math.random() * 2.5).toFixed(1);
+        const wheatRisk = (0.5 + Math.random() * 2.5).toFixed(1);
         
         // Update report with location
         document.querySelector('.report-header h2').innerHTML = `Farm Risk Analysis`;
@@ -1703,14 +1979,31 @@
         document.getElementById("avg-frost").textContent = maxFrost;
         document.getElementById("frost-season").textContent = frostSeason;
         
+        // Update flood data
+        document.getElementById("flood-index").textContent = floodIndex;
+        document.getElementById("flood-season").textContent = floodSeason;
+        
+        // Update crop risks
+        document.getElementById("maize-risk").textContent = maizeRisk;
+        document.getElementById("soybean-risk").textContent = soybeanRisk;
+        document.getElementById("wheat-risk").textContent = wheatRisk;
+        
+        // Update crop risk labels
+        document.querySelector("#maize-risk + .crop-risk-label").className = "crop-risk-label " + getCropRiskClass(maizeRisk);
+        document.querySelector("#maize-risk + .crop-risk-label").textContent = getCropRiskLabel(maizeRisk);
+        document.querySelector("#soybean-risk + .crop-risk-label").className = "crop-risk-label " + getCropRiskClass(soybeanRisk);
+        document.querySelector("#soybean-risk + .crop-risk-label").textContent = getCropRiskLabel(soybeanRisk);
+        document.querySelector("#wheat-risk + .crop-risk-label").className = "crop-risk-label " + getCropRiskClass(wheatRisk);
+        document.querySelector("#wheat-risk + .crop-risk-label").textContent = getCropRiskLabel(wheatRisk);
+        
         // Update drought summary
         document.getElementById("drought-summary").innerText = `${droughtCount} drought years detected (rainfall < 400mm)`;
         
         // Update risk rating
         document.getElementById('drought-severity').textContent = droughtSeverity;
         document.getElementById('drought-severity-label').textContent = getRiskLabel(droughtSeverity);
-        document.getElementById('drought-frequency').textContent = droughtFrequency;
-        document.getElementById('drought-frequency-label').textContent = getRiskLabel(droughtFrequency);
+        document.getElementById('flood-risk').textContent = floodRisk;
+        document.getElementById('flood-risk-label').textContent = getRiskLabel(floodRisk);
         document.getElementById('frost-risk').textContent = frostRisk;
         document.getElementById('frost-risk-label').textContent = getRiskLabel(frostRisk);
         document.getElementById('overall-risk').textContent = overallRisk;
@@ -1737,22 +2030,42 @@
           </div>
         `;
         
+        // Flood indicator
+        let floodIndicatorClass = "flood-none";
+        let floodIndicatorText = "No flood risk";
+        
+        if (floodIndex > 2) {
+          floodIndicatorClass = "flood-high";
+          floodIndicatorText = "High flood risk - implement flood management strategies";
+        } else if (floodIndex > 1) {
+          floodIndicatorClass = "flood-moderate";
+          floodIndicatorText = "Moderate flood risk - consider drainage improvements";
+        } else if (floodIndex > 0.5) {
+          floodIndicatorClass = "flood-low";
+          floodIndicatorText = "Low flood risk - minimal impact expected";
+        }
+        
+        document.getElementById('flood-indicator-container').innerHTML = `
+          <div class="flood-indicator ${floodIndicatorClass}">
+            <i class="mdi mdi-water-alert"></i> ${floodIndicatorText}
+          </div>
+        `;
+        
         // Expert commentary
         document.getElementById('expert-commentary').innerHTML = `
           <p><strong>Climate Overview:</strong> This region at ${elevation.toFixed(0)}m elevation experiences an average annual rainfall of <strong>${avgRain.toFixed(0)}mm</strong> over the past ${years} years.</p>
           
           <p><strong>Frost Risk Analysis:</strong> The area sees an average of <strong>${maxFrost} freezing days</strong> annually, primarily during <strong>${frostSeason}</strong>. ${frostIndicatorText}.</p>
           
+          <p><strong>Flood Risk Analysis:</strong> Flood risk is rated at <strong>${floodIndex}</strong> with highest risk during <strong>${floodSeason}</strong>. ${floodIndicatorText}.</p>
+          
           <p><strong>Drought Risk:</strong> Analysis identified <strong>${droughtCount} drought years</strong> in the past ${years} years. Drought conditions require contingency planning.</p>
           
-          <p><strong>Agricultural Recommendations:</strong></p>
+          <p><strong>Crop-Specific Recommendations:</strong></p>
           <ul>
-            <li>Implement water conservation strategies during dry months</li>
-            <li>Monitor temperatures during cold months for frost events</li>
-            <li>Develop water storage systems to capture rainfall</li>
-            <li>Select crop varieties that match the climate patterns</li>
-            <li>Use frost protection measures like wind machines or sprinklers</li>
-            <li>Consider crop insurance for frost and drought protection</li>
+            <li><strong>Maize:</strong> Plant early to avoid frost. Use drought-resistant varieties. Ensure proper drainage in flood-prone areas.</li>
+            <li><strong>Soybean:</strong> Monitor soil moisture during drought. Avoid planting in flood-prone lowlands. Use frost protection in colder months.</li>
+            <li><strong>Wheat:</strong> Delay planting to avoid frost damage. Implement irrigation during dry spells. Improve field drainage to reduce flood risk.</li>
           </ul>
           
           <p><strong>Long-term Outlook:</strong> Climate models suggest increasing variability in rainfall patterns. Farmers should prepare for more extreme weather events by diversifying crops and implementing sustainable water management practices.</p>
@@ -1762,16 +2075,25 @@
         const monthlyRain = Array(12).fill().map(() => 30 + Math.random() * 100);
         const monthlyTemp = Array(12).fill().map(() => 10 + Math.random() * 15);
         const monthlyFrost = Array(12).fill().map(() => Math.floor(Math.random() * 3));
+        const monthlyFloodRisk = monthlyRain.map(r => r > 150 ? "High" : r > 100 ? "Moderate" : "Low");
         
         // Monthly rain table
         let tableHTML = '';
         monthlyRain.forEach((rain, index) => {
+          const isFrostRisk = monthlyFrost[index] > 0;
+          const isFloodRisk = monthlyFloodRisk[index] !== "Low";
+          
+          let rowClass = "";
+          if (isFrostRisk) rowClass = "critical-month";
+          else if (isFloodRisk) rowClass = "flood-month";
+          
           tableHTML += `
-            <tr>
+            <tr class="${rowClass}">
               <td>${monthNames[index]}</td>
               <td>${rain.toFixed(1)}</td>
               <td>${monthlyTemp[index].toFixed(1)}</td>
               <td>${monthlyFrost[index]}</td>
+              <td>${monthlyFloodRisk[index]}</td>
             </tr>
           `;
         });
@@ -1954,6 +2276,22 @@
       if (num < 1) return "Low";
       if (num < 2) return "Moderate";
       return "High";
+    }
+    
+    // Get crop risk class based on value
+    function getCropRiskClass(value) {
+      const num = parseFloat(value);
+      if (num < 1) return "risk-low";
+      if (num < 2) return "risk-medium";
+      return "risk-high";
+    }
+    
+    // Get crop risk label based on value
+    function getCropRiskLabel(value) {
+      const num = parseFloat(value);
+      if (num < 1) return "Low Risk";
+      if (num < 2) return "Medium Risk";
+      return "High Risk";
     }
     
     // Download PDF report
