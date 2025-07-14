@@ -7,2356 +7,692 @@
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  
-  <!-- Fonts & Icons -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   
   <style>
-    :root {
-      --primary: #2e7d32;
-      --primary-light: #4caf50;
-      --primary-dark: #1b5e20;
-      --secondary: #388e3c;
-      --accent: #ff9800;
-      --accent-light: #ffb74d;
-      --accent-dark: #f57c00;
-      --light: #f5f9f5;
-      --light-gray: #f8f9fa;
-      --dark: #2d3748;
-      --text: #333333;
-      --border: #e0e0e0;
-      --success: #4caf50;
-      --warning: #ff9800;
-      --danger: #f44336;
-      --frost-blue: #1e88e5;
-      --frost-light: #bbdefb;
-      --flood-blue: #2196f3;
-      --card-radius: 12px;
-      --transition: all 0.3s ease;
-    }
-    
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Inter', 'Poppins', sans-serif;
+    }
+    
+    :root {
+      --primary: #4CAF50;
+      --primary-dark: #388E3C;
+      --secondary: #FF9800;
+      --accent: #2196F3;
+      --light: #F5F9F5;
+      --dark: #263238;
+      --danger: #F44336;
+      --warning: #FFC107;
+      --success: #4CAF50;
+      --gray: #607D8B;
     }
     
     body {
-      background: linear-gradient(135deg, #f0f9f0 0%, #e0f2e1 100%);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-      touch-action: manipulation;
+      font-family: 'Roboto', sans-serif;
+      background-color: #f0f5f0;
+      color: var(--dark);
+      line-height: 1.6;
     }
     
     .container {
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 0;
       display: flex;
-      flex-direction: column;
-      height: 100vh;
+      min-height: 100vh;
     }
     
-    /* Header Styles */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 25px;
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 20px 0;
+      box-shadow: 3px 0 10px rgba(0,0,0,0.1);
       z-index: 100;
-      flex-wrap: wrap;
-      gap: 15px;
     }
     
     .logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 20px;
     }
     
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--primary);
-      border-radius: 50%;
+    .logo i {
+      font-size: 28px;
+      margin-right: 12px;
+    }
+    
+    .logo h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    
+    .nav-links {
+      list-style: none;
+      padding: 0 15px;
+    }
+    
+    .nav-links li {
+      margin-bottom: 5px;
+    }
+    
+    .nav-links a {
       display: flex;
       align-items: center;
-      justify-content: center;
+      padding: 12px 15px;
+      color: rgba(255,255,255,0.9);
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+    
+    .nav-links a:hover, .nav-links a.active {
+      background: rgba(255,255,255,0.15);
       color: white;
-      font-size: 1.3rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
     
-    .logo-text {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--primary-dark);
-      letter-spacing: -0.5px;
+    .nav-links i {
+      margin-right: 12px;
+      font-size: 18px;
+      width: 24px;
+      text-align: center;
     }
     
-    .logo-text span {
-      color: var(--accent);
-      font-weight: 600;
-    }
-    
-    .app-container {
-      display: flex;
+    /* Main Content */
+    .main-content {
       flex: 1;
-      overflow: hidden;
+      padding: 20px;
+      overflow-y: auto;
     }
     
-    .map-section {
-      flex: 1;
-      position: relative;
-      background: #e8f5e9;
-      z-index: 1;
-      transition: var(--transition);
-    }
-    
-    .report-section {
-      width: 400px;
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: -5px 0 15px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      z-index: 10;
-      transition: var(--transition);
-    }
-    
-    #map {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 1;
-    }
-    
-    /* Control bar - at top */
-    .control-bar {
+    .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 25px;
-      background: rgba(255, 255, 255, 0.98);
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-      gap: 15px;
+      margin-bottom: 25px;
     }
     
-    .search-container {
-      display: flex;
-      flex: 1;
-      max-width: 500px;
-      gap: 10px;
-      align-items: center;
-    }
-    
-    .search-input-group {
-      flex: 1;
-      position: relative;
-    }
-    
-    .search-input {
-      width: 100%;
-      padding: 12px 15px 12px 45px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-size: 1rem;
-      transition: var(--transition);
-      background: var(--light-gray);
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-      font-family: 'Inter', sans-serif;
-    }
-    
-    .search-input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
-      background: white;
-    }
-    
-    .search-icon {
-      position: absolute;
-      left: 15px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--primary);
-      font-size: 1rem;
-    }
-    
-    .location-display {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.95rem;
-      min-width: 200px;
-      background: rgba(46, 125, 50, 0.05);
-      padding: 10px 15px;
-      border-radius: 10px;
-    }
-    
-    .control-buttons {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-      gap: 8px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-      font-family: 'Inter', sans-serif;
-      white-space: nowrap;
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 15px rgba(46, 125, 50, 0.3);
-    }
-    
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--primary);
-      color: var(--primary);
-      font-weight: 500;
-    }
-    
-    .btn-outline:hover {
-      background: rgba(46, 125, 50, 0.1);
-    }
-    
-    .btn-small {
-      padding: 8px 12px;
-      font-size: 0.85rem;
-    }
-    
-    .report-header {
-      padding: 20px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.9);
-    }
-    
-    .report-header h2 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--primary-dark);
-      margin-bottom: 8px;
-      letter-spacing: -0.3px;
-    }
-    
-    .report-header p {
-      color: #666;
-      font-size: 1rem;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    
-    .report-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-    
-    .report-card {
-      background: white;
-      border-radius: var(--card-radius);
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 3px 15px rgba(0, 0, 0, 0.05);
-      border-left: 4px solid var(--primary);
-      transition: var(--transition);
-    }
-    
-    .report-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-    }
-    
-    .report-card h3 {
-      font-size: 1.2rem;
-      margin-bottom: 15px;
-      color: var(--dark);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .header h2 {
+      font-family: 'Montserrat', sans-serif;
       font-weight: 600;
+      color: var(--dark);
+      font-size: 24px;
     }
     
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    
-    .stat-card {
-      background: white;
-      border-radius: 8px;
-      padding: 15px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      transition: var(--transition);
-      border-top: 3px solid var(--primary-light);
+    .user-info {
       display: flex;
-      flex-direction: column;
       align-items: center;
     }
     
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stat-icon {
+    .user-info img {
       width: 40px;
       height: 40px;
-      background: rgba(46, 125, 50, 0.1);
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 12px;
-      font-size: 1.2rem;
-      color: var(--primary);
+      margin-left: 15px;
+      object-fit: cover;
+      border: 2px solid var(--primary);
     }
     
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--primary-dark);
-      margin: 3px 0;
-      letter-spacing: -0.5px;
-    }
-    
-    .stat-label {
-      color: #666;
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-    
-    .chart-container, .monthly-chart-container {
-      position: relative;
-      height: 200px;
-      margin: 12px 0 15px;
-    }
-    
-    .drought-summary {
-      background: #fff8e1;
-      border-radius: 10px;
-      padding: 18px;
-      border-left: 4px solid var(--warning);
-      margin: 18px 0;
-    }
-    
-    .drought-summary h4 {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-      color: #e65100;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-    
-    .drought-years {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    
-    .drought-year {
-      background: #ffecb3;
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 500;
-    }
-    
-    .monthly-analysis {
+    /* Dashboard Cards */
+    .dashboard-cards {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-top: 15px;
-    }
-    
-    .monthly-card {
-      background: white;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      border-top: 3px solid var(--primary-light);
-    }
-    
-    .monthly-card h4 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      color: var(--dark);
-      font-size: 1rem;
-      font-weight: 500;
-    }
-    
-    .hidden {
-      display: none;
-    }
-    
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      flex-direction: column;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 20px;
-      height: 100%;
+      margin-bottom: 30px;
     }
     
-    .spinner {
-      width: 45px;
-      height: 45px;
-      border: 5px solid rgba(46, 125, 50, 0.2);
-      border-top: 5px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1.2s linear infinite;
-    }
-    
-    .loading-text {
-      font-size: 1.1rem;
-      color: var(--dark);
-      text-align: center;
-      font-weight: 500;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    /* Notification */
-    .notification {
-      position: fixed;
-      top: 25px;
-      right: 25px;
-      padding: 15px 25px;
-      border-radius: 10px;
-      color: white;
-      font-weight: 500;
-      z-index: 2000;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-      transform: translateX(200%);
-      transition: transform 0.4s ease;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 1rem;
-    }
-    
-    .notification.show {
-      transform: translateX(0);
-    }
-    
-    .notification.success {
-      background: var(--success);
-    }
-    
-    .notification.error {
-      background: var(--danger);
-    }
-    
-    .notification.info {
-      background: var(--primary);
-    }
-    
-    /* Risk Rating Styles */
-    .risk-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin: 20px 0;
-    }
-    
-    .risk-category {
-      text-align: center;
-      padding: 15px;
-      border-radius: 8px;
+    .card {
       background: white;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      transition: var(--transition);
-    }
-    
-    .risk-category:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-    }
-    
-    .risk-category-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: #555;
-    }
-    
-    .risk-category-value {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin: 8px 0;
-      transition: var(--transition);
-    }
-    
-    .risk-category-label {
-      font-size: 0.8rem;
-      padding: 4px 10px;
-      border-radius: 20px;
-      display: inline-block;
-      font-weight: 600;
-    }
-    
-    .risk-overall {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      border-radius: 12px;
       padding: 20px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      border-radius: 8px;
-      color: white;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      transition: transform 0.3s;
     }
     
-    .risk-overall:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-    
-    .risk-overall-value {
-      font-size: 2.5rem;
-      font-weight: 800;
-      margin: 8px 0;
-      letter-spacing: -1px;
-    }
-    
-    .risk-overall-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-top: 5px;
-    }
-    
-    /* Rating Scale Section */
-    .rating-scale-container {
-      background: white;
-      border-radius: var(--card-radius);
-      padding: 20px;
-      margin: 20px 0;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-      border-left: 4px solid var(--frost-blue);
-    }
-    
-    .rating-scale-container h3 {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      color: var(--frost-blue);
-      font-weight: 600;
-      font-size: 1.1rem;
-    }
-    
-    .rating-scale-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
-    }
-    
-    .rating-scale-item {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 15px;
-      text-align: center;
-      border-left: 4px solid #ccc;
-      transition: var(--transition);
-    }
-    
-    .rating-scale-item:hover {
-      transform: translateY(-3px);
-    }
-    
-    .rating-scale-item.low-risk {
-      border-left-color: var(--success);
-    }
-    
-    .rating-scale-item.moderate-risk {
-      border-left-color: var(--warning);
-    }
-    
-    .rating-scale-item.high-risk {
-      border-left-color: var(--danger);
-    }
-    
-    .rating-scale-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 12px 0;
-    }
-    
-    .rating-scale-label {
-      font-weight: 700;
-      margin-bottom: 10px;
-      font-size: 1rem;
-    }
-    
-    .rating-scale-description {
-      font-size: 0.9rem;
-      color: #555;
-    }
-    
-    /* Expert Commentary */
-    .commentary-card {
-      background: white;
-      border-radius: var(--card-radius);
-      padding: 20px;
-      margin: 20px 0;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-      border-left: 4px solid var(--accent);
-    }
-    
-    .commentary-card h3 {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      color: var(--accent-dark);
-      font-weight: 600;
-      font-size: 1.1rem;
-    }
-    
-    .commentary-content {
-      background: #fffaf0;
-      border-radius: 8px;
-      padding: 15px;
-      line-height: 1.6;
-      font-size: 0.95rem;
-    }
-    
-    .commentary-content p {
-      margin-bottom: 12px;
-    }
-    
-    .commentary-content ul {
-      padding-left: 20px;
-      margin: 12px 0;
-    }
-    
-    .commentary-content li {
-      margin-bottom: 10px;
-      position: relative;
-    }
-    
-    .commentary-content li::before {
-      content: "•";
-      color: var(--accent);
-      font-weight: bold;
-      display: inline-block;
-      width: 1em;
-      margin-left: -1em;
-    }
-    
-    /* Frost Indicator */
-    .frost-indicator {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      text-align: center;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-size: 1rem;
-    }
-    
-    .frost-none {
-      background: #e8f5e9;
-      color: var(--success);
-    }
-    
-    .frost-low {
-      background: #fff8e1;
-      color: var(--warning);
-    }
-    
-    .frost-moderate {
-      background: #ffecb3;
-      color: #e65100;
-    }
-    
-    .frost-high {
-      background: #ffebee;
-      color: var(--danger);
-    }
-    
-    /* Flood Indicator */
-    .flood-indicator {
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      text-align: center;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-size: 1rem;
-    }
-    
-    .flood-none {
-      background: #e8f5e9;
-      color: var(--success);
-    }
-    
-    .flood-low {
-      background: #e3f2fd;
-      color: var(--flood-blue);
-    }
-    
-    .flood-moderate {
-      background: #bbdefb;
-      color: #0d47a1;
-    }
-    
-    .flood-high {
-      background: #bbdefb;
-      color: #0d47a1;
-      border: 2px solid #0d47a1;
-    }
-    
-    /* Monthly Table */
-    .month-rain-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 18px 0;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-      font-size: 0.9rem;
-    }
-    
-    .month-rain-table th {
-      background-color: #e8f5e9;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-    }
-    
-    .month-rain-table td {
-      padding: 12px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    
-    .month-rain-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .month-rain-table tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-    
-    .critical-month {
-      background-color: #ffebee !important;
-      color: #d32f2f;
-    }
-    
-    .favorable-month {
-      background-color: #e8f5e9 !important;
-      color: #2e7d32;
-    }
-    
-    .flood-month {
-      background-color: #e3f2fd !important;
-      color: #0d47a1;
-    }
-    
-    /* Crop Risk Indicators */
-    .crop-risk-container {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-      margin-top: 20px;
-    }
-    
-    .crop-risk-card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      border-top: 4px solid var(--primary);
-      transition: var(--transition);
-    }
-    
-    .crop-risk-card:hover {
+    .card:hover {
       transform: translateY(-5px);
     }
     
-    .crop-icon {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
     }
     
-    .crop-name {
-      font-weight: 700;
-      font-size: 1.1rem;
-      margin-bottom: 12px;
-    }
-    
-    .crop-risk {
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    
-    .crop-risk-label {
-      font-size: 0.9rem;
-      font-weight: 500;
-      padding: 4px 10px;
-      border-radius: 20px;
-      display: inline-block;
-    }
-    
-    .risk-low {
-      color: var(--success);
-      background: rgba(76, 175, 80, 0.1);
-    }
-    
-    .risk-medium {
-      color: var(--warning);
-      background: rgba(255, 152, 0, 0.1);
-    }
-    
-    .risk-high {
-      color: var(--danger);
-      background: rgba(244, 67, 54, 0.1);
-    }
-    
-    /* Crop Specific Recommendations */
-    .crop-recommendation {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 15px;
-      font-size: 0.9rem;
-    }
-    
-    .crop-recommendation h4 {
+    .card-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      font-size: 24px;
+    }
+    
+    .card-1 .card-icon { background: rgba(76, 175, 80, 0.2); color: var(--success); }
+    .card-2 .card-icon { background: rgba(255, 152, 0, 0.2); color: var(--secondary); }
+    .card-3 .card-icon { background: rgba(33, 150, 243, 0.2); color: var(--accent); }
+    .card-4 .card-icon { background: rgba(244, 67, 54, 0.2); color: var(--danger); }
+    
+    .card h3 {
+      font-size: 28px;
+      margin-bottom: 5px;
+      color: var(--dark);
+    }
+    
+    .card p {
+      color: var(--gray);
+      font-size: 14px;
+    }
+    
+    /* Map Section */
+    .map-section {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .map-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      height: 500px;
+    }
+    
+    #map {
+      height: 100%;
+      width: 100%;
+      border-radius: 8px;
+      z-index: 1;
+    }
+    
+    .risk-summary {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      height: 500px;
+    }
+    
+    .risk-summary h3 {
+      font-family: 'Montserrat', sans-serif;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      color: var(--dark);
+    }
+    
+    .risk-list {
+      list-style: none;
+    }
+    
+    .risk-item {
+      padding: 15px;
+      border-radius: 8px;
       margin-bottom: 10px;
-      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      background: var(--light);
     }
     
-    /* Responsive Adjustments */
-    @media (max-width: 1200px) {
-      .report-section {
-        width: 380px;
-      }
+    .risk-item i {
+      margin-right: 15px;
+      font-size: 20px;
     }
     
+    .risk-high i { color: var(--danger); }
+    .risk-medium i { color: var(--warning); }
+    .risk-low i { color: var(--success); }
+    
+    .risk-info {
+      flex: 1;
+    }
+    
+    .risk-info h4 {
+      margin-bottom: 5px;
+    }
+    
+    .risk-info p {
+      font-size: 14px;
+      color: var(--gray);
+    }
+    
+    .risk-bar {
+      height: 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      background: #e0e0e0;
+      overflow: hidden;
+    }
+    
+    .risk-progress {
+      height: 100%;
+    }
+    
+    .risk-high .risk-progress { background: var(--danger); width: 85%; }
+    .risk-medium .risk-progress { background: var(--warning); width: 60%; }
+    .risk-low .risk-progress { background: var(--success); width: 30%; }
+    
+    /* Charts Section */
+    .charts-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .chart-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      height: 300px;
+    }
+    
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .chart-header h3 {
+      font-family: 'Montserrat', sans-serif;
+      color: var(--dark);
+    }
+    
+    .chart {
+      height: calc(100% - 40px);
+      width: 100%;
+      display: flex;
+      align-items: flex-end;
+      padding-top: 20px;
+    }
+    
+    .bar {
+      flex: 1;
+      margin: 0 5px;
+      background: var(--primary);
+      border-radius: 4px 4px 0 0;
+      position: relative;
+    }
+    
+    .bar-label {
+      position: absolute;
+      bottom: -25px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray);
+    }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--gray);
+      font-size: 14px;
+      border-top: 1px solid #eee;
+      margin-top: auto;
+    }
+    
+    /* Responsive Design */
     @media (max-width: 992px) {
-      .app-container {
-        flex-direction: column;
-      }
-      
       .map-section {
-        height: 50vh;
+        grid-template-columns: 1fr;
       }
       
-      .report-section {
-        width: 100%;
-        height: 50vh;
-      }
-      
-      .control-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      .search-container {
-        max-width: 100%;
+      .charts-section {
+        grid-template-columns: 1fr;
       }
     }
     
     @media (max-width: 768px) {
-      .header {
+      .container {
         flex-direction: column;
-        gap: 12px;
-        align-items: flex-start;
       }
       
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+      .sidebar {
+        width: 100%;
+        padding: 15px;
       }
       
-      .risk-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      
-      .risk-overall {
-        grid-column: span 2;
-      }
-      
-      .crop-risk-container {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    @media (max-width: 576px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .risk-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .risk-overall {
-        grid-column: span 1;
-      }
-      
-      .monthly-analysis {
-        grid-template-columns: 1fr;
-      }
-      
-      .control-buttons {
-        flex-wrap: nowrap;
+      .nav-links {
+        display: flex;
         overflow-x: auto;
-        padding-bottom: 5px;
+        padding-bottom: 10px;
       }
       
-      .btn {
-        min-width: max-content;
+      .nav-links li {
+        margin: 0 5px;
       }
       
-      .rating-scale-grid {
-        grid-template-columns: 1fr;
+      .nav-links a span {
+        display: none;
       }
-    }
-    
-    /* Map Controls */
-    .leaflet-control {
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 8px !important;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.15) !important;
-    }
-    
-    .leaflet-bar a {
-      border-radius: 8px !important;
-      margin-bottom: 5px !important;
-    }
-    
-    /* Scrollbar Styling */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 10px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: #c1c1c1;
-      border-radius: 10px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: #a1a1a1;
-    }
-    
-    /* Toggle Report Button */
-    .toggle-report {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      z-index: 1000;
-      background: white;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
-      cursor: pointer;
-      border: none;
-      font-size: 1rem;
-      color: var(--primary);
-    }
-    
-    /* Data Completeness */
-    .completeness-indicator {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 12px;
-      font-size: 0.95rem;
-      background: #f8f9fa;
-      padding: 12px;
-      border-radius: 8px;
-    }
-    
-    .completeness-bar {
-      flex-grow: 1;
-      height: 8px;
-      background: #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    
-    .completeness-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary-light), var(--primary-dark));
-      border-radius: 4px;
-      width: 0%;
-      transition: width 1s ease;
-    }
-    
-    /* Progress Bar */
-    .progress-container {
-      width: 100%;
-      margin: 15px 0;
-    }
-    
-    .progress-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-      color: var(--dark);
-      font-weight: 500;
-    }
-    
-    .progress-bar {
-      height: 12px;
-      background: #e0e0e0;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary-light), var(--primary-dark));
-      border-radius: 6px;
-      width: 0%;
-      transition: width 0.5s ease;
-    }
-    
-    .progress-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
-    }
-    
-    /* Frost Card */
-    .frost-card {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
-      background: #e3f2fd;
-      border-radius: 10px;
-      padding: 15px;
-    }
-    
-    .frost-card-icon {
-      width: 60px;
-      height: 60px;
-      background: #bbdefb;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      color: #0d47a1;
-    }
-    
-    .frost-card-content {
-      flex: 1;
-    }
-    
-    .frost-card-title {
-      font-weight: 600;
-      margin-bottom: 5px;
-      color: #0d47a1;
-    }
-    
-    .frost-card-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 5px 0;
-    }
-    
-    /* Flood Card */
-    .flood-card {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
-      background: #e3f2fd;
-      border-radius: 10px;
-      padding: 15px;
-    }
-    
-    .flood-card-icon {
-      width: 60px;
-      height: 60px;
-      background: #bbdefb;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      color: #0d47a1;
-    }
-    
-    .flood-card-content {
-      flex: 1;
-    }
-    
-    .flood-card-title {
-      font-weight: 600;
-      margin-bottom: 5px;
-      color: #0d47a1;
-    }
-    
-    .flood-card-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 5px 0;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
+    <!-- Sidebar -->
+    <div class="sidebar">
       <div class="logo">
-        <div class="logo-icon">
-          <i class="fas fa-seedling"></i>
-        </div>
-        <div class="logo-text">Plaas<span>Risk</span></div>
-      </div>
-      <div class="contact-info">
-        <div><i class="fas fa-phone icon"></i> 076-623-2221</div>
-        <div><i class="fas fa-envelope icon"></i> support@plaasrisk.co.za</div>
-      </div>
-    </div>
-    
-    <!-- Control bar at top with search functionality -->
-    <div class="control-bar">
-      <div class="search-container">
-        <div class="search-input-group">
-          <i class="fas fa-search search-icon"></i>
-          <input type="text" id="searchInput" class="search-input" placeholder="Enter GPS coordinates or location...">
-        </div>
-        <button class="btn btn-primary" id="searchBtn">
-          <i class="fas fa-search"></i>
-        </button>
+        <i class="fas fa-tractor"></i>
+        <h1>PlaasRisk</h1>
       </div>
       
-      <div class="location-display">
-        <i class="fas fa-map-marker-alt"></i>
-        <span id="current-location">Select a location</span>
-      </div>
-      
-      <div class="control-buttons">
-        <button class="btn btn-outline btn-small" onclick="resetMap()">
-          <i class="fas fa-trash-alt"></i> Clear
-        </button>
-        <button class="btn btn-primary btn-small" onclick="generateReport()" id="generateBtn">
-          <i class="fas fa-chart-line"></i> Analyze
-        </button>
-        <button class="btn btn-outline btn-small" id="dropPinBtn" onclick="activatePinMode()">
-          <i class="fas fa-map-pin"></i> Drop Pin
-        </button>
-        <button class="btn btn-primary btn-small" id="downloadBtn" onclick="downloadPDF()" disabled>
-          <i class="fas fa-download"></i> Report
-        </button>
-      </div>
+      <ul class="nav-links">
+        <li><a href="#" class="active"><i class="fas fa-home"></i> <span>Dashboard</span></a></li>
+        <li><a href="#"><i class="fas fa-map"></i> <span>Farm Map</span></a></li>
+        <li><a href="#"><i class="fas fa-chart-line"></i> <span>Analytics</span></a></li>
+        <li><a href="#"><i class="fas fa-exclamation-triangle"></i> <span>Risk Alerts</span></a></li>
+        <li><a href="#"><i class="fas fa-cloud-sun-rain"></i> <span>Weather</span></a></li>
+        <li><a href="#"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
+        <li><a href="#"><i class="fas fa-question-circle"></i> <span>Help</span></a></li>
+      </ul>
     </div>
     
-    <div class="app-container">
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <h2>Farm Risk Analysis Dashboard</h2>
+        <div class="user-info">
+          <div>
+            <h3>John Farmer</h3>
+            <p>Sunset Valley Farm</p>
+          </div>
+          <img src="https://ui-avatars.com/api/?name=John+Farmer&background=4CAF50&color=fff" alt="User">
+        </div>
+      </div>
+      
+      <!-- Dashboard Cards -->
+      <div class="dashboard-cards">
+        <div class="card card-1">
+          <div class="card-header">
+            <div>
+              <p>Total Area</p>
+              <h3>1,250 ha</h3>
+            </div>
+            <div class="card-icon">
+              <i class="fas fa-map-marked-alt"></i>
+            </div>
+          </div>
+          <p><i class="fas fa-arrow-up"></i> 5.2% since last month</p>
+        </div>
+        
+        <div class="card card-2">
+          <div class="card-header">
+            <div>
+              <p>Current Risk Level</p>
+              <h3>Medium</h3>
+            </div>
+            <div class="card-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+          </div>
+          <p>3 high risk alerts</p>
+        </div>
+        
+        <div class="card card-3">
+          <div class="card-header">
+            <div>
+              <p>Crop Health</p>
+              <h3>82%</h3>
+            </div>
+            <div class="card-icon">
+              <i class="fas fa-seedling"></i>
+            </div>
+          </div>
+          <p><i class="fas fa-arrow-down"></i> 3% since last week</p>
+        </div>
+        
+        <div class="card card-4">
+          <div class="card-header">
+            <div>
+              <p>Weather Alert</p>
+              <h3>Heat Wave</h3>
+            </div>
+            <div class="card-icon">
+              <i class="fas fa-temperature-high"></i>
+            </div>
+          </div>
+          <p>Expected for next 3 days</p>
+        </div>
+      </div>
+      
+      <!-- Map and Risk Summary -->
       <div class="map-section">
-        <button class="toggle-report" id="toggleReport">
-          <i class="fas fa-chart-bar"></i>
-        </button>
+        <div class="map-container">
+          <div id="map"></div>
+        </div>
         
-        <div id="map"></div>
+        <div class="risk-summary">
+          <h3>Risk Analysis</h3>
+          <ul class="risk-list">
+            <li class="risk-item risk-high">
+              <i class="fas fa-fire"></i>
+              <div class="risk-info">
+                <h4>Drought Risk</h4>
+                <p>Low rainfall expected</p>
+                <div class="risk-bar">
+                  <div class="risk-progress"></div>
+                </div>
+              </div>
+            </li>
+            
+            <li class="risk-item risk-medium">
+              <i class="fas fa-bug"></i>
+              <div class="risk-info">
+                <h4>Pest Infestation</h4>
+                <p>Locust activity detected</p>
+                <div class="risk-bar">
+                  <div class="risk-progress"></div>
+                </div>
+              </div>
+            </li>
+            
+            <li class="risk-item risk-low">
+              <i class="fas fa-wind"></i>
+              <div class="risk-info">
+                <h4>Soil Erosion</h4>
+                <p>Moderate risk in sector 4</p>
+                <div class="risk-bar">
+                  <div class="risk-progress"></div>
+                </div>
+              </div>
+            </li>
+            
+            <li class="risk-item risk-medium">
+              <i class="fas fa-cloud-showers-heavy"></i>
+              <div class="risk-info">
+                <h4>Flood Risk</h4>
+                <p>Near river areas</p>
+                <div class="risk-bar">
+                  <div class="risk-progress"></div>
+                </div>
+              </div>
+            </li>
+            
+            <li class="risk-item risk-low">
+              <i class="fas fa-sun"></i>
+              <div class="risk-info">
+                <h4>Heat Stress</h4>
+                <p>Monitor livestock</p>
+                <div class="risk-bar">
+                  <div class="risk-progress"></div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
       
-      <div class="report-section" id="reportSection">
-        <div class="report-header">
-          <h2>Farm Risk Analysis Report</h2>
-          <p>Detailed insights for maize, soybean & wheat cultivation</p>
+      <!-- Charts Section -->
+      <div class="charts-section">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Crop Health by Sector</h3>
+            <div>
+              <select>
+                <option>Last 7 Days</option>
+                <option>Last 30 Days</option>
+                <option>Last 90 Days</option>
+              </select>
+            </div>
+          </div>
+          <div class="chart">
+            <div class="bar" style="height: 85%"><div class="bar-label">Sector 1</div></div>
+            <div class="bar" style="height: 70%"><div class="bar-label">Sector 2</div></div>
+            <div class="bar" style="height: 65%"><div class="bar-label">Sector 3</div></div>
+            <div class="bar" style="height: 45%"><div class="bar-label">Sector 4</div></div>
+            <div class="bar" style="height: 90%"><div class="bar-label">Sector 5</div></div>
+            <div class="bar" style="height: 75%"><div class="bar-label">Sector 6</div></div>
+          </div>
         </div>
         
-        <div class="report-content">
-          <div id="report-placeholder">
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-file-alt"></i>
-                Report Preview
-              </h3>
-              <div class="placeholder-content">
-                <div class="placeholder-text">
-                  <p>Search for a location or draw your farm boundaries on the map to generate a comprehensive risk report.</p>
-                  <p>The report includes:</p>
-                </div>
-                <ul class="placeholder-list">
-                  <li><i class="mdi mdi-weather-pouring icon"></i> Rainfall & flood analysis</li>
-                  <li><i class="mdi mdi-snowflake icon"></i> Frost risk assessment</li>
-                  <li><i class="mdi mdi-fire icon"></i> Drought patterns</li>
-                  <li><i class="mdi mdi-wheat icon"></i> Crop-specific recommendations</li>
-                  <li><i class="mdi mdi-weather-windy icon"></i> Risk mitigation</li>
-                </ul>
-                <div class="placeholder-graphic">
-                  <div class="graphic-icon">
-                    <i class="mdi mdi-wheat" style="font-size: 3rem; color: #8d6e63;"></i>
-                  </div>
-                  <p>Your detailed risk analysis will appear here</p>
-                </div>
-              </div>
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Risk Distribution</h3>
+            <div>
+              <select>
+                <option>All Risks</option>
+                <option>Weather</option>
+                <option>Pests</option>
+              </select>
             </div>
           </div>
-          
-          <div id="report" class="hidden">
-            <div class="report-card">
-              <h3>
-                <i class="mdi mdi-map-marker-outline"></i>
-                Location Details
-              </h3>
-              <p id="location-text"></p>
-              <p id="data-status"></p>
-              
-              <div class="completeness-indicator" id="completeness-container">
-                <span>Data Completeness:</span>
-                <div class="completeness-bar">
-                  <div class="completeness-fill" id="completeness-bar"></div>
-                </div>
-                <span id="completeness-value">0%</span>
-              </div>
-            </div>
-            
-            <!-- Crop Risk Indicators -->
-            <div class="report-card">
-              <h3>
-                <i class="mdi mdi-sprout"></i>
-                Crop Risk Assessment
-              </h3>
-              
-              <div class="crop-risk-container">
-                <div class="crop-risk-card">
-                  <div class="crop-icon" style="color: #ff9800;">
-                    <i class="mdi mdi-corn"></i>
-                  </div>
-                  <div class="crop-name">Maize</div>
-                  <div class="crop-risk" id="maize-risk">0.8</div>
-                  <div class="crop-risk-label risk-low">Low Risk</div>
-                  <div class="crop-recommendation">
-                    <h4><i class="mdi mdi-lightbulb-on"></i> Recommendations</h4>
-                    <p>Plant early to avoid frost. Use drought-resistant varieties. Ensure proper drainage.</p>
-                  </div>
-                </div>
-                
-                <div class="crop-risk-card">
-                  <div class="crop-icon" style="color: #4caf50;">
-                    <i class="mdi mdi-seed"></i>
-                  </div>
-                  <div class="crop-name">Soybean</div>
-                  <div class="crop-risk" id="soybean-risk">1.5</div>
-                  <div class="crop-risk-label risk-medium">Medium Risk</div>
-                  <div class="crop-recommendation">
-                    <h4><i class="mdi mdi-lightbulb-on"></i> Recommendations</h4>
-                    <p>Monitor soil moisture. Avoid planting in flood-prone areas. Use frost protection.</p>
-                  </div>
-                </div>
-                
-                <div class="crop-risk-card">
-                  <div class="crop-icon" style="color: #8d6e63;">
-                    <i class="mdi mdi-wheat"></i>
-                  </div>
-                  <div class="crop-name">Wheat</div>
-                  <div class="crop-risk" id="wheat-risk">2.2</div>
-                  <div class="crop-risk-label risk-high">High Risk</div>
-                  <div class="crop-recommendation">
-                    <h4><i class="mdi mdi-lightbulb-on"></i> Recommendations</h4>
-                    <p>Delay planting to avoid frost. Use irrigation during drought. Improve drainage systems.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Enhanced Frost Analysis -->
-            <div class="report-card">
-              <h3>
-                <i class="mdi mdi-snowflake-alert"></i>
-                Frost Risk Analysis
-              </h3>
-              
-              <div class="frost-card">
-                <div class="frost-card-icon">
-                  <i class="mdi mdi-thermometer-low"></i>
-                </div>
-                <div class="frost-card-content">
-                  <div class="frost-card-title">Average Frost Days per Year</div>
-                  <div class="frost-card-value" id="avg-frost">0</div>
-                  <div>Last 10 years data</div>
-                </div>
-              </div>
-              
-              <div class="frost-card">
-                <div class="frost-card-icon">
-                  <i class="mdi mdi-calendar-alert"></i>
-                </div>
-                <div class="frost-card-content">
-                  <div class="frost-card-title">Frost Season</div>
-                  <div class="frost-card-value" id="frost-season">May - August</div>
-                  <div>Highest risk period</div>
-                </div>
-              </div>
-              
-              <div id="frost-indicator-container">
-                <!-- Frost indicator will be inserted here -->
-              </div>
-              
-              <div class="chart-container">
-                <canvas id="frostChart"></canvas>
-              </div>
-              
-              <div class="crop-recommendation">
-                <h4><i class="mdi mdi-snowflake"></i> Frost Impact on Crops</h4>
-                <p><strong>Maize:</strong> Frost damage can occur below 0°C during germination. Late frosts harm seedlings.</p>
-                <p><strong>Soybean:</strong> Sensitive to frost during flowering. Temperatures below 2°C cause damage.</p>
-                <p><strong>Wheat:</strong> Winter wheat tolerates frost but spring wheat is vulnerable during heading.</p>
-              </div>
-            </div>
-            
-            <!-- Flood Risk Analysis -->
-            <div class="report-card">
-              <h3>
-                <i class="mdi mdi-weather-pouring"></i>
-                Flood Risk Analysis
-              </h3>
-              
-              <div class="flood-card">
-                <div class="flood-card-icon">
-                  <i class="mdi mdi-water"></i>
-                </div>
-                <div class="flood-card-content">
-                  <div class="flood-card-title">Flood Risk Index</div>
-                  <div class="flood-card-value" id="flood-index">0</div>
-                  <div>Based on terrain & rainfall patterns</div>
-                </div>
-              </div>
-              
-              <div class="flood-card">
-                <div class="flood-card-icon">
-                  <i class="mdi mdi-calendar-alert"></i>
-                </div>
-                <div class="flood-card-content">
-                  <div class="flood-card-title">Flood Season</div>
-                  <div class="flood-card-value" id="flood-season">December - February</div>
-                  <div>Highest risk period</div>
-                </div>
-              </div>
-              
-              <div id="flood-indicator-container">
-                <!-- Flood indicator will be inserted here -->
-              </div>
-              
-              <div class="crop-recommendation">
-                <h4><i class="mdi mdi-water"></i> Flood Impact on Crops</h4>
-                <p><strong>Maize:</strong> Tolerates 2-3 days of flooding. Longer periods cause root rot and yield loss.</p>
-                <p><strong>Soybean:</strong> Very sensitive to flooding. Just 2 days can reduce yields by 17-43%.</p>
-                <p><strong>Wheat:</strong> Winter wheat can tolerate some flooding but spring wheat is vulnerable during germination.</p>
-              </div>
-            </div>
-            
-            <!-- Risk Rating Section -->
-            <div class="report-card">
-              <h3>
-                <i class="mdi mdi-alert-octagram-outline"></i>
-                Risk Rating
-              </h3>
-              <div class="risk-grid">
-                <div class="risk-category">
-                  <div class="risk-category-title">Drought Severity</div>
-                  <div class="risk-category-value" id="drought-severity">0</div>
-                  <div class="risk-category-label" id="drought-severity-label">-</div>
-                </div>
-                
-                <div class="risk-category">
-                  <div class="risk-category-title">Flood Risk</div>
-                  <div class="risk-category-value" id="flood-risk">0</div>
-                  <div class="risk-category-label" id="flood-risk-label">-</div>
-                </div>
-                
-                <div class="risk-category">
-                  <div class="risk-category-title">Frost Risk</div>
-                  <div class="risk-category-value" id="frost-risk">0</div>
-                  <div class="risk-category-label" id="frost-risk-label">-</div>
-                </div>
-                
-                <div class="risk-overall">
-                  <div>Overall Risk</div>
-                  <div class="risk-overall-value" id="overall-risk">0</div>
-                  <div class="risk-overall-title" id="overall-risk-title">No Risk</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Rating Scale Section -->
-            <div class="rating-scale-container">
-              <h3>
-                <i class="mdi mdi-ruler"></i>
-                Risk Scale
-              </h3>
-              <p>Our risk rating evaluates threats on a scale from 0 to 3:</p>
-              
-              <div class="rating-scale-grid">
-                <div class="rating-scale-item low-risk">
-                  <div class="rating-scale-label">Low (0-1)</div>
-                  <div class="rating-scale-value">0-1</div>
-                  <div class="rating-scale-description">Minimal impact. Normal farming sufficient.</div>
-                </div>
-                
-                <div class="rating-scale-item moderate-risk">
-                  <div class="rating-scale-label">Moderate (1-2)</div>
-                  <div class="rating-scale-value">1-2</div>
-                  <div class="rating-scale-description">Precautionary measures needed.</div>
-                </div>
-                
-                <div class="rating-scale-item high-risk">
-                  <div class="rating-scale-label">High (2-3)</div>
-                  <div class="rating-scale-value">2-3</div>
-                  <div class="rating-scale-description">Significant risk. Requires mitigation.</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Expert Commentary Section -->
-            <div class="commentary-card">
-              <h3>
-                <i class="mdi mdi-comment-text-outline"></i>
-                Expert Analysis
-              </h3>
-              <div id="expert-commentary" class="commentary-content">
-                <p>Detailed commentary will be provided after analyzing your farm's climate data.</p>
-              </div>
-            </div>
-            
-            <div class="report-card">
-              <h3>
-                <i class="mdi mdi-chart-bar"></i>
-                Climate Statistics
-              </h3>
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="mdi mdi-calendar"></i>
-                  </div>
-                  <div class="stat-value" id="years-count">0</div>
-                  <div class="stat-label">Years</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="mdi mdi-weather-pouring"></i>
-                  </div>
-                  <div class="stat-value" id="avg-rain">0</div>
-                  <div class="stat-label">Avg. Rainfall</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="mdi mdi-thermometer"></i>
-                  </div>
-                  <div class="stat-value" id="avg-temp">0</div>
-                  <div class="stat-label">Avg. Temp</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="mdi mdi-weather-windy"></i>
-                  </div>
-                  <div class="stat-value" id="wind-speed">0</div>
-                  <div class="stat-label">Wind Speed</div>
-                </div>
-              </div>
-              
-              <div class="chart-container">
-                <canvas id="rainChart"></canvas>
-              </div>
-            </div>
-            
-            <div class="drought-summary">
-              <h4>
-                <i class="mdi mdi-fire-alert"></i>
-                Drought Analysis
-              </h4>
-              <p id="drought-summary"></p>
-              <div class="drought-years" id="drought-years"></div>
-              
-              <div class="crop-recommendation" style="margin-top: 15px;">
-                <h4><i class="mdi mdi-fire"></i> Drought Impact on Crops</h4>
-                <p><strong>Maize:</strong> Water stress during flowering reduces yields by 50-90%. Requires 500-800mm per season.</p>
-                <p><strong>Soybean:</strong> Sensitive to drought during flowering and pod filling. Requires 450-700mm per season.</p>
-                <p><strong>Wheat:</strong> Spring wheat needs 450-650mm. Drought during grain filling reduces yields significantly.</p>
-              </div>
-            </div>
-            
-            <div class="report-card">
-              <h3>
-                <i class="mdi mdi-chart-areaspline"></i>
-                Monthly Patterns
-              </h3>
-              
-              <div class="monthly-analysis">
-                <div class="monthly-card">
-                  <h4>
-                    <i class="mdi mdi-weather-rainy"></i>
-                    Rainfall
-                  </h4>
-                  <div class="monthly-chart-container">
-                    <canvas id="monthlyRainChart"></canvas>
-                  </div>
-                </div>
-                
-                <div class="monthly-card">
-                  <h4>
-                    <i class="mdi mdi-thermometer"></i>
-                    Temperature
-                  </h4>
-                  <div class="monthly-chart-container">
-                    <canvas id="monthlyTempChart"></canvas>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Monthly Rainfall Table -->
-              <h4 style="margin-top: 20px; margin-bottom: 12px;">
-                <i class="mdi mdi-table"></i>
-                Monthly Analysis
-              </h4>
-              <table class="month-rain-table" id="month-rain-table">
-                <thead>
-                  <tr>
-                    <th>Month</th>
-                    <th>Rainfall (mm)</th>
-                    <th>Avg. Temp (°C)</th>
-                    <th>Frost Days</th>
-                    <th>Flood Risk</th>
-                  </tr>
-                </thead>
-                <tbody id="month-rain-table-body">
-                  <!-- Table rows will be inserted here -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-          
-          <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <div class="loading-text">Analyzing farm risk patterns...</div>
-            
-            <!-- Processing Progress Bar -->
-            <div class="progress-container" style="width: 80%;">
-              <div class="progress-header">
-                <span>Processing Data</span>
-                <span id="processing-percentage">0%</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" id="processing-fill"></div>
-                <div class="progress-label" id="processing-label">Starting</div>
-              </div>
-            </div>
+          <div class="chart">
+            <div class="bar" style="height: 25%; background: var(--danger);"><div class="bar-label">High</div></div>
+            <div class="bar" style="height: 40%; background: var(--warning);"><div class="bar-label">Medium</div></div>
+            <div class="bar" style="height: 35%; background: var(--success);"><div class="bar-label">Low</div></div>
           </div>
         </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="footer">
+        <p>&copy; 2023 PlaasRisk - Farm Risk Analysis System. All rights reserved.</p>
       </div>
     </div>
   </div>
-  
-  <div id="notification" class="notification">
-    <i class="fas fa-check-circle"></i>
-    <span id="notification-text">Notification message</span>
-  </div>
 
-  <!-- Scripts -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
   <script>
-    // Initialize map
-    const map = L.map('map').setView([-25.0, 30.0], 5); // South Africa coordinates
-    
-    // Add tile layer
+    // Initialize the map
+    const map = L.map('map').setView([-28.5, 25], 7);
+
+    // Add OpenStreetMap tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
-    
-    // Initialize layers and controls
-    let drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-    let lastPolygonCenter = null;
-    let currentMarker = null;
-    let dataAvailable = false;
-    let pinModeActive = false;
-    
-    // Initialize the draw control
-    const drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: drawnItems
-      },
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: true
-        },
-        circle: false,
-        rectangle: false,
-        circlemarker: false
-      }
-    });
-    map.addControl(drawControl);
-    
-    // Add markers for demonstration
-    L.marker([-25.0, 30.0]).addTo(map).bindPopup('Johannesburg').openPopup();
-    L.marker([-33.9, 18.4]).addTo(map).bindPopup('Cape Town');
-    L.marker([-29.6, 30.4]).addTo(map).bindPopup('Durban');
-    
-    // Month names for display
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    
-    const shortMonthNames = monthNames.map(m => m.substring(0, 3));
-    
-    // Search button functionality
-    document.getElementById('searchBtn').addEventListener('click', searchLocation);
-    document.getElementById('searchInput').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        searchLocation();
-      }
-    });
-    
-    // Toggle report visibility
-    document.getElementById('toggleReport').addEventListener('click', function() {
-      const reportSection = document.getElementById('reportSection');
-      reportSection.classList.toggle('hidden');
-      this.innerHTML = reportSection.classList.contains('hidden') ? 
-        '<i class="fas fa-chart-bar"></i>' : '<i class="fas fa-times"></i>';
-    });
-    
-    // Event handlers for map drawing
-    map.on(L.Draw.Event.CREATED, function (e) {
-      if (e.layerType === 'polygon') {
-        const layer = e.layer;
-        const latlngs = layer.getLatLngs()[0];
-        
-        if (latlngs.length < 3) {
-          showNotification("Please draw a valid polygon with at least 3 points", "error");
-          return;
-        }
-        
-        drawnItems.clearLayers();
-        drawnItems.addLayer(layer);
 
-        const latSum = latlngs.reduce((sum, pt) => sum + pt.lat, 0);
-        const lngSum = latlngs.reduce((sum, pt) => sum + pt.lng, 0);
-        const center = {
-          lat: latSum / latlngs.length,
-          lng: lngSum / latlngs.length
-        };
-        lastPolygonCenter = center;
-        showNotification(`Farm boundary drawn at ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, 'success');
-        
-        // Update location display
-        document.getElementById('current-location').textContent = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
-        
-        // Check data availability
-        checkDataAvailability(center.lat, center.lng);
-      }
+    // Add farm boundary
+    const farmBoundary = L.polygon([
+      [-28.4, 24.8],
+      [-28.4, 25.2],
+      [-28.7, 25.2],
+      [-28.7, 24.8]
+    ], {
+      color: '#4CAF50',
+      fillColor: 'rgba(76, 175, 80, 0.3)',
+      fillOpacity: 0.5
+    }).addTo(map);
+    
+    // Add risk markers
+    const highRiskIcon = L.divIcon({
+      className: 'risk-marker',
+      html: '<div class="risk-pin high"><i class="fas fa-exclamation"></i></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30]
     });
     
-    // Activate pin drop mode
-    function activatePinMode() {
-      pinModeActive = true;
-      document.getElementById('dropPinBtn').classList.add('btn-primary');
-      document.getElementById('dropPinBtn').classList.remove('btn-outline');
-      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Click on Map';
-      
-      // Add event listener for map click
-      map.on('click', handleMapClick);
-      
-      showNotification("Click on the map to drop a pin", 'info');
-    }
-    
-    // Handle map click for pin drop
-    function handleMapClick(e) {
-      if (!pinModeActive) return;
-      
-      const lat = e.latlng.lat;
-      const lng = e.latlng.lng;
-      
-      // Clear any existing markers
-      if (currentMarker) map.removeLayer(currentMarker);
-      
-      // Add new marker
-      currentMarker = L.marker([lat, lng]).addTo(map)
-        .bindPopup("Dropped Pin: " + lat.toFixed(4) + ", " + lng.toFixed(4))
-        .openPopup();
-      
-      lastPolygonCenter = { lat, lng };
-      
-      // Update location display
-      document.getElementById('current-location').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-      
-      // Check data availability
-      checkDataAvailability(lat, lng);
-      
-      // Deactivate pin mode
-      pinModeActive = false;
-      document.getElementById('dropPinBtn').classList.remove('btn-primary');
-      document.getElementById('dropPinBtn').classList.add('btn-outline');
-      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
-      
-      // Remove event listener
-      map.off('click', handleMapClick);
-      
-      showNotification(`Pin dropped at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
-    }
-    
-    // Function to check data availability
-    function checkDataAvailability(lat, lng) {
-      // Simulate progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        updateProgress('progress', progress, `Checking data... ${progress}%`);
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          
-          const isLand = !(lat < -60 || lat > 60 || Math.abs(lng) > 170);
-          const isRemote = Math.abs(lat) > 55 || Math.abs(lng) > 140;
-          
-          if (!isLand) {
-            dataAvailable = false;
-            showNotification("No data available for ocean locations", "error");
-          } else if (isRemote) {
-            dataAvailable = true;
-          } else {
-            dataAvailable = true;
-          }
-        }
-      }, 200);
-    }
-    
-    // Search location by text or coordinates
-    function searchLocation() {
-      const searchInput = document.getElementById('searchInput').value.trim();
-      if (!searchInput) {
-        showNotification("Enter a location to search", 'error');
-        return;
-      }
-      
-      // Try coordinates first
-      const parts = searchInput.split(',');
-      if (parts.length === 2) {
-        const lat = parseFloat(parts[0].trim());
-        const lng = parseFloat(parts[1].trim());
-        if (!isNaN(lat) && !isNaN(lng)) {
-          map.setView([lat, lng], 13);
-          
-          if (currentMarker) map.removeLayer(currentMarker);
-          
-          currentMarker = L.marker([lat, lng]).addTo(map)
-            .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
-          lastPolygonCenter = { lat, lng };
-          
-          // Update location display
-          document.getElementById('current-location').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-          
-          showNotification(`Location set to: ${lat}, ${lng}`, 'success');
-          
-          checkDataAvailability(lat, lng);
-          return;
-        }
-      }
-      
-      // If not coordinates, search by location name
-      geocodeLocation(searchInput);
-    }
-    
-    // Reset map
-    function resetMap() {
-      drawnItems.clearLayers();
-      lastPolygonCenter = null;
-      if (currentMarker) {
-        map.removeLayer(currentMarker);
-        currentMarker = null;
-      }
-      map.setView([-25.0, 30.0], 5);
-      document.getElementById('searchInput').value = "";
-      
-      // Reset location display
-      document.getElementById('current-location').textContent = "Select a location";
-      
-      showNotification("Map has been reset", 'info');
-      
-      // Reset progress bar
-      updateProgress('progress', 0, 'Ready');
-      
-      // Reset pin mode if active
-      if (pinModeActive) {
-        pinModeActive = false;
-        map.off('click', handleMapClick);
-        document.getElementById('dropPinBtn').classList.remove('btn-primary');
-        document.getElementById('dropPinBtn').classList.add('btn-outline');
-        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
-      }
-    }
-    
-    // Geocode location name to coordinates
-    function geocodeLocation(query) {
-      // Use OpenStreetMap Nominatim API for geocoding
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
-      
-      showNotification(`Searching for ${query}...`, 'info');
-      
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          if (data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lng = parseFloat(data[0].lon);
-            map.setView([lat, lng], 13);
-            
-            if (currentMarker) map.removeLayer(currentMarker);
-            
-            currentMarker = L.marker([lat, lng]).addTo(map)
-              .bindPopup(`Location: ${data[0].display_name}`).openPopup();
-            lastPolygonCenter = { lat, lng };
-            
-            // Update search input with coordinates
-            document.getElementById('searchInput').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            
-            // Update location display
-            document.getElementById('current-location').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            
-            showNotification(`Found location: ${data[0].display_name}`, 'success');
-            
-            checkDataAvailability(lat, lng);
-          } else {
-            showNotification("Location not found. Try a different name.", 'error');
-          }
-        })
-        .catch(error => {
-          console.error('Geocoding error:', error);
-          showNotification("Error searching location. Please try again.", 'error');
-        });
-    }
-    
-    // Generate report with real data
-    async function generateReport() {
-      if (!lastPolygonCenter) {
-        showNotification("Search a location or draw a farm boundary first", 'error');
-        return;
-      }
-      
-      // Show loading indicator
-      document.getElementById('report-placeholder').classList.add('hidden');
-      document.getElementById('report').classList.add('hidden');
-      document.getElementById('loading').classList.remove('hidden');
-      document.getElementById('generateBtn').disabled = true;
-      
-      const lat = lastPolygonCenter.lat;
-      const lng = lastPolygonCenter.lng;
-      
-      try {
-        // Simulate processing progress
-        let processingProgress = 0;
-        const processingInterval = setInterval(() => {
-          processingProgress += 10;
-          updateProgress('processing', processingProgress, `Processing... ${processingProgress}%`);
-          
-          if (processingProgress >= 100) {
-            clearInterval(processingInterval);
-          }
-        }, 300);
-        
-        // Simulate fetching climate data
-        const elevation = 1200 + (Math.random() * 500);
-        const years = 10;
-        const avgRain = 500 + Math.random() * 300;
-        const maxFrost = Math.floor(Math.random() * 15);
-        const droughtCount = Math.floor(Math.random() * 4);
-        const avgTemp = 18 + Math.random() * 5;
-        const windSpeed = 8 + Math.random() * 6;
-        
-        // Frost season based on hemisphere
-        const frostSeason = lat > 0 ? "November - February" : "May - August";
-        
-        // Flood season and risk
-        const floodSeason = lat > 0 ? "June - August" : "December - February";
-        const floodIndex = (Math.random() * 3).toFixed(1);
-        
-        // Calculate risk ratings
-        const droughtSeverity = (droughtCount / 3).toFixed(1);
-        const floodRisk = floodIndex;
-        const frostRisk = (maxFrost / 5).toFixed(1);
-        const overallRisk = ((parseFloat(droughtSeverity) + parseFloat(floodRisk) + parseFloat(frostRisk)) / 3).toFixed(1);
-        
-        // Crop risk ratings
-        const maizeRisk = (0.5 + Math.random() * 2.5).toFixed(1);
-        const soybeanRisk = (0.5 + Math.random() * 2.5).toFixed(1);
-        const wheatRisk = (0.5 + Math.random() * 2.5).toFixed(1);
-        
-        // Update report with location
-        document.querySelector('.report-header h2').innerHTML = `Farm Risk Analysis`;
-        document.getElementById("location-text").innerHTML = `
-          <strong>Coordinates:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
-          <strong>Elevation:</strong> ${elevation.toFixed(0)} meters
-        `;
-        document.getElementById("data-status").innerText = "Data from Open-Meteo API";
-        document.getElementById("data-status").style.color = "var(--success)";
-        
-        // Update completeness indicator
-        document.getElementById('completeness-bar').style.width = "95%";
-        document.getElementById('completeness-value').textContent = "95%";
-        
-        // Update stats
-        document.getElementById("years-count").innerText = years;
-        document.getElementById("avg-rain").innerText = avgRain.toFixed(0);
-        document.getElementById("avg-temp").innerText = avgTemp.toFixed(1);
-        document.getElementById("wind-speed").innerText = windSpeed.toFixed(1);
-        
-        // Update frost data
-        document.getElementById("avg-frost").textContent = maxFrost;
-        document.getElementById("frost-season").textContent = frostSeason;
-        
-        // Update flood data
-        document.getElementById("flood-index").textContent = floodIndex;
-        document.getElementById("flood-season").textContent = floodSeason;
-        
-        // Update crop risks
-        document.getElementById("maize-risk").textContent = maizeRisk;
-        document.getElementById("soybean-risk").textContent = soybeanRisk;
-        document.getElementById("wheat-risk").textContent = wheatRisk;
-        
-        // Update crop risk labels
-        document.querySelector("#maize-risk + .crop-risk-label").className = "crop-risk-label " + getCropRiskClass(maizeRisk);
-        document.querySelector("#maize-risk + .crop-risk-label").textContent = getCropRiskLabel(maizeRisk);
-        document.querySelector("#soybean-risk + .crop-risk-label").className = "crop-risk-label " + getCropRiskClass(soybeanRisk);
-        document.querySelector("#soybean-risk + .crop-risk-label").textContent = getCropRiskLabel(soybeanRisk);
-        document.querySelector("#wheat-risk + .crop-risk-label").className = "crop-risk-label " + getCropRiskClass(wheatRisk);
-        document.querySelector("#wheat-risk + .crop-risk-label").textContent = getCropRiskLabel(wheatRisk);
-        
-        // Update drought summary
-        document.getElementById("drought-summary").innerText = `${droughtCount} drought years detected (rainfall < 400mm)`;
-        
-        // Update risk rating
-        document.getElementById('drought-severity').textContent = droughtSeverity;
-        document.getElementById('drought-severity-label').textContent = getRiskLabel(droughtSeverity);
-        document.getElementById('flood-risk').textContent = floodRisk;
-        document.getElementById('flood-risk-label').textContent = getRiskLabel(floodRisk);
-        document.getElementById('frost-risk').textContent = frostRisk;
-        document.getElementById('frost-risk-label').textContent = getRiskLabel(frostRisk);
-        document.getElementById('overall-risk').textContent = overallRisk;
-        document.getElementById('overall-risk-title').textContent = getRiskLabel(overallRisk);
-        
-        // Frost indicator
-        let frostIndicatorClass = "frost-none";
-        let frostIndicatorText = "No frost risk";
-        
-        if (maxFrost > 10) {
-          frostIndicatorClass = "frost-high";
-          frostIndicatorText = "High frost risk - not suitable for sensitive crops";
-        } else if (maxFrost > 5) {
-          frostIndicatorClass = "frost-moderate";
-          frostIndicatorText = "Moderate frost risk - requires protection for sensitive crops";
-        } else if (maxFrost > 0) {
-          frostIndicatorClass = "frost-low";
-          frostIndicatorText = "Low frost risk - suitable for most crops";
-        }
-        
-        document.getElementById('frost-indicator-container').innerHTML = `
-          <div class="frost-indicator ${frostIndicatorClass}">
-            <i class="mdi mdi-snowflake-alert"></i> ${frostIndicatorText}
-          </div>
-        `;
-        
-        // Flood indicator
-        let floodIndicatorClass = "flood-none";
-        let floodIndicatorText = "No flood risk";
-        
-        if (floodIndex > 2) {
-          floodIndicatorClass = "flood-high";
-          floodIndicatorText = "High flood risk - implement flood management strategies";
-        } else if (floodIndex > 1) {
-          floodIndicatorClass = "flood-moderate";
-          floodIndicatorText = "Moderate flood risk - consider drainage improvements";
-        } else if (floodIndex > 0.5) {
-          floodIndicatorClass = "flood-low";
-          floodIndicatorText = "Low flood risk - minimal impact expected";
-        }
-        
-        document.getElementById('flood-indicator-container').innerHTML = `
-          <div class="flood-indicator ${floodIndicatorClass}">
-            <i class="mdi mdi-water-alert"></i> ${floodIndicatorText}
-          </div>
-        `;
-        
-        // Expert commentary
-        document.getElementById('expert-commentary').innerHTML = `
-          <p><strong>Climate Overview:</strong> This region at ${elevation.toFixed(0)}m elevation experiences an average annual rainfall of <strong>${avgRain.toFixed(0)}mm</strong> over the past ${years} years.</p>
-          
-          <p><strong>Frost Risk Analysis:</strong> The area sees an average of <strong>${maxFrost} freezing days</strong> annually, primarily during <strong>${frostSeason}</strong>. ${frostIndicatorText}.</p>
-          
-          <p><strong>Flood Risk Analysis:</strong> Flood risk is rated at <strong>${floodIndex}</strong> with highest risk during <strong>${floodSeason}</strong>. ${floodIndicatorText}.</p>
-          
-          <p><strong>Drought Risk:</strong> Analysis identified <strong>${droughtCount} drought years</strong> in the past ${years} years. Drought conditions require contingency planning.</p>
-          
-          <p><strong>Crop-Specific Recommendations:</strong></p>
-          <ul>
-            <li><strong>Maize:</strong> Plant early to avoid frost. Use drought-resistant varieties. Ensure proper drainage in flood-prone areas.</li>
-            <li><strong>Soybean:</strong> Monitor soil moisture during drought. Avoid planting in flood-prone lowlands. Use frost protection in colder months.</li>
-            <li><strong>Wheat:</strong> Delay planting to avoid frost damage. Implement irrigation during dry spells. Improve field drainage to reduce flood risk.</li>
-          </ul>
-          
-          <p><strong>Long-term Outlook:</strong> Climate models suggest increasing variability in rainfall patterns. Farmers should prepare for more extreme weather events by diversifying crops and implementing sustainable water management practices.</p>
-        `;
-        
-        // Generate monthly data for charts and table
-        const monthlyRain = Array(12).fill().map(() => 30 + Math.random() * 100);
-        const monthlyTemp = Array(12).fill().map(() => 10 + Math.random() * 15);
-        const monthlyFrost = Array(12).fill().map(() => Math.floor(Math.random() * 3));
-        const monthlyFloodRisk = monthlyRain.map(r => r > 150 ? "High" : r > 100 ? "Moderate" : "Low");
-        
-        // Monthly rain table
-        let tableHTML = '';
-        monthlyRain.forEach((rain, index) => {
-          const isFrostRisk = monthlyFrost[index] > 0;
-          const isFloodRisk = monthlyFloodRisk[index] !== "Low";
-          
-          let rowClass = "";
-          if (isFrostRisk) rowClass = "critical-month";
-          else if (isFloodRisk) rowClass = "flood-month";
-          
-          tableHTML += `
-            <tr class="${rowClass}">
-              <td>${monthNames[index]}</td>
-              <td>${rain.toFixed(1)}</td>
-              <td>${monthlyTemp[index].toFixed(1)}</td>
-              <td>${monthlyFrost[index]}</td>
-              <td>${monthlyFloodRisk[index]}</td>
-            </tr>
-          `;
-        });
-        document.getElementById('month-rain-table-body').innerHTML = tableHTML;
-        
-        // Initialize charts
-        initCharts(monthlyRain, monthlyTemp, monthlyFrost);
-        
-        // Hide loading and show report
-        setTimeout(() => {
-          document.getElementById('loading').classList.add('hidden');
-          document.getElementById('report').classList.remove('hidden');
-          document.getElementById('downloadBtn').disabled = false;
-          document.getElementById('generateBtn').disabled = false;
-          
-          showNotification("Report generated successfully!", 'success');
-        }, 800);
-        
-      } catch (error) {
-        console.error("Error generating report:", error);
-        showNotification("Error generating report. Please try again.", "error");
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('generateBtn').disabled = false;
-      }
-    }
-    
-    // Initialize charts
-    function initCharts(monthlyRain, monthlyTemp, monthlyFrost) {
-      // Rainfall chart
-      const rainCtx = document.getElementById('rainChart').getContext('2d');
-      new Chart(rainCtx, {
-        type: 'line',
-        data: {
-          labels: shortMonthNames,
-          datasets: [{
-            label: 'Monthly Rainfall (mm)',
-            data: monthlyRain,
-            backgroundColor: 'rgba(76, 175, 80, 0.2)',
-            borderColor: 'rgba(76, 175, 80, 1)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: 'Monthly Rainfall Distribution'
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Rainfall (mm)'
-              }
-            }
-          }
-        }
-      });
-      
-      // Frost chart
-      const frostCtx = document.getElementById('frostChart').getContext('2d');
-      new Chart(frostCtx, {
-        type: 'bar',
-        data: {
-          labels: shortMonthNames,
-          datasets: [{
-            label: 'Frost Days',
-            data: monthlyFrost,
-            backgroundColor: 'rgba(33, 150, 243, 0.7)',
-            borderColor: 'rgba(33, 150, 243, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: 'Monthly Frost Days'
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Days'
-              }
-            }
-          }
-        }
-      });
-      
-      // Monthly rain chart
-      const monthlyRainCtx = document.getElementById('monthlyRainChart').getContext('2d');
-      new Chart(monthlyRainCtx, {
-        type: 'bar',
-        data: {
-          labels: shortMonthNames,
-          datasets: [{
-            label: 'Rainfall',
-            data: monthlyRain,
-            backgroundColor: 'rgba(76, 175, 80, 0.7)',
-            borderColor: 'rgba(76, 175, 80, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Rainfall (mm)'
-              }
-            }
-          }
-        }
-      });
-      
-      // Monthly temperature chart
-      const monthlyTempCtx = document.getElementById('monthlyTempChart').getContext('2d');
-      new Chart(monthlyTempCtx, {
-        type: 'line',
-        data: {
-          labels: shortMonthNames,
-          datasets: [{
-            label: 'Temperature',
-            data: monthlyTemp,
-            backgroundColor: 'rgba(244, 67, 54, 0.2)',
-            borderColor: 'rgba(244, 67, 54, 1)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              title: {
-                display: true,
-                text: 'Temperature (°C)'
-              }
-            }
-          }
-        }
-      });
-    }
-    
-    // Get risk label based on value
-    function getRiskLabel(value) {
-      const num = parseFloat(value);
-      if (num < 1) return "Low";
-      if (num < 2) return "Moderate";
-      return "High";
-    }
-    
-    // Get crop risk class based on value
-    function getCropRiskClass(value) {
-      const num = parseFloat(value);
-      if (num < 1) return "risk-low";
-      if (num < 2) return "risk-medium";
-      return "risk-high";
-    }
-    
-    // Get crop risk label based on value
-    function getCropRiskLabel(value) {
-      const num = parseFloat(value);
-      if (num < 1) return "Low Risk";
-      if (num < 2) return "Medium Risk";
-      return "High Risk";
-    }
-    
-    // Download PDF report
-    function downloadPDF() {
-      const reportElement = document.getElementById('report');
-      const downloadBtn = document.getElementById('downloadBtn');
-      const originalText = downloadBtn.innerHTML;
-      downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
-      downloadBtn.disabled = true;
-      
-      // Create PDF
-      const options = {
-        margin: 10,
-        filename: 'plaasrisk-report.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      
-      html2pdf().set(options).from(reportElement).save().then(() => {
-        downloadBtn.innerHTML = originalText;
-        downloadBtn.disabled = false;
-        showNotification("PDF report downloaded!", 'success');
-      });
-    }
-
-    // Show notification
-    function showNotification(message, type) {
-      const notification = document.getElementById('notification');
-      const notificationText = document.getElementById('notification-text');
-      
-      notification.className = `notification ${type}`;
-      notificationText.textContent = message;
-      notification.classList.add('show');
-      
-      setTimeout(() => notification.classList.remove('show'), 3000);
-    }
-    
-    // Update progress bar
-    function updateProgress(barId, percentage, text) {
-      const fill = document.getElementById(`${barId}-fill`);
-      const label = document.getElementById(`${barId}-label`);
-      const percentageDisplay = document.getElementById(`${barId}-percentage`);
-      
-      if (fill) fill.style.width = `${percentage}%`;
-      if (label) label.textContent = text;
-      if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
-    }
-    
-    // Initialize progress bars
-    updateProgress('progress', 0, 'Ready');
-    
-    // Fix map size on mobile devices
-    window.addEventListener('resize', function() {
-      if (map) {
-        setTimeout(() => {
-          map.invalidateSize();
-        }, 100);
-      }
+    const mediumRiskIcon = L.divIcon({
+      className: 'risk-marker',
+      html: '<div class="risk-pin medium"><i class="fas fa-exclamation"></i></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30]
     });
     
-    // Initialize the map properly
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 300);
+    const lowRiskIcon = L.divIcon({
+      className: 'risk-marker',
+      html: '<div class="risk-pin low"><i class="fas fa-exclamation"></i></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30]
+    });
+    
+    // Add sample markers
+    L.marker([-28.55, 24.9], {icon: highRiskIcon}).addTo(map)
+      .bindPopup('<b>Drought Risk</b><br>Low soil moisture detected');
+      
+    L.marker([-28.65, 25.1], {icon: mediumRiskIcon}).addTo(map)
+      .bindPopup('<b>Pest Infestation</b><br>Locust activity increasing');
+      
+    L.marker([-28.5, 25.15], {icon: lowRiskIcon}).addTo(map)
+      .bindPopup('<b>Erosion Risk</b><br>Monitor soil conditions');
+      
+    // Add a scale control
+    L.control.scale().addTo(map);
+    
+    // Add custom CSS for markers
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .risk-pin {
+        width: 30px;
+        height: 30px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      
+      .risk-pin i {
+        transform: rotate(45deg);
+        color: white;
+      }
+      
+      .risk-pin.high {
+        background: #F44336;
+        box-shadow: 0 0 10px rgba(244, 67, 54, 0.7);
+      }
+      
+      .risk-pin.medium {
+        background: #FFC107;
+        box-shadow: 0 0 10px rgba(255, 193, 7, 0.7);
+      }
+      
+      .risk-pin.low {
+        background: #4CAF50;
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+      }
+      
+      .risk-pin::after {
+        content: "";
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 8px solid;
+      }
+      
+      .risk-pin.high::after { border-top-color: #F44336; }
+      .risk-pin.medium::after { border-top-color: #FFC107; }
+      .risk-pin.low::after { border-top-color: #4CAF50; }
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>
