@@ -29,6 +29,7 @@
       --light: #f5f9fc;
       --card-shadow: 0 6px 20px rgba(0,0,0,0.07);
       --expert: #9C27B0;
+      --processing: #FFC107;
     }
     
     body {
@@ -37,6 +38,7 @@
       color: var(--dark);
       line-height: 1.6;
       min-height: 100vh;
+      overflow-x: hidden;
     }
     
     .container {
@@ -244,6 +246,11 @@
       background: var(--frost);
     }
     
+    .btn-disabled {
+      background: #78909c;
+      cursor: not-allowed;
+    }
+    
     .risk-summary {
       background: rgba(255,255,255,0.08);
       padding: 15px;
@@ -420,6 +427,7 @@
       z-index: 1;
       box-shadow: 0 3px 10px rgba(0,0,0,0.08);
       min-height: 500px;
+      background: #f8f9fa;
     }
     
     .map-overlay {
@@ -521,6 +529,12 @@
       padding: 20px;
       border-left: 4px solid var(--success);
       box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .year-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
     
     .year-card h4 {
@@ -562,13 +576,10 @@
     .frost-label i { color: var(--frost); }
     .rain-label i { color: var(--rain); }
     
-    .risk-value {
-      font-weight: 500;
-    }
-    
     .chart-container {
       height: 300px;
       margin-top: 20px;
+      position: relative;
     }
     
     .expert-commentary {
@@ -632,6 +643,11 @@
       padding: 15px;
       text-align: center;
       box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+      transition: transform 0.3s;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-3px);
     }
     
     .stat-value {
@@ -648,6 +664,58 @@
     .drought-stat .stat-value { color: var(--drought); }
     .frost-stat .stat-value { color: var(--frost); }
     .rain-stat .stat-value { color: var(--rain); }
+    
+    /* Loading Indicator */
+    .loading-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(76, 175, 80, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--success);
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      font-weight: 500;
+      color: var(--dark);
+    }
+    
+    .progress-bar {
+      width: 200px;
+      height: 8px;
+      background: #eee;
+      border-radius: 4px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    
+    .progress {
+      height: 100%;
+      background: var(--processing);
+      width: 0%;
+      transition: width 0.5s;
+    }
     
     /* Responsive Design */
     @media (max-width: 1200px) {
@@ -684,6 +752,11 @@
       
       .stats-grid {
         grid-template-columns: 1fr;
+      }
+      
+      .report-tabs {
+        overflow-x: auto;
+        white-space: nowrap;
       }
     }
     
@@ -815,7 +888,7 @@
           <button class="btn btn-clear" id="clear-boundary">
             <i class="fas fa-eraser"></i> Clear
           </button>
-          <button class="btn btn-download" id="download-report" disabled>
+          <button class="btn btn-download btn-disabled" id="download-report" disabled>
             <i class="fas fa-download"></i> Download Report
           </button>
         </div>
@@ -826,10 +899,10 @@
               <i class="fas fa-sun"></i>
             </div>
             <div class="risk-info">
-              <h4>Drought Risk: High</h4>
-              <p>Low rainfall expected</p>
+              <h4>Drought Risk: <span class="risk-value">Loading...</span></h4>
+              <p>24-year historical analysis</p>
               <div class="risk-bar">
-                <div class="risk-progress" style="width: 85%"></div>
+                <div class="risk-progress" id="drought-bar" style="width: 0%"></div>
               </div>
             </div>
           </div>
@@ -839,10 +912,10 @@
               <i class="fas fa-snowflake"></i>
             </div>
             <div class="risk-info">
-              <h4>Frost Risk: Medium</h4>
-              <p>Potential for frost damage</p>
+              <h4>Frost Risk: <span class="risk-value">Loading...</span></h4>
+              <p>24-year historical analysis</p>
               <div class="risk-bar">
-                <div class="risk-progress" style="width: 55%"></div>
+                <div class="risk-progress" id="frost-bar" style="width: 0%"></div>
               </div>
             </div>
           </div>
@@ -852,10 +925,10 @@
               <i class="fas fa-cloud-rain"></i>
             </div>
             <div class="risk-info">
-              <h4>Rain Risk: Low</h4>
-              <p>30mm expected in next 48h</p>
+              <h4>Rain Risk: <span class="risk-value">Loading...</span></h4>
+              <p>24-year historical analysis</p>
               <div class="risk-bar">
-                <div class="risk-progress" style="width: 25%"></div>
+                <div class="risk-progress" id="rain-bar" style="width: 0%"></div>
               </div>
             </div>
           </div>
@@ -885,7 +958,15 @@
             </div>
           </div>
         </div>
-        <div id="map"></div>
+        <div id="map">
+          <div class="loading-indicator" id="map-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Map Data...</div>
+            <div class="progress-bar">
+              <div class="progress" id="map-progress"></div>
+            </div>
+          </div>
+        </div>
         <div class="map-overlay">
           <i class="fas fa-info-circle"></i> Click the polygon tool to start drawing your farm boundary
         </div>
@@ -908,27 +989,41 @@
         </div>
         
         <div class="tab-content active" id="yearly-tab">
+          <div class="loading-indicator" id="yearly-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing 24 Years of Historical Data...</div>
+            <div class="progress-bar">
+              <div class="progress" id="yearly-progress"></div>
+            </div>
+          </div>
           <div class="stats-grid">
             <div class="stat-card drought-stat">
-              <div class="stat-value">72%</div>
+              <div class="stat-value" id="avg-drought">0%</div>
               <div class="stat-label">Average Drought Risk</div>
             </div>
             <div class="stat-card frost-stat">
-              <div class="stat-value">48%</div>
+              <div class="stat-value" id="avg-frost">0%</div>
               <div class="stat-label">Average Frost Risk</div>
             </div>
             <div class="stat-card rain-stat">
-              <div class="stat-value">65%</div>
+              <div class="stat-value" id="avg-rain">0%</div>
               <div class="stat-label">Average Rain Risk</div>
             </div>
           </div>
           
-          <div class="yearly-data">
+          <div class="yearly-data" id="yearly-data-container">
             <!-- Yearly data will be populated here -->
           </div>
         </div>
         
         <div class="tab-content" id="monthly-tab">
+          <div class="loading-indicator" id="monthly-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Calculating Monthly Averages...</div>
+            <div class="progress-bar">
+              <div class="progress" id="monthly-progress"></div>
+            </div>
+          </div>
           <h4>Monthly Risk Trends (2000-2024 Average)</h4>
           <div class="chart-container">
             <canvas id="monthly-chart"></canvas>
@@ -976,6 +1071,13 @@
         </div>
         
         <div class="tab-content" id="expert-tab">
+          <div class="loading-indicator" id="expert-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Generating Expert Analysis...</div>
+            <div class="progress-bar">
+              <div class="progress" id="expert-progress"></div>
+            </div>
+          </div>
           <div class="expert-commentary">
             <div class="expert-header">
               <i class="fas fa-user-tie"></i>
@@ -1026,355 +1128,510 @@
   
   <script>
     // Initialize the map
-    const map = L.map('map').setView([-28.5, 25], 6);
-    
-    // Add OpenStreetMap tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-    
-    // Initialize the feature group for drawn items
-    const drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
-    
-    // Initialize the draw control
-    const drawControl = new L.Control.Draw({
-      position: 'topright',
-      draw: {
-        polygon: {
-          shapeOptions: {
-            color: '#4CAF50',
-            fillColor: 'rgba(76, 175, 80, 0.3)'
-          },
-          allowIntersection: false,
-          showArea: true
-        },
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        circlemarker: false,
-        marker: false
-      },
-      edit: {
-        featureGroup: drawnItems,
-        remove: false
-      }
-    });
-    
-    map.addControl(drawControl);
-    
-    // Store drawn polygon
-    let farmPolygon = null;
-    let farmArea = 0;
-    
-    // Handle drawing events
-    map.on(L.Draw.Event.CREATED, function (e) {
-      const type = e.layerType;
-      const layer = e.layer;
+    function initializeMap() {
+      const mapLoading = document.getElementById('map-loading');
+      const mapProgress = document.getElementById('map-progress');
       
-      if (type === 'polygon') {
-        // Clear any existing polygon
-        drawnItems.clearLayers();
-        
-        // Add the new polygon
-        drawnItems.addLayer(layer);
-        farmPolygon = layer;
-        
-        // Calculate area
-        farmArea = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]) / 10000;
-        document.getElementById('report-area').textContent = farmArea.toFixed(2);
-        document.getElementById('location-area').textContent = farmArea.toFixed(2) + ' ha';
-        
-        // Update coordinates display
-        updateCoordinatesDisplay(layer);
-        
-        // Enable download button
-        document.getElementById('download-report').disabled = false;
-        
-        // Generate report data
-        generateYearlyData();
-        generateMonthlyChart();
-        generateExpertCommentary();
-      }
-    });
+      // Show loading indicator
+      mapLoading.style.display = 'flex';
+      
+      // Simulate map loading progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 10;
+        mapProgress.style.width = `${progress}%`;
+        if (progress >= 100) {
+          clearInterval(progressInterval);
+          // Create map after loading completes
+          createMap();
+          mapLoading.style.display = 'none';
+        }
+      }, 200);
+    }
     
-    // Handle edit events
-    map.on(L.Draw.Event.EDITED, function (e) {
-      const layers = e.layers;
-      layers.eachLayer(function(layer) {
-        if (layer instanceof L.Polygon) {
+    function createMap() {
+      const map = L.map('map').setView([-28.5, 25], 6);
+      
+      // Add OpenStreetMap tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      
+      // Initialize the feature group for drawn items
+      const drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
+      
+      // Initialize the draw control
+      const drawControl = new L.Control.Draw({
+        position: 'topright',
+        draw: {
+          polygon: {
+            shapeOptions: {
+              color: '#4CAF50',
+              fillColor: 'rgba(76, 175, 80, 0.3)'
+            },
+            allowIntersection: false,
+            showArea: true
+          },
+          polyline: false,
+          rectangle: false,
+          circle: false,
+          circlemarker: false,
+          marker: false
+        },
+        edit: {
+          featureGroup: drawnItems,
+          remove: false
+        }
+      });
+      
+      map.addControl(drawControl);
+      
+      // Store drawn polygon
+      let farmPolygon = null;
+      let farmArea = 0;
+      
+      // Handle drawing events
+      map.on(L.Draw.Event.CREATED, function (e) {
+        const type = e.layerType;
+        const layer = e.layer;
+        
+        if (type === 'polygon') {
+          // Clear any existing polygon
+          drawnItems.clearLayers();
+          
+          // Add the new polygon
+          drawnItems.addLayer(layer);
           farmPolygon = layer;
+          
+          // Calculate area
           farmArea = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]) / 10000;
           document.getElementById('report-area').textContent = farmArea.toFixed(2);
           document.getElementById('location-area').textContent = farmArea.toFixed(2) + ' ha';
+          
+          // Update coordinates display
           updateCoordinatesDisplay(layer);
+          
+          // Enable download button
+          document.getElementById('download-report').disabled = false;
+          document.getElementById('download-report').classList.remove('btn-disabled');
+          
+          // Generate report data
+          generateYearlyData();
+          generateMonthlyChart();
+          generateExpertCommentary();
+          updateRiskSummary();
         }
       });
-    });
-    
-    // Update coordinates display
-    function updateCoordinatesDisplay(polygon) {
-      const coords = polygon.getLatLngs()[0]; // Get the first ring (no holes)
-      let html = '';
       
-      coords.forEach(coord => {
-        html += `<div>${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}</div>`;
-      });
-      
-      document.getElementById('coordinates-display').innerHTML = html;
-    }
-    
-    // Clear boundary button
-    document.getElementById('clear-boundary').addEventListener('click', function() {
-      drawnItems.clearLayers();
-      farmPolygon = null;
-      farmArea = 0;
-      document.getElementById('coordinates-display').innerHTML = 'No boundary defined yet. Draw on the map to define your farm.';
-      document.getElementById('report-area').textContent = '0';
-      document.getElementById('location-area').textContent = '0 ha';
-      document.getElementById('download-report').disabled = true;
-    });
-    
-    // Predictive search functionality
-    const searchInput = document.getElementById('location-search');
-    const searchResults = document.getElementById('search-results');
-    
-    // List of South African locations
-    const southAfricaLocations = [
-      { name: "Johannesburg, Gauteng", lat: -26.2041, lng: 28.0473 },
-      { name: "Cape Town, Western Cape", lat: -33.9249, lng: 18.4241 },
-      { name: "Durban, KwaZulu-Natal", lat: -29.8587, lng: 31.0218 },
-      { name: "Pretoria, Gauteng", lat: -25.7479, lng: 28.2293 },
-      { name: "Port Elizabeth, Eastern Cape", lat: -33.9608, lng: 25.6022 },
-      { name: "Bloemfontein, Free State", lat: -29.1167, lng: 26.2167 },
-      { name: "Nelspruit, Mpumalanga", lat: -25.4745, lng: 30.9703 },
-      { name: "Polokwane, Limpopo", lat: -23.9045, lng: 29.4689 },
-      { name: "Kimberley, Northern Cape", lat: -28.7386, lng: 24.7581 },
-      { name: "Rustenburg, North West", lat: -25.6544, lng: 27.2429 },
-      { name: "East London, Eastern Cape", lat: -33.0292, lng: 27.8546 }
-    ];
-    
-    searchInput.addEventListener('input', function() {
-      const query = this.value.toLowerCase();
-      searchResults.innerHTML = '';
-      
-      if (query.length < 2) {
-        searchResults.style.display = 'none';
-        return;
-      }
-      
-      const filteredLocations = southAfricaLocations.filter(location => 
-        location.name.toLowerCase().includes(query)
-      );
-      
-      if (filteredLocations.length === 0) {
-        searchResults.style.display = 'none';
-        return;
-      }
-      
-      filteredLocations.slice(0, 5).forEach(location => {
-        const item = document.createElement('div');
-        item.className = 'search-result-item';
-        item.textContent = location.name;
-        item.addEventListener('click', () => {
-          map.setView([location.lat, location.lng], 12);
-          searchInput.value = location.name;
-          document.getElementById('location-name').textContent = location.name;
-          document.getElementById('location-region').textContent = location.name.split(', ')[1];
-          searchResults.style.display = 'none';
-          
-          // Set climate zone based on region
-          if (location.name.includes("Cape")) {
-            document.getElementById('climate-zone').textContent = "Mediterranean";
-          } else if (location.name.includes("KwaZulu")) {
-            document.getElementById('climate-zone').textContent = "Subtropical";
-          } else {
-            document.getElementById('climate-zone').textContent = "Temperate";
+      // Handle edit events
+      map.on(L.Draw.Event.EDITED, function (e) {
+        const layers = e.layers;
+        layers.eachLayer(function(layer) {
+          if (layer instanceof L.Polygon) {
+            farmPolygon = layer;
+            farmArea = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]) / 10000;
+            document.getElementById('report-area').textContent = farmArea.toFixed(2);
+            document.getElementById('location-area').textContent = farmArea.toFixed(2) + ' ha';
+            updateCoordinatesDisplay(layer);
           }
         });
-        searchResults.appendChild(item);
       });
       
-      searchResults.style.display = 'block';
-    });
-    
-    // Close search results when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!searchInput.contains(e.target) {
-        searchResults.style.display = 'none';
+      // Update coordinates display
+      function updateCoordinatesDisplay(polygon) {
+        const coords = polygon.getLatLngs()[0]; // Get the first ring (no holes)
+        let html = '';
+        
+        coords.forEach(coord => {
+          html += `<div>${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}</div>`;
+        });
+        
+        document.getElementById('coordinates-display').innerHTML = html;
       }
-    });
+      
+      // Map controls
+      document.getElementById('zoom-in').addEventListener('click', function() {
+        map.zoomIn();
+      });
+      
+      document.getElementById('zoom-out').addEventListener('click', function() {
+        map.zoomOut();
+      });
+      
+      return map;
+    }
+    
+    // Predictive search functionality
+    function setupSearch() {
+      const searchInput = document.getElementById('location-search');
+      const searchResults = document.getElementById('search-results');
+      
+      // List of South African locations
+      const southAfricaLocations = [
+        { name: "Johannesburg, Gauteng", lat: -26.2041, lng: 28.0473 },
+        { name: "Cape Town, Western Cape", lat: -33.9249, lng: 18.4241 },
+        { name: "Durban, KwaZulu-Natal", lat: -29.8587, lng: 31.0218 },
+        { name: "Pretoria, Gauteng", lat: -25.7479, lng: 28.2293 },
+        { name: "Port Elizabeth, Eastern Cape", lat: -33.9608, lng: 25.6022 },
+        { name: "Bloemfontein, Free State", lat: -29.1167, lng: 26.2167 },
+        { name: "Nelspruit, Mpumalanga", lat: -25.4745, lng: 30.9703 },
+        { name: "Polokwane, Limpopo", lat: -23.9045, lng: 29.4689 },
+        { name: "Kimberley, Northern Cape", lat: -28.7386, lng: 24.7581 },
+        { name: "Rustenburg, North West", lat: -25.6544, lng: 27.2429 },
+        { name: "East London, Eastern Cape", lat: -33.0292, lng: 27.8546 }
+      ];
+      
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        searchResults.innerHTML = '';
+        
+        if (query.length < 2) {
+          searchResults.style.display = 'none';
+          return;
+        }
+        
+        const filteredLocations = southAfricaLocations.filter(location => 
+          location.name.toLowerCase().includes(query)
+        );
+        
+        if (filteredLocations.length === 0) {
+          searchResults.style.display = 'none';
+          return;
+        }
+        
+        filteredLocations.slice(0, 5).forEach(location => {
+          const item = document.createElement('div');
+          item.className = 'search-result-item';
+          item.textContent = location.name;
+          item.addEventListener('click', () => {
+            const map = L.DomUtil.get('map')._leaflet_id
+              ? L.DomUtil.get('map')._leaflet_map
+              : null;
+            
+            if (map) {
+              map.setView([location.lat, location.lng], 12);
+            }
+            
+            searchInput.value = location.name;
+            document.getElementById('location-name').textContent = location.name;
+            document.getElementById('location-region').textContent = location.name.split(', ')[1];
+            searchResults.style.display = 'none';
+            
+            // Set climate zone based on region
+            if (location.name.includes("Cape")) {
+              document.getElementById('climate-zone').textContent = "Mediterranean";
+            } else if (location.name.includes("KwaZulu")) {
+              document.getElementById('climate-zone').textContent = "Subtropical";
+            } else {
+              document.getElementById('climate-zone').textContent = "Temperate";
+            }
+          });
+          searchResults.appendChild(item);
+        });
+        
+        searchResults.style.display = 'block';
+      });
+      
+      // Close search results when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target)) {
+          searchResults.style.display = 'none';
+        }
+      });
+    }
     
     // Tab functionality
-    document.querySelectorAll('.tab-btn').forEach(button => {
-      button.addEventListener('click', function() {
-        // Remove active class from all buttons and content
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        
-        // Add active class to clicked button
-        this.classList.add('active');
-        
-        // Show corresponding content
-        const tabId = this.getAttribute('data-tab');
-        document.getElementById(`${tabId}-tab`).classList.add('active');
+    function setupTabs() {
+      document.querySelectorAll('.tab-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          // Remove active class from all buttons and content
+          document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+          
+          // Add active class to clicked button
+          this.classList.add('active');
+          
+          // Show corresponding content
+          const tabId = this.getAttribute('data-tab');
+          document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
       });
-    });
+    }
     
     // Generate 24 years of risk data (2000-2024)
     function generateYearlyData() {
-      const yearlyDataContainer = document.querySelector('.yearly-data');
-      yearlyDataContainer.innerHTML = '';
+      const yearlyLoading = document.getElementById('yearly-loading');
+      const yearlyProgress = document.getElementById('yearly-progress');
+      const yearlyContainer = document.getElementById('yearly-data-container');
       
-      // Generate data for 24 years
-      for (let year = 2000; year <= 2024; year++) {
-        // Create realistic trends for risks
-        const baseDrought = 60 + (year - 2000) * 0.5;
-        const baseFrost = 40 - (year - 2000) * 0.3;
-        const baseRain = 50 + Math.sin((year - 2000) * 0.2) * 10;
-        
-        // Add some randomness
-        const droughtRisk = Math.min(95, Math.max(40, Math.floor(baseDrought + Math.random() * 10 - 5)));
-        const frostRisk = Math.min(80, Math.max(20, Math.floor(baseFrost + Math.random() * 10 - 5)));
-        const rainRisk = Math.min(90, Math.max(30, Math.floor(baseRain + Math.random() * 10 - 5)));
-        
-        yearlyDataContainer.innerHTML += `
-          <div class="year-card">
-            <h4><i class="fas fa-calendar"></i> ${year} Risk Analysis</h4>
-            <div class="risk-row">
-              <div class="risk-label drought-label">
-                <i class="fas fa-sun"></i> Drought:
+      // Show loading indicator
+      yearlyLoading.style.display = 'flex';
+      yearlyContainer.innerHTML = '';
+      
+      // Simulate data processing
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 4;
+        yearlyProgress.style.width = `${progress}%`;
+        if (progress >= 100) {
+          clearInterval(progressInterval);
+          yearlyLoading.style.display = 'none';
+          
+          // Generate data for 24 years
+          let totalDrought = 0;
+          let totalFrost = 0;
+          let totalRain = 0;
+          
+          for (let year = 2000; year <= 2024; year++) {
+            // Create realistic trends for risks
+            const baseDrought = 60 + (year - 2000) * 0.5;
+            const baseFrost = 40 - (year - 2000) * 0.3;
+            const baseRain = 50 + Math.sin((year - 2000) * 0.2) * 10;
+            
+            // Add some randomness
+            const droughtRisk = Math.min(95, Math.max(40, Math.floor(baseDrought + Math.random() * 10 - 5)));
+            const frostRisk = Math.min(80, Math.max(20, Math.floor(baseFrost + Math.random() * 10 - 5)));
+            const rainRisk = Math.min(90, Math.max(30, Math.floor(baseRain + Math.random() * 10 - 5)));
+            
+            // Add to totals for averages
+            totalDrought += droughtRisk;
+            totalFrost += frostRisk;
+            totalRain += rainRisk;
+            
+            yearlyContainer.innerHTML += `
+              <div class="year-card">
+                <h4><i class="fas fa-calendar"></i> ${year} Risk Analysis</h4>
+                <div class="risk-row">
+                  <div class="risk-label drought-label">
+                    <i class="fas fa-sun"></i> Drought:
+                  </div>
+                  <div class="risk-value drought">${droughtRisk}%</div>
+                </div>
+                <div class="risk-row">
+                  <div class="risk-label frost-label">
+                    <i class="fas fa-snowflake"></i> Frost:
+                  </div>
+                  <div class="risk-value frost">${frostRisk}%</div>
+                </div>
+                <div class="risk-row">
+                  <div class="risk-label rain-label">
+                    <i class="fas fa-cloud-rain"></i> Rainfall:
+                  </div>
+                  <div class="risk-value rain">${rainRisk}%</div>
+                </div>
               </div>
-              <div class="risk-value drought">${droughtRisk}%</div>
-            </div>
-            <div class="risk-row">
-              <div class="risk-label frost-label">
-                <i class="fas fa-snowflake"></i> Frost:
-              </div>
-              <div class="risk-value frost">${frostRisk}%</div>
-            </div>
-            <div class="risk-row">
-              <div class="risk-label rain-label">
-                <i class="fas fa-cloud-rain"></i> Rainfall:
-              </div>
-              <div class="risk-value rain">${rainRisk}%</div>
-            </div>
-          </div>
-        `;
-      }
+            `;
+          }
+          
+          // Calculate averages
+          const avgDrought = Math.round(totalDrought / 25);
+          const avgFrost = Math.round(totalFrost / 25);
+          const avgRain = Math.round(totalRain / 25);
+          
+          // Update stats
+          document.getElementById('avg-drought').textContent = `${avgDrought}%`;
+          document.getElementById('avg-frost').textContent = `${avgFrost}%`;
+          document.getElementById('avg-rain').textContent = `${avgRain}%`;
+        }
+      }, 50);
     }
     
     // Generate monthly chart with 24-year averages
     function generateMonthlyChart() {
-      const ctx = document.getElementById('monthly-chart').getContext('2d');
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyLoading = document.getElementById('monthly-loading');
+      const monthlyProgress = document.getElementById('monthly-progress');
       
-      // Generate realistic monthly risk data
-      const droughtData = [
-        85, 80, 75, 65, 55, 45, 40, 45, 55, 65, 75, 80 // Higher in summer months
-      ].map(val => val + Math.random() * 5 - 2.5);
+      // Show loading indicator
+      monthlyLoading.style.display = 'flex';
       
-      const frostData = [
-        15, 18, 12, 8, 5, 3, 2, 3, 5, 8, 12, 15 // Higher in winter months
-      ].map(val => val + Math.random() * 5 - 2.5);
-      
-      const rainData = [
-        70, 75, 72, 68, 60, 55, 50, 55, 60, 65, 70, 72 // More consistent with slight variations
-      ].map(val => val + Math.random() * 5 - 2.5);
-      
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: months,
-          datasets: [
-            {
-              label: 'Drought Risk',
-              data: droughtData,
-              borderColor: 'var(--drought)',
-              backgroundColor: 'rgba(255, 152, 0, 0.1)',
-              borderWidth: 3,
-              tension: 0.3,
-              fill: true
+      // Simulate data processing
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 10;
+        monthlyProgress.style.width = `${progress}%`;
+        if (progress >= 100) {
+          clearInterval(progressInterval);
+          monthlyLoading.style.display = 'none';
+          
+          const ctx = document.getElementById('monthly-chart').getContext('2d');
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          
+          // Generate realistic monthly risk data
+          const droughtData = [
+            85, 80, 75, 65, 55, 45, 40, 45, 55, 65, 75, 80 // Higher in summer months
+          ].map(val => val + Math.random() * 5 - 2.5);
+          
+          const frostData = [
+            15, 18, 12, 8, 5, 3, 2, 3, 5, 8, 12, 15 // Higher in winter months
+          ].map(val => val + Math.random() * 5 - 2.5);
+          
+          const rainData = [
+            70, 75, 72, 68, 60, 55, 50, 55, 60, 65, 70, 72 // More consistent with slight variations
+          ].map(val => val + Math.random() * 5 - 2.5);
+          
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: months,
+              datasets: [
+                {
+                  label: 'Drought Risk',
+                  data: droughtData,
+                  borderColor: 'var(--drought)',
+                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                  borderWidth: 3,
+                  tension: 0.3,
+                  fill: true
+                },
+                {
+                  label: 'Frost Risk',
+                  data: frostData,
+                  borderColor: 'var(--frost)',
+                  backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                  borderWidth: 3,
+                  tension: 0.3,
+                  fill: true
+                },
+                {
+                  label: 'Rain Risk',
+                  data: rainData,
+                  borderColor: 'var(--rain)',
+                  backgroundColor: 'rgba(63, 81, 181, 0.1)',
+                  borderWidth: 3,
+                  tension: 0.3,
+                  fill: true
+                }
+              ]
             },
-            {
-              label: 'Frost Risk',
-              data: frostData,
-              borderColor: 'var(--frost)',
-              backgroundColor: 'rgba(33, 150, 243, 0.1)',
-              borderWidth: 3,
-              tension: 0.3,
-              fill: true
-            },
-            {
-              label: 'Rain Risk',
-              data: rainData,
-              borderColor: 'var(--rain)',
-              backgroundColor: 'rgba(63, 81, 181, 0.1)',
-              borderWidth: 3,
-              tension: 0.3,
-              fill: true
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'top',
-            },
-            title: {
-              display: true,
-              text: 'Monthly Risk Averages (2000-2024)',
-              font: {
-                size: 16
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                title: {
+                  display: true,
+                  text: 'Monthly Risk Averages (2000-2024)',
+                  font: {
+                    size: 16
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  min: 0,
+                  max: 100,
+                  title: {
+                    display: true,
+                    text: 'Risk Probability (%)'
+                  }
+                }
               }
             }
-          },
-          scales: {
-            y: {
-              min: 0,
-              max: 100,
-              title: {
-                display: true,
-                text: 'Risk Probability (%)'
-              }
-            }
-          }
+          });
         }
-      });
+      }, 100);
     }
     
     // Generate expert commentary based on risk data
     function generateExpertCommentary() {
+      const expertLoading = document.getElementById('expert-loading');
+      const expertProgress = document.getElementById('expert-progress');
       const commentaryContainer = document.getElementById('expert-commentary');
       
-      const commentary = `
-        <p><strong>Climate Trend Analysis (2000-2024)</strong></p>
-        
-        <p>Over the past 24 years, our analysis shows a consistent increase in drought risk, 
-        with an average increase of 0.5% per year. This trend aligns with global climate patterns 
-        showing reduced rainfall in southern Africa.</p>
-        
-        <p>Frost risk has shown a slight decrease, particularly in the last decade. This may be 
-        attributed to rising average temperatures and shorter winter seasons. However, isolated 
-        frost events remain a significant concern for early-season crops.</p>
-        
-        <p>Rainfall patterns have become more unpredictable, with increased variability between 
-        years. While the annual average rainfall has remained relatively stable, the distribution 
-        across months has shifted, leading to more intense rainfall events followed by longer dry 
-        periods.</p>
-        
-        <p><strong>Recommendations:</strong></p>
-        <p>1. Implement water conservation measures including drip irrigation and rainwater harvesting.</p>
-        <p>2. Consider drought-resistant crop varieties for the coming seasons.</p>
-        <p>3. Maintain frost protection systems despite the overall decreasing trend, as late frosts 
-        can still cause significant damage.</p>
-        <p>4. Develop a flexible planting schedule that can adapt to changing rainfall patterns.</p>
-      `;
+      // Show loading indicator
+      expertLoading.style.display = 'flex';
       
-      commentaryContainer.innerHTML = commentary;
+      // Simulate data processing
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 20;
+        expertProgress.style.width = `${progress}%`;
+        if (progress >= 100) {
+          clearInterval(progressInterval);
+          expertLoading.style.display = 'none';
+          
+          const commentary = `
+            <p><strong>Climate Trend Analysis (2000-2024)</strong></p>
+            
+            <p>Our analysis of 24 years of historical data reveals significant climate trends affecting agricultural risk:</p>
+            
+            <p><strong>Drought Risk:</strong> We've observed a steady increase in drought conditions, with a 12% rise over the past two decades. 
+            The most vulnerable months are January through March, where drought risk averages 78-85%.</p>
+            
+            <p><strong>Frost Patterns:</strong> Frost risk has decreased by approximately 8% since 2000, but remains a significant threat 
+            during the winter months (June-August). Unpredictable late-season frost events continue to pose challenges.</p>
+            
+            <p><strong>Rainfall Variability:</strong> While total annual rainfall has remained relatively stable, distribution has become 
+            increasingly erratic. We're seeing more intense rainfall events followed by longer dry periods, increasing both flood and drought risks.</p>
+            
+            <p><strong>Key Recommendations:</strong></p>
+            <ol>
+              <li>Implement water conservation systems (drip irrigation, rainwater harvesting)</li>
+              <li>Consider drought-resistant crop varieties for the coming seasons</li>
+              <li>Maintain frost protection systems despite overall decreasing trends</li>
+              <li>Diversify planting schedules to mitigate climate variability risks</li>
+              <li>Invest in soil moisture monitoring technology</li>
+            </ol>
+            
+            <p>Based on current trends, we project drought risk will continue to increase at a rate of 0.5-0.7% per year over the next decade.</p>
+          `;
+          
+          commentaryContainer.innerHTML = commentary;
+        }
+      }, 150);
     }
+    
+    // Update risk summary in sidebar
+    function updateRiskSummary() {
+      const droughtValue = document.querySelector('.drought .risk-value');
+      const frostValue = document.querySelector('.frost .risk-value');
+      const rainValue = document.querySelector('.rain .risk-value');
+      const droughtBar = document.getElementById('drought-bar');
+      const frostBar = document.getElementById('frost-bar');
+      const rainBar = document.getElementById('rain-bar');
+      
+      // Simulate risk calculation
+      setTimeout(() => {
+        droughtValue.textContent = "72%";
+        frostValue.textContent = "48%";
+        rainValue.textContent = "65%";
+        
+        droughtBar.style.width = "72%";
+        frostBar.style.width = "48%";
+        rainBar.style.width = "65%";
+      }, 1500);
+    }
+    
+    // Clear boundary button
+    document.getElementById('clear-boundary').addEventListener('click', function() {
+      const map = L.DomUtil.get('map')._leaflet_id
+        ? L.DomUtil.get('map')._leaflet_map
+        : null;
+      
+      if (map) {
+        const drawnItems = map._layers[Object.keys(map._layers)[1]];
+        if (drawnItems) {
+          drawnItems.clearLayers();
+        }
+      }
+      
+      document.getElementById('coordinates-display').innerHTML = 'No boundary defined yet. Draw on the map to define your farm.';
+      document.getElementById('report-area').textContent = '0';
+      document.getElementById('location-area').textContent = '0 ha';
+      document.getElementById('download-report').disabled = true;
+      document.getElementById('download-report').classList.add('btn-disabled');
+      
+      // Reset risk summary
+      document.querySelector('.drought .risk-value').textContent = "Loading...";
+      document.querySelector('.frost .risk-value').textContent = "Loading...";
+      document.querySelector('.rain .risk-value').textContent = "Loading...";
+      document.getElementById('drought-bar').style.width = "0%";
+      document.getElementById('frost-bar').style.width = "0%";
+      document.getElementById('rain-bar').style.width = "0%";
+    });
     
     // Download report button
     document.getElementById('download-report').addEventListener('click', function() {
@@ -1402,15 +1659,6 @@
       }, 1500);
     });
     
-    // Map controls
-    document.getElementById('zoom-in').addEventListener('click', function() {
-      map.zoomIn();
-    });
-    
-    document.getElementById('zoom-out').addEventListener('click', function() {
-      map.zoomOut();
-    });
-    
     // Set report date
     const now = new Date();
     document.getElementById('report-date').textContent = now.toLocaleDateString('en-US', {
@@ -1421,60 +1669,20 @@
       minute: '2-digit'
     });
     
-    // Initialize with sample data
-    generateYearlyData();
-    generateMonthlyChart();
-    generateExpertCommentary();
-    
-    // Add custom CSS for markers
-    const style = document.createElement('style');
-    style.innerHTML = `
-      .risk-pin {
-        width: 30px;
-        height: 30px;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      }
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeMap();
+      setupSearch();
+      setupTabs();
       
-      .risk-pin i {
-        transform: rotate(45deg);
-        color: white;
-        font-size: 14px;
-      }
-      
-      .risk-pin.drought {
-        background: var(--drought);
-      }
-      
-      .risk-pin.frost {
-        background: var(--frost);
-      }
-      
-      .risk-pin.rain {
-        background: var(--rain);
-      }
-      
-      .risk-pin::after {
-        content: "";
-        position: absolute;
-        bottom: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 8px solid;
-      }
-      
-      .risk-pin.drought::after { border-top-color: var(--drought); }
-      .risk-pin.frost::after { border-top-color: var(--frost); }
-      .risk-pin.rain::after { border-top-color: var(--rain); }
-    `;
-    document.head.appendChild(style);
+      // Initialize with sample data
+      setTimeout(() => {
+        generateYearlyData();
+        generateMonthlyChart();
+        generateExpertCommentary();
+        updateRiskSummary();
+      }, 1000);
+    });
   </script>
 </body>
 </html>
