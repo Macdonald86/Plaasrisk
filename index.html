@@ -842,6 +842,43 @@
     .pdf-btn i {
       margin-right: 8px;
     }
+    
+    /* API Status Indicator */
+    .api-status {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      padding: 10px 15px;
+      border-radius: 30px;
+      font-size: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+    }
+    
+    .api-status i {
+      margin-right: 8px;
+    }
+    
+    .api-status.connected {
+      color: #4CAF50;
+    }
+    
+    .api-status.disconnected {
+      color: #f44336;
+    }
+    
+    /* Error Message */
+    .error-message {
+      background: #ffebee;
+      color: #f44336;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -981,6 +1018,11 @@
           </div>
         </div>
         
+        <div class="error-message" id="api-error">
+          <i class="fas fa-exclamation-triangle"></i> 
+          <span id="error-text">Unable to connect to climate data API. Using simulated data for demonstration.</span>
+        </div>
+        
         <div class="report-tabs">
           <button class="tab-btn active" data-tab="yearly">Yearly Risk Data</button>
           <button class="tab-btn" data-tab="monthly">Monthly Risk Data</button>
@@ -1096,6 +1138,12 @@
     </div>
   </div>
   
+  <!-- API Status Indicator -->
+  <div class="api-status connected" id="api-status">
+    <i class="fas fa-plug"></i>
+    <span>Connected to Climate API</span>
+  </div>
+  
   <!-- PDF Preview Modal -->
   <div class="modal" id="pdf-modal">
     <div class="modal-content">
@@ -1127,6 +1175,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script>
+    // Global variables
+    let farmPolygon = null;
+    let farmArea = 0;
+    let map = null;
+    let yearlyAverages = null;
+    
     // Initialize the map
     function initializeMap() {
       const mapLoading = document.getElementById('map-loading');
@@ -1150,7 +1204,7 @@
     }
     
     function createMap() {
-      const map = L.map('map').setView([-28.5, 25], 6);
+      map = L.map('map').setView([-28.5, 25], 6);
       
       // Add OpenStreetMap tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1186,10 +1240,6 @@
       });
       
       map.addControl(drawControl);
-      
-      // Store drawn polygon
-      let farmPolygon = null;
-      let farmArea = 0;
       
       // Handle drawing events
       map.on(L.Draw.Event.CREATED, function (e) {
@@ -1262,6 +1312,80 @@
       return map;
     }
     
+    // Fetch climate data from Open-Meteo API
+    async function fetchClimateData(lat, lng, startYear, endYear) {
+      try {
+        const apiStatus = document.getElementById('api-status');
+        const errorMessage = document.getElementById('api-error');
+        
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lng}&start_date=${startYear}-01-01&end_date=${endYear}-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Climate API error');
+        
+        // Update API status
+        apiStatus.classList.remove('disconnected');
+        apiStatus.classList.add('connected');
+        apiStatus.innerHTML = '<i class="fas fa-plug"></i> Connected to Climate API';
+        errorMessage.style.display = 'none';
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Failed to fetch climate data:', error);
+        
+        // Update API status
+        document.getElementById('api-status').classList.remove('connected');
+        document.getElementById('api-status').classList.add('disconnected');
+        document.getElementById('api-status').innerHTML = '<i class="fas fa-plug"></i> API Connection Failed';
+        document.getElementById('error-text').textContent = 'Unable to connect to climate data API. Using simulated data for demonstration.';
+        document.getElementById('api-error').style.display = 'flex';
+        
+        return null;
+      }
+    }
+    
+    // Calculate risks based on climate data
+    function calculateRisks(climateData, year) {
+      if (!climateData) return null;
+
+      const dailyData = climateData.daily;
+      const yearData = {
+        time: [],
+        tempMax: [],
+        tempMin: [],
+        precipitation: []
+      };
+
+      // Filter data for the specific year
+      dailyData.time.forEach((date, index) => {
+        if (date.startsWith(year)) {
+          yearData.time.push(date);
+          yearData.tempMax.push(dailyData.temperature_2m_max[index]);
+          yearData.tempMin.push(dailyData.temperature_2m_min[index]);
+          yearData.precipitation.push(dailyData.precipitation_sum[index]);
+        }
+      });
+
+      // Calculate drought risk (days with high temp and low precipitation)
+      const droughtDays = yearData.tempMax.filter((t, i) => 
+        t > 30 && yearData.precipitation[i] < 1
+      ).length;
+      
+      // Calculate frost risk (days with min temp below freezing)
+      const frostDays = yearData.tempMin.filter(t => t < 0).length;
+      
+      // Calculate rain risk (days with heavy precipitation)
+      const heavyRainDays = yearData.precipitation.filter(p => p > 20).length;
+
+      const totalDays = yearData.time.length;
+      
+      return {
+        droughtRisk: +((droughtDays / totalDays) * 100).toFixed(1),
+        frostRisk: +((frostDays / totalDays) * 100).toFixed(1),
+        rainRisk: +((heavyRainDays / totalDays) * 100).toFixed(1)
+      };
+    }
+    
     // Predictive search functionality
     function setupSearch() {
       const searchInput = document.getElementById('location-search');
@@ -1305,10 +1429,6 @@
           item.className = 'search-result-item';
           item.textContent = location.name;
           item.addEventListener('click', () => {
-            const map = L.DomUtil.get('map')._leaflet_id
-              ? L.DomUtil.get('map')._leaflet_map
-              : null;
-            
             if (map) {
               map.setView([location.lat, location.lng], 12);
             }
@@ -1360,7 +1480,7 @@
     }
     
     // Generate 24 years of risk data (2000-2024)
-    function generateYearlyData() {
+    async function generateYearlyData() {
       const yearlyLoading = document.getElementById('yearly-loading');
       const yearlyProgress = document.getElementById('yearly-progress');
       const yearlyContainer = document.getElementById('yearly-data-container');
@@ -1368,6 +1488,19 @@
       // Show loading indicator
       yearlyLoading.style.display = 'flex';
       yearlyContainer.innerHTML = '';
+      
+      // Check if we have a polygon
+      if (!farmPolygon) {
+        alert('Please draw a farm boundary first');
+        yearlyLoading.style.display = 'none';
+        return;
+      }
+      
+      // Get centroid of the farm polygon
+      const centroid = farmPolygon.getBounds().getCenter();
+      
+      // Fetch climate data
+      const climateData = await fetchClimateData(centroid.lat, centroid.lng, 2000, 2024);
       
       // Simulate data processing
       let progress = 0;
@@ -1378,26 +1511,38 @@
           clearInterval(progressInterval);
           yearlyLoading.style.display = 'none';
           
-          // Generate data for 24 years
           let totalDrought = 0;
           let totalFrost = 0;
           let totalRain = 0;
+          let yearCount = 0;
           
           for (let year = 2000; year <= 2024; year++) {
-            // Create realistic trends for risks
-            const baseDrought = 60 + (year - 2000) * 0.5;
-            const baseFrost = 40 - (year - 2000) * 0.3;
-            const baseRain = 50 + Math.sin((year - 2000) * 0.2) * 10;
+            let droughtRisk, frostRisk, rainRisk;
             
-            // Add some randomness
-            const droughtRisk = Math.min(95, Math.max(40, Math.floor(baseDrought + Math.random() * 10 - 5)));
-            const frostRisk = Math.min(80, Math.max(20, Math.floor(baseFrost + Math.random() * 10 - 5)));
-            const rainRisk = Math.min(90, Math.max(30, Math.floor(baseRain + Math.random() * 10 - 5)));
+            if (climateData) {
+              // Calculate risks from real data
+              const risks = calculateRisks(climateData, year.toString());
+              if (!risks) continue;
+              
+              droughtRisk = risks.droughtRisk;
+              frostRisk = risks.frostRisk;
+              rainRisk = risks.rainRisk;
+            } else {
+              // Fallback to simulated data
+              const baseDrought = 60 + (year - 2000) * 0.5;
+              const baseFrost = 40 - (year - 2000) * 0.3;
+              const baseRain = 50 + Math.sin((year - 2000) * 0.2) * 10;
+              
+              droughtRisk = Math.min(95, Math.max(40, Math.floor(baseDrought + Math.random() * 10 - 5)));
+              frostRisk = Math.min(80, Math.max(20, Math.floor(baseFrost + Math.random() * 10 - 5)));
+              rainRisk = Math.min(90, Math.max(30, Math.floor(baseRain + Math.random() * 10 - 5)));
+            }
             
             // Add to totals for averages
             totalDrought += droughtRisk;
             totalFrost += frostRisk;
             totalRain += rainRisk;
+            yearCount++;
             
             yearlyContainer.innerHTML += `
               <div class="year-card">
@@ -1425,20 +1570,27 @@
           }
           
           // Calculate averages
-          const avgDrought = Math.round(totalDrought / 25);
-          const avgFrost = Math.round(totalFrost / 25);
-          const avgRain = Math.round(totalRain / 25);
+          const avgDrought = totalDrought / yearCount;
+          const avgFrost = totalFrost / yearCount;
+          const avgRain = totalRain / yearCount;
+          
+          // Store averages for risk summary
+          yearlyAverages = {
+            drought: avgDrought,
+            frost: avgFrost,
+            rain: avgRain
+          };
           
           // Update stats
-          document.getElementById('avg-drought').textContent = `${avgDrought}%`;
-          document.getElementById('avg-frost').textContent = `${avgFrost}%`;
-          document.getElementById('avg-rain').textContent = `${avgRain}%`;
+          document.getElementById('avg-drought').textContent = `${avgDrought.toFixed(1)}%`;
+          document.getElementById('avg-frost').textContent = `${avgFrost.toFixed(1)}%`;
+          document.getElementById('avg-rain').textContent = `${avgRain.toFixed(1)}%`;
         }
       }, 50);
     }
     
     // Generate monthly chart with 24-year averages
-    function generateMonthlyChart() {
+    async function generateMonthlyChart() {
       const monthlyLoading = document.getElementById('monthly-loading');
       const monthlyProgress = document.getElementById('monthly-progress');
       
@@ -1454,9 +1606,6 @@
           clearInterval(progressInterval);
           monthlyLoading.style.display = 'none';
           
-          const ctx = document.getElementById('monthly-chart').getContext('2d');
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          
           // Generate realistic monthly risk data
           const droughtData = [
             85, 80, 75, 65, 55, 45, 40, 45, 55, 65, 75, 80 // Higher in summer months
@@ -1469,6 +1618,9 @@
           const rainData = [
             70, 75, 72, 68, 60, 55, 50, 55, 60, 65, 70, 72 // More consistent with slight variations
           ].map(val => val + Math.random() * 5 - 2.5);
+          
+          const ctx = document.getElementById('monthly-chart').getContext('2d');
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
           
           new Chart(ctx, {
             type: 'line',
@@ -1586,6 +1738,8 @@
     
     // Update risk summary in sidebar
     function updateRiskSummary() {
+      if (!yearlyAverages) return;
+      
       const droughtValue = document.querySelector('.drought .risk-value');
       const frostValue = document.querySelector('.frost .risk-value');
       const rainValue = document.querySelector('.rain .risk-value');
@@ -1595,29 +1749,28 @@
       
       // Simulate risk calculation
       setTimeout(() => {
-        droughtValue.textContent = "72%";
-        frostValue.textContent = "48%";
-        rainValue.textContent = "65%";
+        droughtValue.textContent = `${yearlyAverages.drought.toFixed(1)}%`;
+        frostValue.textContent = `${yearlyAverages.frost.toFixed(1)}%`;
+        rainValue.textContent = `${yearlyAverages.rain.toFixed(1)}%`;
         
-        droughtBar.style.width = "72%";
-        frostBar.style.width = "48%";
-        rainBar.style.width = "65%";
+        droughtBar.style.width = `${yearlyAverages.drought}%`;
+        frostBar.style.width = `${yearlyAverages.frost}%`;
+        rainBar.style.width = `${yearlyAverages.rain}%`;
       }, 1500);
     }
     
     // Clear boundary button
     document.getElementById('clear-boundary').addEventListener('click', function() {
-      const map = L.DomUtil.get('map')._leaflet_id
-        ? L.DomUtil.get('map')._leaflet_map
-        : null;
-      
       if (map) {
-        const drawnItems = map._layers[Object.keys(map._layers)[1]];
-        if (drawnItems) {
-          drawnItems.clearLayers();
+        const layers = map._layers;
+        for (let layerId in layers) {
+          if (layers[layerId] instanceof L.Polygon) {
+            map.removeLayer(layers[layerId]);
+          }
         }
       }
       
+      farmPolygon = null;
       document.getElementById('coordinates-display').innerHTML = 'No boundary defined yet. Draw on the map to define your farm.';
       document.getElementById('report-area').textContent = '0';
       document.getElementById('location-area').textContent = '0 ha';
@@ -1677,10 +1830,13 @@
       
       // Initialize with sample data
       setTimeout(() => {
-        generateYearlyData();
-        generateMonthlyChart();
-        generateExpertCommentary();
-        updateRiskSummary();
+        // Only generate data if no polygon is drawn
+        if (!farmPolygon) {
+          generateYearlyData();
+          generateMonthlyChart();
+          generateExpertCommentary();
+          updateRiskSummary();
+        }
       }, 1000);
     });
   </script>
