@@ -122,95 +122,59 @@
       background: #e8f5e9;
     }
     
-    .map-controls {
-      padding: 15px;
+    /* NEW TOP CONTROL BAR */
+    .map-controls-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
       background: white;
       border-bottom: 1px solid var(--border);
-      z-index: 10;
+      z-index: 1000;
       position: relative;
-    }
-    
-    .search-container {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 15px;
-      align-items: center;
     }
     
     @media (max-width: 768px) {
-      .search-container {
-        grid-template-columns: 1fr;
+      .map-controls-top {
+        flex-direction: column;
+        align-items: stretch;
       }
     }
     
-    .search-box {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-      backdrop-filter: blur(5px);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-    
-    .search-box h2 {
-      font-size: 1.1rem;
-      margin-bottom: 12px;
-      color: var(--primary-dark);
+    .control-group {
       display: flex;
       align-items: center;
       gap: 8px;
-      position: relative;
-      padding-bottom: 8px;
     }
     
-    .search-box h2::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 20px;
-      height: 2px;
-      background: var(--accent);
-    }
-    
-    .data-availability {
-      background: #e8f5e9;
-      padding: 8px 12px;
+    .search-type-toggle {
+      display: flex;
+      background: var(--light-gray);
       border-radius: 8px;
-      margin-top: 10px;
+      padding: 4px;
+      margin: 0;
+    }
+    
+    .search-type-btn {
+      flex: 1;
+      padding: 6px;
+      text-align: center;
+      border-radius: 6px;
+      cursor: pointer;
       font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      transition: all 0.2s;
     }
     
-    .data-availability.warning {
-      background: #fff8e1;
-    }
-    
-    .data-availability.error {
-      background: #ffebee;
-    }
-    
-    .data-availability i {
-      color: var(--success);
-    }
-    
-    .data-availability.warning i {
-      color: var(--warning);
-    }
-    
-    .data-availability.error i {
-      color: var(--danger);
-    }
-    
-    .form-group {
-      margin-bottom: 12px;
-      position: relative;
+    .search-type-btn.active {
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-weight: 500;
+      color: var(--primary-dark);
     }
     
     .input-with-icon {
       position: relative;
+      min-width: 200px;
     }
     
     .input-icon {
@@ -288,7 +252,6 @@
     .map-actions {
       display: flex;
       gap: 8px;
-      margin-top: 12px;
       flex-wrap: wrap;
     }
     
@@ -725,39 +688,6 @@
       color: var(--danger);
     }
     
-    .status-message.success {
-      border-left-color: var(--success);
-    }
-    
-    .status-message.success i {
-      color: var(--success);
-    }
-    
-    .search-type-toggle {
-      display: flex;
-      background: var(--light-gray);
-      border-radius: 8px;
-      padding: 4px;
-      margin-bottom: 10px;
-    }
-    
-    .search-type-btn {
-      flex: 1;
-      padding: 6px;
-      text-align: center;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-    }
-    
-    .search-type-btn.active {
-      background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      font-weight: 500;
-      color: var(--primary-dark);
-    }
-    
     .suggestions-box {
       position: absolute;
       width: calc(100% - 30px);
@@ -813,239 +743,6 @@
       flex-wrap: wrap;
       gap: 6px;
       margin-bottom: 15px;
-    }
-    
-    /* Reduced font size for report preview */
-    .report-preview-text {
-      font-size: 0.85rem;
-      margin: 10px 0;
-      color: #555;
-      line-height: 1.6;
-    }
-    
-    .report-preview-list {
-      margin: 10px 0 10px 18px;
-      font-size: 0.85rem;
-    }
-    
-    .report-preview-list li {
-      margin-bottom: 8px;
-    }
-    
-    /* Enhanced Risk Rating Styles */
-    .risk-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin: 15px 0;
-    }
-    
-    @media (max-width: 768px) {
-      .risk-grid {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto;
-      }
-      
-      .risk-overall {
-        grid-column: span 2;
-      }
-    }
-    
-    .risk-category {
-      text-align: center;
-      padding: 12px;
-      border-radius: 10px;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    
-    .risk-category-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #555;
-    }
-    
-    .risk-category-value {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin: 5px 0;
-    }
-    
-    .risk-category-label {
-      font-size: 0.75rem;
-      padding: 3px 8px;
-      border-radius: 12px;
-      display: inline-block;
-    }
-    
-    .risk-overall {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 10px;
-    }
-    
-    .risk-overall-value {
-      font-size: 2.8rem;
-      font-weight: 800;
-      margin: 5px 0;
-    }
-    
-    .risk-overall-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-top: 5px;
-    }
-    
-    /* Rating Scale Section */
-    .rating-scale-container {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin: 20px 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      border-left: 4px solid #1e88e5;
-    }
-    
-    .rating-scale-container h3 {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      color: #1e88e5;
-    }
-    
-    .rating-scale-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-top: 15px;
-    }
-    
-    .rating-scale-item {
-      background: #f8f9fa;
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      border-left: 4px solid #ccc;
-    }
-    
-    .rating-scale-item.low-risk {
-      border-left-color: #4caf50;
-    }
-    
-    .rating-scale-item.moderate-risk {
-      border-left-color: #ff9800;
-    }
-    
-    .rating-scale-item.high-risk {
-      border-left-color: #f44336;
-    }
-    
-    .rating-scale-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin: 8px 0;
-    }
-    
-    .rating-scale-label {
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    
-    .rating-scale-description {
-      font-size: 0.85rem;
-      color: #555;
-    }
-    
-    /* Risk Rating Scale Table */
-    .rating-scale-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .rating-scale-table th {
-      background-color: #e8f5e9;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    
-    .rating-scale-table td {
-      padding: 12px;
-      border-bottom: 1px solid #e0e0e0;
-      font-size: 0.9rem;
-    }
-    
-    .rating-scale-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .rating-scale-table tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-    
-    .risk-level-low {
-      background-color: #e8f5e9 !important;
-      color: #2e7d32;
-      font-weight: 600;
-    }
-    
-    .risk-level-moderate {
-      background-color: #fff8e1 !important;
-      color: #e65100;
-      font-weight: 600;
-    }
-    
-    .risk-level-high {
-      background-color: #ffebee !important;
-      color: #d32f2f;
-      font-weight: 600;
-    }
-    
-    /* Mobile menu button */
-    .mobile-menu-toggle {
-      display: none;
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      z-index: 1010;
-      background: white;
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      border: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-      cursor: pointer;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 5px;
-    }
-    
-    .mobile-menu-toggle span {
-      display: block;
-      width: 22px;
-      height: 2px;
-      background: var(--primary);
-      border-radius: 1px;
-      transition: all 0.3s;
-    }
-    
-    @media (max-width: 768px) {
-      .mobile-menu-toggle {
-        display: flex;
-      }
     }
     
     /* Touch-friendly adjustments */
@@ -1148,23 +845,42 @@
       border-bottom: 1px dashed #bbdefb;
     }
     
-    .search-header {
-      display: flex;
-      justify-content: space-between;
+    /* NEW: Data availability badge */
+    .data-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: inline-flex;
       align-items: center;
-      margin-bottom: 15px;
+      gap: 6px;
     }
     
-    .search-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1.2rem;
-      color: var(--primary-dark);
+    .data-badge.available {
+      background: #e8f5e9;
+      color: var(--success);
     }
     
-    .search-title i {
-      font-size: 1.4rem;
+    .data-badge.warning {
+      background: #fff8e1;
+      color: var(--warning);
+    }
+    
+    .data-badge.error {
+      background: #ffebee;
+      color: var(--danger);
+    }
+    
+    /* NEW: Compact controls */
+    .compact-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .compact-btn {
+      padding: 8px;
+      min-width: auto;
     }
   </style>
 </head>
@@ -1172,70 +888,51 @@
   <div class="container">
     <div class="app-container">
       <div class="map-section">
-        <div class="map-controls">
-          <div class="search-header">
-            <div class="search-title">
-              <i class="fas fa-map-marker-alt"></i>
-              <h2>Farm Location Analysis</h2>
+        <!-- NEW TOP CONTROL BAR -->
+        <div class="map-controls-top">
+          <div class="control-group">
+            <div class="search-type-toggle">
+              <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
+              <div class="search-type-btn" id="locationToggle">Location</div>
             </div>
-            <button class="mobile-menu-toggle" id="mobileMenuToggle">
-              <span></span>
-              <span></span>
-              <span></span>
+          </div>
+          
+          <div class="control-group">
+            <div class="input-with-icon">
+              <i class="fas fa-search input-icon"></i>
+              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
+              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
+              <div id="suggestions" class="suggestions-box"></div>
+            </div>
+            <button class="btn btn-primary compact-btn" onclick="searchLocation()" title="Search location">
+              <i class="fas fa-search-location"></i>
             </button>
           </div>
           
-          <div class="search-container">
-            <div class="search-box">
-              <div class="search-type-toggle">
-                <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
-                <div class="search-type-btn" id="locationToggle">Location Name</div>
-              </div>
-              
-              <div class="form-group">
-                <div class="input-with-icon">
-                  <i class="fas fa-search input-icon"></i>
-                  <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
-                  <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
-                </div>
-              </div>
-              
-              <div id="suggestions" class="suggestions-box"></div>
-              
-              <div id="data-availability" class="data-availability">
-                <i class="fas fa-info-circle"></i>
-                <span>Data availability: Select a location</span>
-              </div>
-              
-              <div class="map-actions">
-                <button class="btn btn-primary" onclick="searchLocation()">
-                  <i class="fas fa-search-location btn-icon"></i> Search Location
-                </button>
-                <button class="btn btn-outline" onclick="resetMap()">
-                  <i class="fas fa-trash-alt btn-icon"></i> Clear Map
-                </button>
-                <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
-                  <i class="fas fa-map-pin"></i> Drop Pin
-                </button>
-                <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
-                  <i class="fas fa-chart-line btn-icon"></i> Analyze Location
-                </button>
-              </div>
-              
-              <!-- Data Fetching Progress Bar -->
-              <div class="progress-container">
-                <div class="progress-header">
-                  <span>Data Retrieval</span>
-                  <span id="progress-percentage">0%</span>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill" id="progress-fill"></div>
-                  <div class="progress-label" id="progress-label">Starting</div>
-                </div>
-              </div>
+          <div class="map-actions">
+            <button class="btn btn-outline compact-btn" onclick="resetMap()" title="Clear Map">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+            <button class="btn btn-primary compact-btn" onclick="generateReport()" id="generateBtn" title="Analyze">
+              <i class="fas fa-chart-line"></i>
+            </button>
+            <button class="btn btn-outline compact-btn" id="dropPinBtn" onclick="activatePinMode()" title="Drop Pin">
+              <i class="fas fa-map-pin"></i>
+            </button>
+          </div>
+          
+          <div class="progress-container">
+            <div class="progress-header">
+              <span>Data Retrieval</span>
+              <span id="progress-percentage">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+              <div class="progress-label" id="progress-label">Starting</div>
             </div>
           </div>
         </div>
+        
         <div id="map"></div>
       </div>
       
@@ -1605,20 +1302,6 @@
     
     const shortMonthNames = monthNames.map(m => m.substring(0, 3));
     
-    // Mobile menu toggle
-    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-    
-    mobileMenuToggle.addEventListener('click', function() {
-      document.querySelector('.search-container').classList.toggle('mobile-visible');
-    });
-    
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!mobileMenuToggle.contains(e.target)) {
-        document.querySelector('.search-container').classList.remove('mobile-visible');
-      }
-    });
-
     // Initialize map
     const map = L.map('map').setView([-25.0, 30.0], 5); // Set to South Africa coordinates
     
@@ -1727,10 +1410,6 @@
     
     // Function to check data availability
     function checkDataAvailability(lat, lng) {
-      const availabilityEl = document.getElementById('data-availability');
-      availabilityEl.innerHTML = '<i class="fas fa-sync fa-spin"></i> Checking data availability...';
-      availabilityEl.className = 'data-availability';
-      
       // Simulate progress
       let progress = 0;
       const interval = setInterval(() => {
@@ -1744,16 +1423,13 @@
           const isRemote = Math.abs(lat) > 55 || Math.abs(lng) > 140;
           
           if (!isLand) {
-            availabilityEl.innerHTML = '<i class="fas fa-times-circle"></i> No data available (ocean location)';
-            availabilityEl.className = 'data-availability error';
+            showNotification("No data available (ocean location)", "error");
             dataAvailable = false;
           } else if (isRemote) {
-            availabilityEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Limited data available (remote area)';
-            availabilityEl.className = 'data-availability warning';
+            showNotification("Limited data available (remote area)", "warning");
             dataAvailable = true;
           } else {
-            availabilityEl.innerHTML = '<i class="fas fa-check-circle"></i> Reliable data available';
-            availabilityEl.className = 'data-availability';
+            showNotification("Reliable data available", "success");
             dataAvailable = true;
           }
         }
@@ -1799,7 +1475,7 @@
       pinModeActive = false;
       document.getElementById('dropPinBtn').classList.remove('btn-primary');
       document.getElementById('dropPinBtn').classList.add('btn-outline');
-      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i>';
       
       // Remove event listener
       map.off('click', handleMapClick);
@@ -1987,12 +1663,6 @@
       document.getElementById("locationInput").value = "";
       document.getElementById('suggestions').style.display = 'none';
       
-      const availabilityEl = document.getElementById('data-availability');
-      availabilityEl.innerHTML = '<i class="fas fa-info-circle"></i> Data availability: Select a location';
-      availabilityEl.className = 'data-availability';
-      
-      showNotification("Map has been reset", 'info');
-      
       // Reset progress bar
       updateProgress('progress', 0, 'Ready');
       
@@ -2002,7 +1672,7 @@
         map.off('click', handleMapClick);
         document.getElementById('dropPinBtn').classList.remove('btn-primary');
         document.getElementById('dropPinBtn').classList.add('btn-outline');
-        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i>';
       }
     }
 
