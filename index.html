@@ -29,9 +29,11 @@
       --success: #4caf50;
       --warning: #ff9800;
       --danger: #f44336;
-      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       --frost-blue: #1e88e5;
       --frost-light: #bbdefb;
+      --drought-brown: #8d6e63;
+      --drought-light: #efebe9;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
     
     * {
@@ -368,6 +370,16 @@
       color: var(--danger);
     }
     
+    .data-badge.frost {
+      background: var(--frost-light);
+      color: var(--frost-blue);
+    }
+    
+    .data-badge.drought {
+      background: var(--drought-light);
+      color: var(--drought-brown);
+    }
+    
     /* Report Modal */
     .report-modal {
       position: fixed;
@@ -484,7 +496,6 @@
     .stat-value {
       font-size: 1.8rem;
       font-weight: 700;
-      color: var(--primary);
       margin: 10px 0;
     }
     
@@ -539,6 +550,54 @@
       gap: 8px;
     }
     
+    .frost-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: var(--frost-light);
+      color: var(--frost-blue);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    
+    .drought-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      background: var(--drought-light);
+      color: var(--drought-brown);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    
+    .risk-meter {
+      height: 8px;
+      background: #eee;
+      border-radius: 4px;
+      margin-top: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .risk-fill {
+      height: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    
+    .risk-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #777;
+      margin-top: 5px;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .report-content {
@@ -571,7 +630,6 @@
 <body>
   <div class="container">
     <div class="map-section">
-      <!-- Slimmer control bar with merged search -->
       <div class="control-bar">
         <div class="control-group">
           <div class="input-with-icon">
@@ -644,26 +702,22 @@
           <div class="stats-grid">
             <div class="stat-card">
               <div class="stat-label">Average Temp</div>
-              <div class="stat-value">21.4°C</div>
-              <div class="stat-label">(2000-2024)</div>
+              <div class="stat-value" id="avgTempValue">21.4°C</div>
             </div>
             
             <div class="stat-card">
               <div class="stat-label">Max Temp</div>
-              <div class="stat-value">34.2°C</div>
-              <div class="stat-label">(Jan 2016)</div>
+              <div class="stat-value" id="maxTempValue">34.2°C</div>
             </div>
             
             <div class="stat-card">
               <div class="stat-label">Min Temp</div>
-              <div class="stat-value">-1.3°C</div>
-              <div class="stat-label">(Jul 2008)</div>
+              <div class="stat-value" id="minTempValue">-1.3°C</div>
             </div>
             
             <div class="stat-card">
               <div class="stat-label">Warming Trend</div>
-              <div class="stat-value">+1.2°C</div>
-              <div class="stat-label">(since 2000)</div>
+              <div class="stat-value" id="warmingValue">+1.2°C</div>
             </div>
           </div>
         </div>
@@ -677,47 +731,80 @@
           <div class="stats-grid">
             <div class="stat-card">
               <div class="stat-label">Annual Avg</div>
-              <div class="stat-value">625 mm</div>
-              <div class="stat-label">(2000-2024)</div>
+              <div class="stat-value" id="annualPrecip">625 mm</div>
             </div>
             
             <div class="stat-card">
               <div class="stat-label">Max Monthly</div>
-              <div class="stat-value">210 mm</div>
-              <div class="stat-label">(Feb 2011)</div>
+              <div class="stat-value" id="maxMonthlyPrecip">210 mm</div>
             </div>
             
             <div class="stat-card">
               <div class="stat-label">Dry Spells</div>
-              <div class="stat-value">3.2/yr</div>
-              <div class="stat-label">(>30 days dry)</div>
+              <div class="stat-value" id="drySpells">3.2/yr</div>
             </div>
             
             <div class="stat-card">
               <div class="stat-label">Trend</div>
-              <div class="stat-value">-8%</div>
-              <div class="stat-label">(since 2000)</div>
+              <div class="stat-value" id="precipTrend">-8%</div>
             </div>
           </div>
         </div>
         
         <div class="report-section">
-          <h3><i class="fas fa-calendar-alt"></i> Seasonal Patterns</h3>
+          <h3><i class="fas fa-snowflake"></i> Frost Analysis</h3>
           <div class="chart-container">
-            <canvas id="seasonalChart"></canvas>
+            <canvas id="frostChart"></canvas>
+          </div>
+          
+          <div class="frost-indicator">
+            <i class="fas fa-info-circle"></i>
+            <span id="frostRisk">Moderate frost risk (15 days/year)</span>
+          </div>
+          
+          <div class="risk-meter">
+            <div class="risk-fill" id="frostRiskMeter" style="width: 40%; background: var(--frost-blue);"></div>
+          </div>
+          <div class="risk-labels">
+            <span>Low</span>
+            <span>Moderate</span>
+            <span>High</span>
+            <span>Severe</span>
           </div>
         </div>
         
         <div class="report-section">
-          <h3><i class="fas fa-lightbulb"></i> Farming Recommendations</h3>
-          <ul style="padding-left: 20px; margin-top: 15px;">
-            <li style="margin-bottom: 10px;">Based on temperature trends, consider drought-resistant crop varieties</li>
-            <li style="margin-bottom: 10px;">Schedule planting in early October to maximize spring rainfall</li>
-            <li style="margin-bottom: 10px;">Implement water conservation techniques during summer months</li>
-            <li style="margin-bottom: 10px;">Monitor for potential heat stress in January and February</li>
-            <li style="margin-bottom: 10px;">Consider supplemental irrigation during November dry spells</li>
-          </ul>
+          <h3><i class="fas fa-tint-slash"></i> Drought Analysis</h3>
+          <div class="chart-container">
+            <canvas id="droughtChart"></canvas>
+          </div>
+          
+          <div class="drought-indicator">
+            <i class="fas fa-info-circle"></i>
+            <span id="droughtRisk">Low drought risk (5 days/year)</span>
+          </div>
+          
+          <div class="risk-meter">
+            <div class="risk-fill" id="droughtRiskMeter" style="width: 20%; background: var(--drought-brown);"></div>
+          </div>
+          <div class="risk-labels">
+            <span>Low</span>
+            <span>Moderate</span>
+            <span>High</span>
+            <span>Severe</span>
+          </div>
         </div>
+      </div>
+      
+      <div class="report-section" style="margin-top: 20px;">
+        <h3><i class="fas fa-lightbulb"></i> Farming Recommendations</h3>
+        <ul style="padding-left: 20px; margin-top: 15px;">
+          <li style="margin-bottom: 10px;" id="rec1">Based on temperature trends, consider drought-resistant crop varieties</li>
+          <li style="margin-bottom: 10px;" id="rec2">Schedule planting in early October to maximize spring rainfall</li>
+          <li style="margin-bottom: 10px;" id="rec3">Implement water conservation techniques during summer months</li>
+          <li style="margin-bottom: 10px;" id="rec4">Monitor for potential heat stress in January and February</li>
+          <li style="margin-bottom: 10px;" id="rec5">Consider supplemental irrigation during November dry spells</li>
+        </ul>
       </div>
       
       <div class="report-footer">
@@ -768,9 +855,8 @@
     let pinModeActive = false;
     let geocodeTimeout = null;
     let currentRequest = null;
+    let currentLocationName = "South Africa";
     
-    const dataAvailabilityLayer = L.layerGroup().addTo(map);
-
     const drawControl = new L.Control.Draw({
       draw: {
         polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#2e7d32' } },
@@ -809,13 +895,13 @@
     }
     
     // Open report modal
-    function openReport() {
+    function openReport(data) {
       const modal = document.getElementById('reportModal');
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
       
-      // Initialize charts
-      initCharts();
+      // Initialize charts with data
+      initCharts(data);
     }
     
     // Close report modal
@@ -834,16 +920,16 @@
     }
     
     // Initialize charts in report
-    function initCharts() {
+    function initCharts(data) {
       // Temperature chart
       const tempCtx = document.getElementById('temperatureChart').getContext('2d');
       new Chart(tempCtx, {
         type: 'line',
         data: {
-          labels: ['2000', '2002', '2004', '2006', '2008', '2010', '2012', '2014', '2016', '2018', '2020', '2022', '2024'],
+          labels: data.temp.labels,
           datasets: [{
             label: 'Average Temperature (°C)',
-            data: [19.8, 20.1, 20.5, 20.7, 20.2, 20.9, 21.2, 21.4, 21.8, 21.6, 21.9, 22.1, 22.3],
+            data: data.temp.values,
             borderColor: '#e74c3c',
             backgroundColor: 'rgba(231, 76, 60, 0.1)',
             borderWidth: 3,
@@ -875,10 +961,10 @@
       new Chart(precipCtx, {
         type: 'bar',
         data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+          labels: data.precip.labels,
           datasets: [{
             label: 'Average Precipitation (mm)',
-            data: [120, 110, 95, 55, 30, 15, 10, 15, 35, 75, 95, 110],
+            data: data.precip.values,
             backgroundColor: '#3498db',
             borderColor: '#2980b9',
             borderWidth: 1
@@ -903,34 +989,21 @@
         }
       });
       
-      // Seasonal chart
-      const seasonalCtx = document.getElementById('seasonalChart').getContext('2d');
-      new Chart(seasonalCtx, {
-        type: 'radar',
+      // Frost chart
+      const frostCtx = document.getElementById('frostChart').getContext('2d');
+      new Chart(frostCtx, {
+        type: 'line',
         data: {
-          labels: ['Winter', 'Spring', 'Summer', 'Autumn'],
-          datasets: [
-            {
-              label: 'Temperature (°C)',
-              data: [15, 22, 28, 20],
-              borderColor: '#e74c3c',
-              backgroundColor: 'rgba(231, 76, 60, 0.2)',
-              pointBackgroundColor: '#e74c3c',
-              pointBorderColor: '#fff',
-              pointHoverBackgroundColor: '#fff',
-              pointHoverBorderColor: '#e74c3c'
-            },
-            {
-              label: 'Precipitation (mm)',
-              data: [40, 75, 120, 60],
-              borderColor: '#3498db',
-              backgroundColor: 'rgba(52, 152, 219, 0.2)',
-              pointBackgroundColor: '#3498db',
-              pointBorderColor: '#fff',
-              pointHoverBackgroundColor: '#fff',
-              pointHoverBorderColor: '#3498db'
-            }
-          ]
+          labels: data.frost.labels,
+          datasets: [{
+            label: 'Frost Days per Year',
+            data: data.frost.values,
+            borderColor: '#1e88e5',
+            backgroundColor: 'rgba(30, 136, 229, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.3
+          }]
         },
         options: {
           responsive: true,
@@ -938,19 +1011,66 @@
           plugins: {
             title: {
               display: true,
-              text: 'Seasonal Climate Patterns',
+              text: 'Annual Frost Days',
               font: { size: 16 }
             },
-            legend: { position: 'top' }
+            legend: { display: false }
           },
           scales: {
-            r: {
-              angleLines: { display: true },
-              suggestedMin: 0
+            y: {
+              title: { display: true, text: 'Days per Year' }
             }
           }
         }
       });
+      
+      // Drought chart
+      const droughtCtx = document.getElementById('droughtChart').getContext('2d');
+      new Chart(droughtCtx, {
+        type: 'bar',
+        data: {
+          labels: data.drought.labels,
+          datasets: [{
+            label: 'Drought Days per Year',
+            data: data.drought.values,
+            backgroundColor: '#8d6e63',
+            borderColor: '#6d4c41',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Drought Days',
+              font: { size: 16 }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Days per Year' }
+            }
+          }
+        }
+      });
+      
+      // Update stats
+      document.getElementById('avgTempValue').textContent = `${data.stats.avgTemp}°C`;
+      document.getElementById('maxTempValue').textContent = `${data.stats.maxTemp}°C`;
+      document.getElementById('minTempValue').textContent = `${data.stats.minTemp}°C`;
+      document.getElementById('warmingValue').textContent = `${data.stats.warming}°C`;
+      document.getElementById('annualPrecip').textContent = `${data.stats.annualPrecip} mm`;
+      document.getElementById('maxMonthlyPrecip').textContent = `${data.stats.maxMonthlyPrecip} mm`;
+      document.getElementById('drySpells').textContent = `${data.stats.drySpells}/yr`;
+      document.getElementById('precipTrend').textContent = `${data.stats.precipTrend}%`;
+      document.getElementById('frostRisk').textContent = data.stats.frostRisk;
+      document.getElementById('droughtRisk').textContent = data.stats.droughtRisk;
+      document.getElementById('frostRiskMeter').style.width = data.stats.frostRiskPercent;
+      document.getElementById('droughtRiskMeter').style.width = data.stats.droughtRiskPercent;
+      document.getElementById('reportLocation').textContent = `${data.location.coords} (${data.location.name})`;
     }
 
     // Event handlers
@@ -1101,6 +1221,7 @@
           currentMarker = L.marker([lat, lng]).addTo(map)
             .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
           lastPolygonCenter = { lat, lng };
+          currentLocationName = "Custom Location";
           showNotification(`Location set to: ${lat}, ${lng}`, 'success');
           
           checkDataAvailability(lat, lng);
@@ -1163,6 +1284,7 @@
                   .openPopup();
                 
                 lastPolygonCenter = { lat, lng: lon };
+                currentLocationName = item.display_name;
                 checkDataAvailability(lat, lon);
                 
                 showNotification(`Location set to: ${item.display_name}`, 'success');
@@ -1191,6 +1313,7 @@
               .openPopup();
             
             lastPolygonCenter = { lat, lng: lon };
+            currentLocationName = item.display_name;
             checkDataAvailability(lat, lon);
             
             showNotification(`Location set to: ${item.display_name}`, 'success');
@@ -1222,6 +1345,7 @@
       map.setView([-25.0, 30.0], 5);
       document.getElementById("searchInput").value = "";
       document.getElementById('suggestions').style.display = 'none';
+      currentLocationName = "South Africa";
       
       // Reset progress bar
       updateProgress(0, 'Ready');
@@ -1254,7 +1378,7 @@
       // API request parameters
       const startDate = "2000-01-01";
       const endDate = "2024-12-31";
-      const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&timezone=auto`;
+      const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=auto`;
       
       try {
         // Cancel any previous request
@@ -1300,19 +1424,184 @@
         
         showNotification("Climate data retrieved successfully! Generating report...", 'success');
         
-        // Set location in report
-        document.getElementById('reportLocation').textContent = `${lat}, ${lon} (South Africa)`;
+        // Process data for charts and stats
+        const processedData = processClimateData(data, lat, lon);
         
         // Open the report modal
         setTimeout(() => {
-          openReport();
-        }, 1000);
+          openReport(processedData);
+        }, 500);
       } catch (err) {
         console.error('Error generating report:', err);
         showNotification("Couldn't fetch data for this location", 'error');
       } finally {
         currentRequest = null;
       }
+    }
+    
+    // Process climate data for charts and stats
+    function processClimateData(apiData, lat, lon) {
+      const daily = apiData.daily;
+      const times = daily.time;
+      const tempMin = daily.temperature_2m_min;
+      const tempMax = daily.temperature_2m_max;
+      const precipitation = daily.precipitation_sum;
+      
+      // Initialize data structures
+      const years = [];
+      const annualAvgTemp = [];
+      const annualPrecip = [];
+      const annualFrostDays = [];
+      const annualDroughtDays = [];
+      
+      const monthlyPrecip = Array(12).fill(0);
+      const monthlyCounts = Array(12).fill(0);
+      
+      // Track min/max values
+      let minTemp = Infinity;
+      let maxTemp = -Infinity;
+      let totalPrecip = 0;
+      let frostDays = 0;
+      let droughtDays = 0;
+      
+      // Process each day
+      for (let i = 0; i < times.length; i++) {
+        const date = new Date(times[i]);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        
+        const avgTemp = (tempMin[i] + tempMax[i]) / 2;
+        
+        // Initialize year data if new year
+        if (!years.includes(year)) {
+          years.push(year);
+          annualAvgTemp.push(0);
+          annualPrecip.push(0);
+          annualFrostDays.push(0);
+          annualDroughtDays.push(0);
+        }
+        
+        const yearIndex = years.indexOf(year);
+        
+        // Accumulate annual data
+        annualAvgTemp[yearIndex] += avgTemp;
+        annualPrecip[yearIndex] += precipitation[i];
+        
+        // Check for frost
+        if (tempMin[i] < 0) {
+          annualFrostDays[yearIndex]++;
+          frostDays++;
+        }
+        
+        // Check for drought (no precipitation)
+        if (precipitation[i] === 0) {
+          annualDroughtDays[yearIndex]++;
+          droughtDays++;
+        }
+        
+        // Track min/max temps
+        if (tempMin[i] < minTemp) minTemp = tempMin[i];
+        if (tempMax[i] > maxTemp) maxTemp = tempMax[i];
+        
+        // Accumulate monthly precipitation
+        monthlyPrecip[month] += precipitation[i];
+        monthlyCounts[month]++;
+        
+        totalPrecip += precipitation[i];
+      }
+      
+      // Calculate averages
+      for (let i = 0; i < years.length; i++) {
+        annualAvgTemp[i] = parseFloat((annualAvgTemp[i] / 365).toFixed(1));
+      }
+      
+      for (let i = 0; i < 12; i++) {
+        if (monthlyCounts[i] > 0) {
+          monthlyPrecip[i] = parseFloat((monthlyPrecip[i] / monthlyCounts[i]).toFixed(1));
+        }
+      }
+      
+      // Calculate warming trend
+      const warmingTrend = parseFloat((annualAvgTemp[annualAvgTemp.length - 1] - annualAvgTemp[0]).toFixed(1));
+      
+      // Calculate precipitation trend
+      const precipTrend = parseFloat(((annualPrecip[annualPrecip.length - 1] - annualPrecip[0]) / annualPrecip[0] * 100).toFixed(1));
+      
+      // Find max monthly precipitation
+      const maxMonthlyPrecip = Math.max(...monthlyPrecip).toFixed(1);
+      
+      // Calculate average dry spells (months with < 30mm precipitation)
+      const drySpells = monthlyPrecip.filter(p => p < 30).length;
+      
+      // Calculate frost risk
+      const avgFrostDays = frostDays / years.length;
+      let frostRisk = "Low frost risk";
+      let frostRiskPercent = "20%";
+      if (avgFrostDays > 15) {
+        frostRisk = "High frost risk";
+        frostRiskPercent = "70%";
+      } else if (avgFrostDays > 7) {
+        frostRisk = "Moderate frost risk";
+        frostRiskPercent = "40%";
+      }
+      frostRisk += ` (${avgFrostDays.toFixed(1)} days/year)`;
+      
+      // Calculate drought risk
+      const avgDroughtDays = droughtDays / years.length;
+      let droughtRisk = "Low drought risk";
+      let droughtRiskPercent = "25%";
+      if (avgDroughtDays > 60) {
+        droughtRisk = "Severe drought risk";
+        droughtRiskPercent = "90%";
+      } else if (avgDroughtDays > 40) {
+        droughtRisk = "High drought risk";
+        droughtRiskPercent = "60%";
+      } else if (avgDroughtDays > 20) {
+        droughtRisk = "Moderate drought risk";
+        droughtRiskPercent = "40%";
+      }
+      droughtRisk += ` (${avgDroughtDays.toFixed(1)} days/year)`;
+      
+      // Generate labels for years
+      const yearLabels = years.map(y => y.toString());
+      
+      // Prepare data for charts
+      return {
+        location: {
+          coords: `${lat}, ${lon}`,
+          name: currentLocationName
+        },
+        temp: {
+          labels: yearLabels,
+          values: annualAvgTemp
+        },
+        precip: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+          values: monthlyPrecip
+        },
+        frost: {
+          labels: yearLabels,
+          values: annualFrostDays
+        },
+        drought: {
+          labels: yearLabels,
+          values: annualDroughtDays
+        },
+        stats: {
+          avgTemp: annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length.toFixed(1),
+          maxTemp: maxTemp.toFixed(1),
+          minTemp: minTemp.toFixed(1),
+          warming: warmingTrend,
+          annualPrecip: (totalPrecip / years.length).toFixed(1),
+          maxMonthlyPrecip,
+          drySpells: (drySpells / 12).toFixed(1),
+          precipTrend,
+          frostRisk,
+          droughtRisk,
+          frostRiskPercent,
+          droughtRiskPercent
+        }
+      };
     }
     
     // Initialize progress bar
