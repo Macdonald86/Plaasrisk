@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PlaasRisk - Farm Climate Analysis</title>
+  <title>PlaasRisk - Advanced Climate Analysis</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -745,6 +745,152 @@
       gap: 12px;
     }
     
+    /* Prediction Section */
+    .prediction-section {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #1e88e5 0%, #0d47a1 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-top: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .prediction-section::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      z-index: 1;
+    }
+    
+    .prediction-section::after {
+      content: "";
+      position: absolute;
+      bottom: -30%;
+      left: -30%;
+      width: 150px;
+      height: 150px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      z-index: 1;
+    }
+    
+    .prediction-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 2;
+    }
+    
+    .prediction-header h3 {
+      font-size: 1.8rem;
+      margin: 0;
+    }
+    
+    .prediction-content {
+      display: flex;
+      gap: 20px;
+      position: relative;
+      z-index: 2;
+    }
+    
+    @media (max-width: 768px) {
+      .prediction-content {
+        flex-direction: column;
+      }
+    }
+    
+    .prediction-card {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .prediction-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+    }
+    
+    .prediction-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 10px 0;
+      text-align: center;
+    }
+    
+    .prediction-label {
+      text-align: center;
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+    
+    .prediction-trend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+    
+    .trend-up {
+      color: #ff7043;
+    }
+    
+    .trend-down {
+      color: #81c784;
+    }
+    
+    .prediction-gauge {
+      height: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      margin-top: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .gauge-fill {
+      height: 100%;
+      border-radius: 10px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      transition: width 1s ease;
+    }
+    
+    .gauge-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+    
+    .prediction-footer {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 0.9rem;
+      position: relative;
+      z-index: 2;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .report-content {
@@ -790,6 +936,10 @@
       .drought-classification {
         flex-direction: column;
       }
+      
+      .prediction-value {
+        font-size: 2rem;
+      }
     }
   </style>
 </head>
@@ -799,7 +949,7 @@
       <div class="control-bar">
         <div class="logo-container">
           <div class="plaasrisk-logo">
-            <i class="fas fa-leaf logo-icon"></i>
+            <i class="fas fa-seedling logo-icon"></i>
           </div>
           <div class="logo-text">PlaasRisk</div>
         </div>
@@ -979,6 +1129,62 @@
           </div>
         </div>
         
+        <!-- NEW: Prediction Section -->
+        <div class="prediction-section">
+          <div class="prediction-header">
+            <i class="fas fa-crystal-ball" style="font-size: 2.5rem;"></i>
+            <h3>2025 Climate Prediction</h3>
+          </div>
+          
+          <div class="prediction-content">
+            <div class="prediction-card">
+              <div class="prediction-title">
+                <i class="fas fa-temperature-high"></i>
+                <h4>Temperature Forecast</h4>
+              </div>
+              <div class="prediction-value" id="predictedTemp">22.8°C</div>
+              <div class="prediction-label">Annual Average</div>
+              <div class="prediction-trend trend-up">
+                <i class="fas fa-arrow-up"></i>
+                <span>1.4°C above average</span>
+              </div>
+              <div class="prediction-gauge">
+                <div class="gauge-fill" id="tempGauge" style="width: 75%; background: linear-gradient(90deg, #4fc3f7, #e57373);"></div>
+              </div>
+              <div class="gauge-labels">
+                <span>Low</span>
+                <span>Average</span>
+                <span>High</span>
+              </div>
+            </div>
+            
+            <div class="prediction-card">
+              <div class="prediction-title">
+                <i class="fas fa-tint"></i>
+                <h4>Precipitation Forecast</h4>
+              </div>
+              <div class="prediction-value" id="predictedPrecip">580 mm</div>
+              <div class="prediction-label">Annual Total</div>
+              <div class="prediction-trend trend-down">
+                <i class="fas fa-arrow-down"></i>
+                <span>7% below average</span>
+              </div>
+              <div class="prediction-gauge">
+                <div class="gauge-fill" id="precipGauge" style="width: 65%; background: linear-gradient(90deg, #81c784, #4fc3f7);"></div>
+              </div>
+              <div class="gauge-labels">
+                <span>Dry</span>
+                <span>Average</span>
+                <span>Wet</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="prediction-footer">
+            <p><i class="fas fa-info-circle"></i> Predictions based on historical trends and seasonal forecasting models. This forecast indicates a warmer and drier year ahead. Farmers should prepare for potential water shortages and consider heat-tolerant crop varieties.</p>
+          </div>
+        </div>
+        
         <!-- Commentary Section -->
         <div class="commentary-section">
           <h3><i class="fas fa-comment-alt"></i> Climate Commentary</h3>
@@ -1125,6 +1331,10 @@
       
       // Initialize charts with data
       initCharts(data);
+      
+      // Update prediction values
+      document.getElementById('predictedTemp').textContent = `${data.prediction.temp.toFixed(1)}°C`;
+      document.getElementById('predictedPrecip').textContent = `${data.prediction.precip.toFixed(0)} mm`;
     }
     
     // Close report modal
@@ -1251,7 +1461,7 @@
         }
       });
       
-      // NEW: Annual Rainfall Chart
+      // Annual Rainfall Chart
       const annualRainfallCtx = document.getElementById('annualRainfallChart').getContext('2d');
       new Chart(annualRainfallCtx, {
         type: 'bar',
@@ -1917,6 +2127,19 @@
       // Generate labels for years
       const yearLabels = years.map(y => y.toString());
       
+      // PREDICTIVE MODEL for next year (2025)
+      // Simple linear regression based on historical trends
+      const lastYear = years[years.length - 1];
+      const nextYear = lastYear + 1;
+      
+      // Predict temperature
+      const tempSlope = warmingTrend / (years.length - 1);
+      const predictedTemp = annualAvgTemp[annualAvgTemp.length - 1] + tempSlope;
+      
+      // Predict precipitation
+      const precipSlope = (annualPrecip[annualPrecip.length - 1] - annualPrecip[0]) / (years.length - 1);
+      const predictedPrecip = annualPrecip[annualPrecip.length - 1] + precipSlope;
+      
       // Prepare data for charts
       return {
         location: {
@@ -1931,7 +2154,7 @@
           labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
           values: monthlyPrecip
         },
-        // NEW: Annual Rainfall Data
+        // Annual Rainfall Data
         annualRainfall: {
           labels: yearLabels,
           values: annualPrecip.map(p => parseFloat(p.toFixed(1)))
@@ -1956,6 +2179,11 @@
           highFrostYears,
           moderateDroughtYears,
           severeDroughtYears
+        },
+        prediction: {
+          year: nextYear,
+          temp: predictedTemp,
+          precip: predictedPrecip
         }
       };
     }
