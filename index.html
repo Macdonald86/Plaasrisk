@@ -148,50 +148,32 @@
       gap: 10px;
     }
     
-    /* Search box in report section */
-    .search-box {
+    /* GPS Search Box at the top */
+    .gps-search-container {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
       background: rgba(255, 255, 255, 0.98);
-      padding: 20px;
+      padding: 15px;
       border-radius: 12px;
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-      width: 100%;
+      width: 90%;
+      max-width: 600px;
       backdrop-filter: blur(5px);
       border: 1px solid rgba(0, 0, 0, 0.05);
-      margin-bottom: 20px;
-    }
-    
-    .search-box h2 {
-      font-size: 1.3rem;
-      margin-bottom: 15px;
-      color: var(--primary-dark);
       display: flex;
       align-items: center;
       gap: 10px;
-      position: relative;
-      padding-bottom: 10px;
     }
     
-    .search-box h2::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 35px;
-      height: 3px;
-      background: var(--accent);
-      border-radius: 2px;
-    }
-    
-    .form-group {
-      margin-bottom: 15px;
+    .gps-search-container .input-with-icon {
+      flex: 1;
       position: relative;
     }
     
-    .input-with-icon {
-      position: relative;
-    }
-    
-    .input-icon {
+    .gps-search-container .input-icon {
       position: absolute;
       left: 15px;
       top: 50%;
@@ -200,9 +182,9 @@
       font-size: 1rem;
     }
     
-    .form-control {
+    .gps-search-container .form-control {
       width: 100%;
-      padding: 14px 15px 14px 45px;
+      padding: 12px 15px 12px 45px;
       border: 1px solid var(--border);
       border-radius: 10px;
       font-size: 1rem;
@@ -212,60 +194,20 @@
       font-family: 'Inter', sans-serif;
     }
     
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
-      background: white;
-    }
-    
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    .gps-search-container .btn {
       padding: 12px 20px;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-      gap: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-      font-family: 'Inter', sans-serif;
+      min-width: 100px;
     }
     
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 15px rgba(46, 125, 50, 0.3);
-    }
-    
-    .btn-outline {
+    .gps-search-container .btn-outline {
       background: transparent;
       border: 1px solid var(--primary);
       color: var(--primary);
       font-weight: 500;
     }
     
-    .btn-outline:hover {
+    .gps-search-container .btn-outline:hover {
       background: rgba(46, 125, 50, 0.1);
-    }
-    
-    .map-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-      flex-wrap: wrap;
-    }
-    
-    .map-actions .btn {
-      flex: 1;
-      min-width: 140px;
     }
     
     .report-header {
@@ -919,6 +861,10 @@
         width: 100%;
         height: 40vh;
       }
+      
+      .gps-search-container {
+        width: 95%;
+      }
     }
     
     @media (max-width: 768px) {
@@ -934,6 +880,11 @@
       
       .risk-grid {
         grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .gps-search-container {
+        flex-direction: column;
+        align-items: stretch;
       }
     }
     
@@ -1016,7 +967,7 @@
         background: white !important;
       }
       
-      .map-section, .toggle-report, .header {
+      .map-section, .toggle-report, .header, .gps-search-container {
         display: none !important;
       }
       
@@ -1104,6 +1055,20 @@
     
     <div class="app-container">
       <div class="map-section">
+        <!-- GPS Search Box at the top -->
+        <div class="gps-search-container">
+          <div class="input-with-icon">
+            <i class="fas fa-search input-icon"></i>
+            <input type="text" id="gpsSearchInput" class="form-control" placeholder="Enter coordinates (e.g., -25.0, 30.0) or location name" />
+          </div>
+          <button class="btn btn-outline" onclick="searchLocation()">
+            <i class="fas fa-search"></i> Search
+          </button>
+          <button class="btn btn-primary" onclick="activatePinMode()">
+            <i class="fas fa-map-pin"></i> Pin
+          </button>
+        </div>
+        
         <button class="toggle-report" id="toggleReport">
           <i class="fas fa-chart-bar"></i>
         </button>
@@ -1118,61 +1083,6 @@
         </div>
         
         <div class="report-content">
-          <!-- Search box integrated in report section -->
-          <div class="search-box" id="searchBox">
-            <h2>
-              <i class="fas fa-map-marker-alt"></i>
-              Farm Location
-            </h2>
-            
-            <div class="search-type-toggle">
-              <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
-              <div class="search-type-btn" id="locationToggle">Location</div>
-            </div>
-            
-            <div class="form-group">
-              <div class="input-with-icon">
-                <i class="fas fa-search input-icon"></i>
-                <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
-                <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <div class="input-with-icon">
-                <i class="fas fa-tag input-icon"></i>
-                <input type="text" id="farmName" class="form-control" placeholder="Farm Name (Optional)" />
-              </div>
-            </div>
-            
-            <div class="map-actions">
-              <button class="btn btn-outline" onclick="resetMap()">
-                <i class="fas fa-trash-alt"></i> Clear
-              </button>
-              <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
-                <i class="fas fa-chart-line"></i> Analyze
-              </button>
-              <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
-                <i class="fas fa-map-pin"></i> Drop Pin
-              </button>
-              <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
-                <i class="fas fa-download"></i> Report
-              </button>
-            </div>
-            
-            <!-- Data Fetching Progress Bar -->
-            <div class="progress-container">
-              <div class="progress-header">
-                <span>Data Retrieval</span>
-                <span id="progress-percentage">0%</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-                <div class="progress-label" id="progress-label">Ready</div>
-              </div>
-            </div>
-          </div>
-          
           <div id="report-placeholder">
             <div class="report-card">
               <h3>
@@ -1489,21 +1399,6 @@
     
     const shortMonthNames = monthNames.map(m => m.substring(0, 3));
     
-    // Toggle search type
-    document.getElementById('gpsToggle').addEventListener('click', () => {
-      document.getElementById('gpsToggle').classList.add('active');
-      document.getElementById('locationToggle').classList.remove('active');
-      document.getElementById('gpsInput').classList.remove('hidden');
-      document.getElementById('locationInput').classList.add('hidden');
-    });
-    
-    document.getElementById('locationToggle').addEventListener('click', () => {
-      document.getElementById('locationToggle').classList.add('active');
-      document.getElementById('gpsToggle').classList.remove('active');
-      document.getElementById('locationInput').classList.remove('hidden');
-      document.getElementById('gpsInput').classList.add('hidden');
-    });
-    
     // Toggle report visibility
     document.getElementById('toggleReport').addEventListener('click', function() {
       const reportSection = document.getElementById('reportSection');
@@ -1536,7 +1431,7 @@
         showNotification(`Farm boundary drawn at ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, 'success');
         
         // Update GPS input
-        document.getElementById("gpsInput").value = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+        document.getElementById("gpsSearchInput").value = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
         
         // Check data availability
         checkDataAvailability(center.lat, center.lng);
@@ -1572,7 +1467,7 @@
         .openPopup();
       
       // Update GPS input
-      document.getElementById("gpsInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      document.getElementById("gpsSearchInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       lastPolygonCenter = { lat, lng };
       
       // Check data availability
@@ -1582,7 +1477,7 @@
       pinModeActive = false;
       document.getElementById('dropPinBtn').classList.remove('btn-primary');
       document.getElementById('dropPinBtn').classList.add('btn-outline');
-      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Pin';
       
       // Remove event listener
       map.off('click', handleMapClick);
@@ -1618,39 +1513,34 @@
     
     // Search location by text or coordinates
     function searchLocation() {
-      if (document.getElementById('gpsInput').classList.contains('hidden')) {
-        // Search by location name
-        const query = document.getElementById('locationInput').value;
-        if (!query) {
-          showNotification("Enter a location name to search", 'error');
+      const input = document.getElementById("gpsSearchInput").value;
+      if (!input) {
+        showNotification("Enter coordinates or a location name", 'error');
+        return;
+      }
+      
+      // Check if input is coordinates
+      const parts = input.split(',');
+      if (parts.length === 2) {
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+        if (!isNaN(lat) && !isNaN(lng)) {
+          map.setView([lat, lng], 13);
+          
+          if (currentMarker) map.removeLayer(currentMarker);
+          
+          currentMarker = L.marker([lat, lng]).addTo(map)
+            .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
+          lastPolygonCenter = { lat, lng };
+          showNotification(`Location set to: ${lat}, ${lng}`, 'success');
+          
+          checkDataAvailability(lat, lng);
           return;
         }
-        geocodeLocation(query);
-      } else {
-        // Search by coordinates
-        const input = document.getElementById("gpsInput").value;
-        const parts = input.split(',');
-        if (parts.length === 2) {
-          const lat = parseFloat(parts[0].trim());
-          const lng = parseFloat(parts[1].trim());
-          if (!isNaN(lat) && !isNaN(lng)) {
-            map.setView([lat, lng], 13);
-            
-            if (currentMarker) map.removeLayer(currentMarker);
-            
-            currentMarker = L.marker([lat, lng]).addTo(map)
-              .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
-            lastPolygonCenter = { lat, lng };
-            showNotification(`Location set to: ${lat}, ${lng}`, 'success');
-            
-            checkDataAvailability(lat, lng);
-          } else {
-            showNotification("Invalid coordinates. Please enter in 'latitude, longitude' format.", 'error');
-          }
-        } else {
-          showNotification("Enter coordinates in 'lat, lng' format.", 'error');
-        }
       }
+      
+      // Otherwise, geocode location name
+      geocodeLocation(input);
     }
     
     // Reset map
@@ -1662,9 +1552,7 @@
         currentMarker = null;
       }
       map.setView([-25.0, 30.0], 5);
-      document.getElementById("gpsInput").value = "";
-      document.getElementById("locationInput").value = "";
-      document.getElementById("farmName").value = "";
+      document.getElementById("gpsSearchInput").value = "";
       
       showNotification("Map has been reset", 'info');
       
@@ -1677,7 +1565,7 @@
         map.off('click', handleMapClick);
         document.getElementById('dropPinBtn').classList.remove('btn-primary');
         document.getElementById('dropPinBtn').classList.add('btn-outline');
-        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Pin';
       }
     }
     
@@ -1702,7 +1590,7 @@
               .bindPopup(`Location: ${data[0].display_name}`).openPopup();
             lastPolygonCenter = { lat, lng };
             
-            document.getElementById("gpsInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            document.getElementById("gpsSearchInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             showNotification(`Found location: ${data[0].display_name}`, 'success');
             
             checkDataAvailability(lat, lng);
@@ -1731,13 +1619,11 @@
       
       const lat = lastPolygonCenter.lat.toFixed(4);
       const lng = lastPolygonCenter.lng.toFixed(4);
-      const farmName = document.getElementById("farmName").value || "Unnamed Farm";
       
       // Simulate report generation
       setTimeout(() => {
         // Update report with location
-        document.querySelector('.report-header h2').innerHTML = `Farm Risk Analysis: ${farmName}`;
-        document.getElementById("location-text").innerText = `${farmName} | Location: ${lat}, ${lng}`;
+        document.getElementById("location-text").innerText = `Location: ${lat}, ${lng}`;
         document.getElementById("data-status").innerText = "Real-time climate data from Open-Meteo API";
         document.getElementById("data-status").style.color = "var(--success)";
         
@@ -1830,6 +1716,9 @@
         });
         document.getElementById('month-rain-table-body').innerHTML = tableHTML;
         
+        // Initialize charts
+        createCharts();
+        
         // Hide loading and show report
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('report').classList.remove('hidden');
@@ -1838,6 +1727,165 @@
         
         showNotification("Report generated successfully!", 'success');
       }, 2000);
+    }
+    
+    // Create charts for the report
+    function createCharts() {
+      // Rainfall chart
+      const rainCtx = document.getElementById('rainChart').getContext('2d');
+      new Chart(rainCtx, {
+        type: 'line',
+        data: {
+          labels: ['2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023'],
+          datasets: [{
+            label: 'Annual Rainfall (mm)',
+            data: [580, 620, 450, 510, 680, 390, 370, 610, 590, 380, 620, 570, 530, 600],
+            borderColor: '#4caf50',
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Rainfall (mm)'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Rainfall Trends',
+              font: {
+                size: 16
+              }
+            }
+          }
+        }
+      });
+      
+      // Frost days chart
+      const frostCtx = document.getElementById('frostChart').getContext('2d');
+      new Chart(frostCtx, {
+        type: 'bar',
+        data: {
+          labels: ['2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023'],
+          datasets: [{
+            label: 'Frost Days',
+            data: [4, 6, 7, 5, 3, 8, 9, 4, 5, 7, 3, 6, 5, 4],
+            backgroundColor: '#1e88e5',
+            borderColor: '#0d47a1',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Frost Days'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Frost Days',
+              font: {
+                size: 16
+              }
+            }
+          }
+        }
+      });
+      
+      // Monthly rainfall chart
+      const monthlyRainCtx = document.getElementById('monthlyRainChart').getContext('2d');
+      new Chart(monthlyRainCtx, {
+        type: 'bar',
+        data: {
+          labels: shortMonthNames,
+          datasets: [{
+            label: 'Rainfall (mm)',
+            data: [105, 95, 85, 45, 25, 15, 10, 15, 35, 75, 95, 100],
+            backgroundColor: 'rgba(76, 175, 80, 0.7)',
+            borderColor: '#2e7d32',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Rainfall (mm)'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Monthly Rainfall Averages',
+              font: {
+                size: 14
+              }
+            }
+          }
+        }
+      });
+      
+      // Monthly frost chart
+      const monthlyFrostCtx = document.getElementById('monthlyFrostChart').getContext('2d');
+      new Chart(monthlyFrostCtx, {
+        type: 'line',
+        data: {
+          labels: shortMonthNames,
+          datasets: [{
+            label: 'Frost Days',
+            data: [0, 0, 0, 1, 3, 6, 7, 5, 2, 0, 0, 0],
+            borderColor: '#1e88e5',
+            backgroundColor: 'rgba(30, 136, 229, 0.1)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Frost Days'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Monthly Frost Days',
+              font: {
+                size: 14
+              }
+            }
+          }
+        }
+      });
     }
     
     // Download PDF report
@@ -1894,9 +1942,6 @@
       if (label) label.textContent = text;
       if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
     }
-    
-    // Initialize progress bars
-    updateProgress('progress', 0, 'Ready');
     
     // Fix map size on mobile devices
     window.addEventListener('resize', function() {
