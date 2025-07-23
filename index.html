@@ -112,45 +112,44 @@
       overflow: hidden;
       height: 100%;
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
     
     #map {
-      height: 100%;
+      flex: 1;
       z-index: 1;
       background: #e8f5e9;
     }
     
+    .map-controls {
+      padding: 15px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+      position: relative;
+    }
+    
+    .search-container {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 15px;
+      align-items: center;
+    }
+    
+    @media (max-width: 768px) {
+      .search-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    
     .search-box {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      z-index: 1000;
       background: rgba(255, 255, 255, 0.95);
       padding: 15px;
       border-radius: 12px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-      width: 280px;
-      max-width: calc(100% - 30px);
       backdrop-filter: blur(5px);
       border: 1px solid rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
-      cursor: move;
-    }
-    
-    @media (max-width: 768px) {
-      .search-box {
-        position: relative;
-        top: auto;
-        left: auto;
-        margin: 15px auto;
-        width: 100%;
-        max-width: 100%;
-        transform: none !important;
-      }
-      
-      .position-indicator {
-        display: none;
-      }
     }
     
     .search-box h2 {
@@ -816,11 +815,6 @@
       margin-bottom: 15px;
     }
     
-    /* Draggable cursor */
-    .draggable {
-      cursor: move;
-    }
-    
     /* Reduced font size for report preview */
     .report-preview-text {
       font-size: 0.85rem;
@@ -836,18 +830,6 @@
     
     .report-preview-list li {
       margin-bottom: 8px;
-    }
-    
-    /* Positioning indicator */
-    .position-indicator {
-      position: absolute;
-      bottom: 5px;
-      right: 5px;
-      font-size: 0.7rem;
-      color: #888;
-      background: rgba(255, 255, 255, 0.7);
-      padding: 2px 5px;
-      border-radius: 3px;
     }
     
     /* Enhanced Risk Rating Styles */
@@ -1064,15 +1046,6 @@
       .mobile-menu-toggle {
         display: flex;
       }
-      
-      .search-box {
-        top: -1000px;
-        transition: top 0.3s ease;
-      }
-      
-      .search-box.mobile-visible {
-        top: 70px;
-      }
     }
     
     /* Touch-friendly adjustments */
@@ -1174,70 +1147,92 @@
       padding-bottom: 5px;
       border-bottom: 1px dashed #bbdefb;
     }
+    
+    .search-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .search-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.2rem;
+      color: var(--primary-dark);
+    }
+    
+    .search-title i {
+      font-size: 1.4rem;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="app-container">
       <div class="map-section">
-        <button class="mobile-menu-toggle" id="mobileMenuToggle">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-        
-        <div class="search-box draggable" id="searchBox">
-          <div class="position-indicator" id="positionIndicator">Position: 15px, 15px</div>
-          <h2>
-            <i class="fas fa-map-marker-alt"></i>
-            Farm Location
-          </h2>
-          
-          <div class="search-type-toggle">
-            <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
-            <div class="search-type-btn" id="locationToggle">Location Name</div>
-          </div>
-          
-          <div class="form-group">
-            <div class="input-with-icon">
-              <i class="fas fa-search input-icon"></i>
-              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
-              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
+        <div class="map-controls">
+          <div class="search-header">
+            <div class="search-title">
+              <i class="fas fa-map-marker-alt"></i>
+              <h2>Farm Location Analysis</h2>
             </div>
-          </div>
-          
-          <div id="suggestions" class="suggestions-box"></div>
-          
-          <div id="data-availability" class="data-availability">
-            <i class="fas fa-info-circle"></i>
-            <span>Data availability: Select a location</span>
-          </div>
-          
-          <button class="btn btn-primary" onclick="searchLocation()">
-            <i class="fas fa-search-location btn-icon"></i> Search
-          </button>
-          
-          <div class="map-actions">
-            <button class="btn btn-outline" onclick="resetMap()">
-              <i class="fas fa-trash-alt btn-icon"></i> Clear Map
-            </button>
-            <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
-              <i class="fas fa-chart-line btn-icon"></i> Analyze
-            </button>
-            <button class="btn btn-outline btn-sm" id="dropPinBtn" onclick="activatePinMode()">
-              <i class="fas fa-map-pin"></i> Drop Pin
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+              <span></span>
+              <span></span>
+              <span></span>
             </button>
           </div>
           
-          <!-- Data Fetching Progress Bar -->
-          <div class="progress-container">
-            <div class="progress-header">
-              <span>Data Retrieval</span>
-              <span id="progress-percentage">0%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progress-fill"></div>
-              <div class="progress-label" id="progress-label">Starting</div>
+          <div class="search-container">
+            <div class="search-box">
+              <div class="search-type-toggle">
+                <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
+                <div class="search-type-btn" id="locationToggle">Location Name</div>
+              </div>
+              
+              <div class="form-group">
+                <div class="input-with-icon">
+                  <i class="fas fa-search input-icon"></i>
+                  <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
+                  <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
+                </div>
+              </div>
+              
+              <div id="suggestions" class="suggestions-box"></div>
+              
+              <div id="data-availability" class="data-availability">
+                <i class="fas fa-info-circle"></i>
+                <span>Data availability: Select a location</span>
+              </div>
+              
+              <div class="map-actions">
+                <button class="btn btn-primary" onclick="searchLocation()">
+                  <i class="fas fa-search-location btn-icon"></i> Search Location
+                </button>
+                <button class="btn btn-outline" onclick="resetMap()">
+                  <i class="fas fa-trash-alt btn-icon"></i> Clear Map
+                </button>
+                <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
+                  <i class="fas fa-map-pin"></i> Drop Pin
+                </button>
+                <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
+                  <i class="fas fa-chart-line btn-icon"></i> Analyze Location
+                </button>
+              </div>
+              
+              <!-- Data Fetching Progress Bar -->
+              <div class="progress-container">
+                <div class="progress-header">
+                  <span>Data Retrieval</span>
+                  <span id="progress-percentage">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="progress-fill"></div>
+                  <div class="progress-label" id="progress-label">Starting</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1612,24 +1607,15 @@
     
     // Mobile menu toggle
     const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-    const searchBox = document.getElementById('searchBox');
     
     mobileMenuToggle.addEventListener('click', function() {
-      searchBox.classList.toggle('mobile-visible');
-      // Invalidate map size after transition
-      setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 350);
+      document.querySelector('.search-container').classList.toggle('mobile-visible');
     });
     
     // Close mobile menu when clicking outside
     document.addEventListener('click', function(e) {
-      if (!searchBox.contains(e.target) && e.target !== mobileMenuToggle) {
-        searchBox.classList.remove('mobile-visible');
-        // Invalidate map size when closing mobile menu
-        setTimeout(() => {
-          if (map) map.invalidateSize();
-        }, 50);
+      if (!mobileMenuToggle.contains(e.target)) {
+        document.querySelector('.search-container').classList.remove('mobile-visible');
       }
     });
 
@@ -3036,78 +3022,6 @@
       if (!locationInput.contains(e.target) && !suggestions.contains(e.target)) {
         suggestions.style.display = 'none';
       }
-    }
-  });
-  
-  // Make search box draggable
-  const searchBoxEl = document.getElementById('searchBox');
-  const positionIndicator = document.getElementById('positionIndicator');
-  
-  let isDragging = false;
-  let currentX;
-  let currentY;
-  let initialX;
-  let initialY;
-  let xOffset = 0;
-  let yOffset = 0;
-  
-  searchBoxEl.addEventListener("mousedown", dragStart);
-  document.addEventListener("mouseup", dragEnd);
-  document.addEventListener("mousemove", drag);
-  
-  function dragStart(e) {
-    if (e.target !== searchBoxEl && !searchBoxEl.contains(e.target)) return;
-    
-    initialX = e.clientX - xOffset;
-    initialY = e.clientY - yOffset;
-    
-    if (e.target === searchBoxEl) {
-      isDragging = true;
-    }
-  }
-  
-  function dragEnd(e) {
-    initialX = currentX;
-    initialY = currentY;
-    
-    isDragging = false;
-    
-    // Update position indicator
-    const rect = searchBoxEl.getBoundingClientRect();
-    positionIndicator.textContent = `Position: ${Math.round(rect.left)}px, ${Math.round(rect.top)}px`;
-  }
-  
-  function drag(e) {
-    if (isDragging) {
-      e.preventDefault();
-      
-      currentX = e.clientX - initialX;
-      currentY = e.clientY - initialY;
-      
-      xOffset = currentX;
-      yOffset = currentY;
-      
-      setTranslate(currentX, currentY, searchBoxEl);
-    }
-  }
-  
-  function setTranslate(xPos, yPos, el) {
-    el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
-  }
-  
-  // Update position indicator on load
-  window.addEventListener('load', function() {
-    const rect = searchBoxEl.getBoundingClientRect();
-    positionIndicator.textContent = `Position: ${Math.round(rect.left)}px, ${Math.round(rect.top)}px`;
-  });
-  
-  // Cleanup event listeners when page unloads
-  window.addEventListener('beforeunload', function() {
-    document.removeEventListener('mousemove', drag);
-    document.removeEventListener('mouseup', dragEnd);
-    
-    if (currentRequest) {
-      currentRequest.abort();
     }
   });
   
