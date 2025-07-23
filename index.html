@@ -906,6 +906,10 @@
             <canvas id="precipitationChart"></canvas>
           </div>
           
+          <div class="chart-container" style="margin-top: 25px;">
+            <canvas id="annualRainfallChart"></canvas>
+          </div>
+          
           <div class="stats-grid">
             <div class="stat-card">
               <div class="stat-label">Annual Avg</div>
@@ -985,7 +989,7 @@
             <p>High frost occurrences were most notable in 2010, 2012, 2015, 2018, and 2021, posing risks to sensitive crops during winter months. These frost events primarily occurred during the months of June to August.</p>
             
             <div class="parameters-box">
-              <p><strong>Frost Classification Parameters:</strong> Frost events are classified when the minimum daily temperature drops below 0°C. High frost years are defined as years with more than 15 frost days.</p>
+              <p><strong>Frost Classification Parameters:</strong> Frost events are classified when minimum temperature drops below -2°C for 3+ consecutive hours, with wind speed &lt; 2 m/s and cloud cover &lt; 20%.</p>
             </div>
             
             <h4 class="drought-header">Drought Analysis</h4>
@@ -1130,14 +1134,28 @@
       document.body.style.overflow = 'auto';
     }
     
-    // Download report as PDF
+    // Download report as PDF - FIXED VERSION
     function downloadReport() {
       showNotification("Generating PDF report...", 'info');
       
       // Use html2canvas to capture the report content
       const reportContent = document.querySelector('.report-content');
+      const originalHeight = reportContent.style.height;
+      const originalOverflow = reportContent.style.overflow;
       
-      html2canvas(reportContent).then(canvas => {
+      // Temporarily make content visible for capture
+      reportContent.style.height = 'auto';
+      reportContent.style.overflow = 'visible';
+      
+      html2canvas(reportContent, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        // Restore original styles
+        reportContent.style.height = originalHeight;
+        reportContent.style.overflow = originalOverflow;
+        
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
         const imgWidth = 210; // A4 width in mm
@@ -1228,6 +1246,39 @@
           scales: {
             y: {
               title: { display: true, text: 'Precipitation (mm)' }
+            }
+          }
+        }
+      });
+      
+      // NEW: Annual Rainfall Chart
+      const annualRainfallCtx = document.getElementById('annualRainfallChart').getContext('2d');
+      new Chart(annualRainfallCtx, {
+        type: 'bar',
+        data: {
+          labels: data.annualRainfall.labels,
+          datasets: [{
+            label: 'Annual Rainfall (mm)',
+            data: data.annualRainfall.values,
+            backgroundColor: '#4caf50',
+            borderColor: '#2e7d32',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Rainfall Totals',
+              font: { size: 16 }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Rainfall (mm)' }
             }
           }
         }
@@ -1361,7 +1412,7 @@
         <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. The highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}. Frost typically occurs between May and August in this region.</p>
         
         <div class="parameters-box">
-          <p><strong>Frost Classification Parameters:</strong> Frost events are classified when the minimum daily temperature drops below 0°C. High frost years are defined as years with more than 15 frost days.</p>
+          <p><strong>Frost Classification Parameters:</strong> Frost events are classified when minimum temperature drops below -2°C for 3+ consecutive hours, with wind speed &lt; 2 m/s and cloud cover &lt; 20%.</p>
         </div>
         
         <h4 class="drought-header">Drought Analysis</h4>
@@ -1879,6 +1930,11 @@
         precip: {
           labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
           values: monthlyPrecip
+        },
+        // NEW: Annual Rainfall Data
+        annualRainfall: {
+          labels: yearLabels,
+          values: annualPrecip.map(p => parseFloat(p.toFixed(1)))
         },
         frost: {
           labels: yearLabels,
