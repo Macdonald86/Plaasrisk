@@ -513,6 +513,11 @@
       border-top: 1px solid var(--border);
     }
     
+    .report-actions {
+      display: flex;
+      gap: 12px;
+    }
+    
     .download-btn {
       display: flex;
       align-items: center;
@@ -532,6 +537,24 @@
       background: var(--primary-dark);
       transform: translateY(-2px);
       box-shadow: 0 6px 15px rgba(46, 125, 50, 0.4);
+    }
+    
+    .close-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 25px;
+      background: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .close-btn:hover {
+      background: #e0e0e0;
     }
     
     .location-info {
@@ -598,6 +621,33 @@
       margin-top: 5px;
     }
     
+    /* Commentary Section */
+    .commentary-section {
+      grid-column: 1 / -1;
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      border-left: 4px solid var(--primary);
+    }
+    
+    .commentary-section h3 {
+      color: var(--primary-dark);
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .commentary-content {
+      line-height: 1.7;
+      padding: 10px;
+    }
+    
+    .commentary-content p {
+      margin-bottom: 15px;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .report-content {
@@ -623,6 +673,12 @@
       .report-footer {
         flex-direction: column;
         gap: 15px;
+        align-items: flex-start;
+      }
+      
+      .report-actions {
+        width: 100%;
+        justify-content: space-between;
       }
     }
   </style>
@@ -794,17 +850,27 @@
             <span>Severe</span>
           </div>
         </div>
-      </div>
-      
-      <div class="report-section" style="margin-top: 20px;">
-        <h3><i class="fas fa-lightbulb"></i> Farming Recommendations</h3>
-        <ul style="padding-left: 20px; margin-top: 15px;">
-          <li style="margin-bottom: 10px;" id="rec1">Based on temperature trends, consider drought-resistant crop varieties</li>
-          <li style="margin-bottom: 10px;" id="rec2">Schedule planting in early October to maximize spring rainfall</li>
-          <li style="margin-bottom: 10px;" id="rec3">Implement water conservation techniques during summer months</li>
-          <li style="margin-bottom: 10px;" id="rec4">Monitor for potential heat stress in January and February</li>
-          <li style="margin-bottom: 10px;" id="rec5">Consider supplemental irrigation during November dry spells</li>
-        </ul>
+        
+        <!-- Commentary Section -->
+        <div class="commentary-section">
+          <h3><i class="fas fa-comment-alt"></i> Climate Commentary</h3>
+          <div class="commentary-content" id="climateCommentary">
+            <p>Based on our analysis of the historical climate data for your location, we've identified several key patterns and risks that are important for agricultural planning.</p>
+            <p>The region experiences a distinct seasonal pattern with significant temperature variations throughout the year. Frost events occur primarily during the winter months, posing a risk to sensitive crops. Drought conditions are most prevalent during the summer season when evaporation rates are highest.</p>
+            <p>The long-term data shows a warming trend of +1.2°C over the past 25 years, with precipitation decreasing by 8% during the same period. These trends suggest increasing challenges for water management and crop selection in the coming years.</p>
+          </div>
+        </div>
+        
+        <div class="report-section" style="grid-column: 1 / -1; margin-top: 0;">
+          <h3><i class="fas fa-lightbulb"></i> Farming Recommendations</h3>
+          <ul style="padding-left: 20px; margin-top: 15px;">
+            <li style="margin-bottom: 10px;" id="rec1">Based on temperature trends, consider drought-resistant crop varieties</li>
+            <li style="margin-bottom: 10px;" id="rec2">Schedule planting in early October to maximize spring rainfall</li>
+            <li style="margin-bottom: 10px;" id="rec3">Implement water conservation techniques during summer months</li>
+            <li style="margin-bottom: 10px;" id="rec4">Monitor for potential heat stress in January and February</li>
+            <li style="margin-bottom: 10px;" id="rec5">Consider supplemental irrigation during November dry spells</li>
+          </ul>
+        </div>
       </div>
       
       <div class="report-footer">
@@ -819,9 +885,14 @@
           </div>
         </div>
         
-        <button class="download-btn" onclick="downloadReport()">
-          <i class="fas fa-download"></i> Download Full Report (PDF)
-        </button>
+        <div class="report-actions">
+          <button class="download-btn" onclick="downloadReport()">
+            <i class="fas fa-download"></i> Download Report (PDF)
+          </button>
+          <button class="close-btn" onclick="closeReport()">
+            <i class="fas fa-times"></i> Close Report
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -913,9 +984,23 @@
     
     // Download report
     function downloadReport() {
-      showNotification("Report download started. Generating PDF...", 'info');
+      showNotification("Generating PDF report... This may take a moment.", 'info');
+      
+      // Simulate PDF generation delay
       setTimeout(() => {
         showNotification("Report downloaded successfully!", 'success');
+        
+        // Create a dummy PDF download
+        const dummyContent = "This would be the PDF content of the climate report.";
+        const blob = new Blob([dummyContent], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `farm-climate-report-${new Date().toISOString().slice(0,10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }, 2000);
     }
     
@@ -1061,16 +1146,41 @@
       document.getElementById('avgTempValue').textContent = `${data.stats.avgTemp}°C`;
       document.getElementById('maxTempValue').textContent = `${data.stats.maxTemp}°C`;
       document.getElementById('minTempValue').textContent = `${data.stats.minTemp}°C`;
-      document.getElementById('warmingValue').textContent = `${data.stats.warming}°C`;
+      document.getElementById('warmingValue').textContent = `${data.stats.warming >= 0 ? '+' : ''}${data.stats.warming}°C`;
       document.getElementById('annualPrecip').textContent = `${data.stats.annualPrecip} mm`;
       document.getElementById('maxMonthlyPrecip').textContent = `${data.stats.maxMonthlyPrecip} mm`;
       document.getElementById('drySpells').textContent = `${data.stats.drySpells}/yr`;
-      document.getElementById('precipTrend').textContent = `${data.stats.precipTrend}%`;
+      document.getElementById('precipTrend').textContent = `${data.stats.precipTrend >= 0 ? '+' : ''}${data.stats.precipTrend}%`;
       document.getElementById('frostRisk').textContent = data.stats.frostRisk;
       document.getElementById('droughtRisk').textContent = data.stats.droughtRisk;
       document.getElementById('frostRiskMeter').style.width = data.stats.frostRiskPercent;
       document.getElementById('droughtRiskMeter').style.width = data.stats.droughtRiskPercent;
       document.getElementById('reportLocation').textContent = `${data.location.coords} (${data.location.name})`;
+      
+      // Generate climate commentary
+      generateClimateCommentary(data);
+    }
+    
+    // Generate climate commentary
+    function generateClimateCommentary(data) {
+      const commentary = document.getElementById('climateCommentary');
+      
+      // Determine risk levels
+      const frostRiskLevel = parseFloat(data.stats.frostRiskPercent);
+      const droughtRiskLevel = parseFloat(data.stats.droughtRiskPercent);
+      
+      // Generate commentary based on data
+      commentary.innerHTML = `
+        <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. This represents a significant shift in temperature patterns that may affect crop selection and growing seasons.</p>
+        
+        <p>Annual precipitation averages <strong>${data.stats.annualPrecip} mm</strong>, with a ${data.stats.precipTrend >= 0 ? 'increase' : 'decrease'} of <strong>${Math.abs(data.stats.precipTrend)}%</strong> over the analysis period. The region experiences an average of <strong>${data.stats.drySpells} dry spells per year</strong> (months with less than 30mm precipitation).</p>
+        
+        <p>Frost occurs on average <strong>${data.stats.frostRisk.split('(')[1]}</strong>, ${frostRiskLevel > 60 ? 'which presents significant challenges for agriculture' : frostRiskLevel > 40 ? 'requiring careful planning for frost-sensitive crops' : 'which is manageable with proper precautions'}.</p>
+        
+        <p>Drought conditions occur <strong>${data.stats.droughtRisk.split('(')[1]}</strong>, ${droughtRiskLevel > 60 ? 'indicating severe water stress that requires advanced irrigation systems' : droughtRiskLevel > 40 ? 'suggesting moderate water management challenges' : 'which is within manageable levels for most crops'}.</p>
+        
+        <p>Based on these patterns, farmers should consider implementing ${droughtRiskLevel > 40 ? 'advanced' : 'basic'} water conservation techniques and selecting ${frostRiskLevel > 40 ? 'frost-resistant' : 'cold-tolerant'} crop varieties. The warming trend suggests that heat-tolerant varieties may become increasingly important in the coming decades.</p>
+      `;
     }
 
     // Event handlers
@@ -1588,14 +1698,14 @@
           values: annualDroughtDays
         },
         stats: {
-          avgTemp: annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length.toFixed(1),
+          avgTemp: (annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length).toFixed(1),
           maxTemp: maxTemp.toFixed(1),
           minTemp: minTemp.toFixed(1),
           warming: warmingTrend,
           annualPrecip: (totalPrecip / years.length).toFixed(1),
           maxMonthlyPrecip,
-          drySpells: (drySpells / 12).toFixed(1),
-          precipTrend,
+          drySpells: (drySpells / years.length).toFixed(1),
+          precipTrend: precipTrend,
           frostRisk,
           droughtRisk,
           frostRiskPercent,
