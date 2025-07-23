@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Farm Climate Analysis Tool</title>
+  <title>PlaasRisk - Farm Climate Analysis</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -20,6 +20,7 @@
       --primary-dark: #1b5e20;
       --secondary: #388e3c;
       --accent: #f57c00;
+      --accent-light: #ffb74d;
       --accent-dark: #e65100;
       --light: #f5f9f5;
       --light-gray: #f8f9fa;
@@ -634,6 +635,16 @@
       color: var(--drought-brown);
     }
     
+    .year-badge.moderate-drought {
+      background: #ffecb3;
+      color: #ff9800;
+    }
+    
+    .year-badge.severe-drought {
+      background: #ffcdd2;
+      color: #f44336;
+    }
+    
     /* Commentary Section */
     .commentary-section {
       grid-column: 1 / -1;
@@ -680,6 +691,42 @@
       margin: 15px 0;
       border-radius: 0 8px 8px 0;
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    
+    .drought-classification {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .drought-class {
+      flex: 1;
+      min-width: 200px;
+      padding: 15px;
+      border-radius: 8px;
+      color: white;
+    }
+    
+    .moderate-drought-box {
+      background: linear-gradient(135deg, #ffb74d 0%, #ff9800 100%);
+    }
+    
+    .severe-drought-box {
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    }
+    
+    .drought-class h5 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .drought-class p {
+      font-size: 0.9rem;
+      margin-bottom: 0;
     }
     
     /* Report Headers */
@@ -739,6 +786,10 @@
         width: 100%;
         margin: 12px 0 0 0;
       }
+      
+      .drought-classification {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -748,7 +799,7 @@
       <div class="control-bar">
         <div class="logo-container">
           <div class="plaasrisk-logo">
-            <i class="fas fa-seedling logo-icon"></i>
+            <i class="fas fa-leaf logo-icon"></i>
           </div>
           <div class="logo-text">PlaasRisk</div>
         </div>
@@ -906,13 +957,19 @@
           
           <div class="years-section">
             <div class="years-container">
+              <h4><i class="fas fa-calendar-day"></i> Years with Moderate Drought</h4>
+              <div class="years-list" id="moderateDroughtYears">
+                <div class="year-badge moderate-drought">2005</div>
+                <div class="year-badge moderate-drought">2009</div>
+                <div class="year-badge moderate-drought">2016</div>
+              </div>
+            </div>
+            
+            <div class="years-container">
               <h4><i class="fas fa-calendar-day"></i> Years with Severe Drought</h4>
-              <div class="years-list" id="droughtYears">
-                <div class="year-badge drought">2005</div>
-                <div class="year-badge drought">2009</div>
-                <div class="year-badge drought">2016</div>
-                <div class="year-badge drought">2019</div>
-                <div class="year-badge drought">2023</div>
+              <div class="years-list" id="severeDroughtYears">
+                <div class="year-badge severe-drought">2019</div>
+                <div class="year-badge severe-drought">2023</div>
               </div>
             </div>
           </div>
@@ -932,10 +989,18 @@
             </div>
             
             <h4 class="drought-header">Drought Analysis</h4>
-            <p>Severe drought conditions were recorded in 2005, 2009, 2016, 2019, and 2023, with water shortages impacting crop yields. The most prolonged drought period occurred from March to November in 2016.</p>
+            <p>Drought conditions were recorded in several years, with moderate drought in 2005, 2009 and 2016, and severe drought in 2019 and 2023. The most prolonged drought period occurred from March to November in 2016.</p>
             
-            <div class="parameters-box">
-              <p><strong>Drought Classification Parameters:</strong> Drought is defined as periods with no precipitation for at least 10 consecutive days. Severe drought years are defined as years with more than 50 drought days.</p>
+            <div class="drought-classification">
+              <div class="drought-class moderate-drought-box">
+                <h5><i class="fas fa-exclamation-triangle"></i> Moderate Drought</h5>
+                <p>26%–50% below normal rainfall compared to the long-term average (30 years)</p>
+              </div>
+              
+              <div class="drought-class severe-drought-box">
+                <h5><i class="fas fa-fire"></i> Severe Drought</h5>
+                <p>More than 50% below normal rainfall compared to the long-term average (30 years)</p>
+              </div>
             </div>
             
             <p>These patterns suggest increasing challenges for water management and crop selection in the coming years. Farmers should consider implementing advanced irrigation techniques and selecting drought-resistant crop varieties.</p>
@@ -1210,9 +1275,13 @@
         data: {
           labels: data.drought.labels,
           datasets: [{
-            label: 'Drought Days per Year',
+            label: 'Rainfall Departure (%)',
             data: data.drought.values,
-            backgroundColor: '#8d6e63',
+            backgroundColor: data.drought.values.map(value => {
+              if (value < -50) return '#f44336'; // Severe drought
+              if (value < -26) return '#ff9800'; // Moderate drought
+              return '#8d6e63'; // Normal
+            }),
             borderColor: '#6d4c41',
             borderWidth: 1
           }]
@@ -1223,14 +1292,14 @@
           plugins: {
             title: {
               display: true,
-              text: 'Annual Drought Days',
+              text: 'Annual Rainfall Departure from Average',
               font: { size: 16 }
             },
             legend: { display: false }
           },
           scales: {
             y: {
-              title: { display: true, text: 'Days per Year' }
+              title: { display: true, text: 'Percentage Departure (%)' }
             }
           }
         }
@@ -1247,7 +1316,7 @@
       document.getElementById('precipTrend').textContent = `${data.stats.precipTrend >= 0 ? '+' : ''}${data.stats.precipTrend}%`;
       document.getElementById('reportLocation').textContent = `${data.location.coords} (${data.location.name})`;
       
-      // Update years with drought and frost
+      // Update years with frost
       const highFrostYears = document.getElementById('highFrostYears');
       highFrostYears.innerHTML = '';
       data.stats.highFrostYears.forEach(year => {
@@ -1257,13 +1326,23 @@
         highFrostYears.appendChild(badge);
       });
       
-      const droughtYears = document.getElementById('droughtYears');
-      droughtYears.innerHTML = '';
-      data.stats.droughtYears.forEach(year => {
+      // Update drought years
+      const moderateDroughtYears = document.getElementById('moderateDroughtYears');
+      moderateDroughtYears.innerHTML = '';
+      data.stats.moderateDroughtYears.forEach(year => {
         const badge = document.createElement('div');
-        badge.className = 'year-badge drought';
+        badge.className = 'year-badge moderate-drought';
         badge.textContent = year;
-        droughtYears.appendChild(badge);
+        moderateDroughtYears.appendChild(badge);
+      });
+      
+      const severeDroughtYears = document.getElementById('severeDroughtYears');
+      severeDroughtYears.innerHTML = '';
+      data.stats.severeDroughtYears.forEach(year => {
+        const badge = document.createElement('div');
+        badge.className = 'year-badge severe-drought';
+        badge.textContent = year;
+        severeDroughtYears.appendChild(badge);
       });
       
       // Generate climate commentary
@@ -1286,10 +1365,18 @@
         </div>
         
         <h4 class="drought-header">Drought Analysis</h4>
-        <p>Drought conditions were most severe in <strong>${data.stats.droughtYears.join(', ')}</strong>, requiring careful water management planning. The longest drought period recorded was ${Math.max(...data.drought.values)} days in ${data.stats.droughtYears[0]}. Precipitation patterns show increasing variability during the rainy season.</p>
+        <p>Drought conditions were most severe in <strong>${data.stats.severeDroughtYears.join(', ')}</strong>, requiring careful water management planning. The most significant rainfall departure was ${Math.min(...data.drought.values).toFixed(1)}% in ${data.stats.severeDroughtYears[0]}. Precipitation patterns show increasing variability during the rainy season.</p>
         
-        <div class="parameters-box">
-          <p><strong>Drought Classification Parameters:</strong> Drought conditions are identified when there is no precipitation for at least 10 consecutive days. Severe drought years are defined as years with more than 50 drought days.</p>
+        <div class="drought-classification">
+          <div class="drought-class moderate-drought-box">
+            <h5><i class="fas fa-exclamation-triangle"></i> Moderate Drought</h5>
+            <p>26%–50% below normal rainfall compared to the long-term average (30 years)</p>
+          </div>
+          
+          <div class="drought-class severe-drought-box">
+            <h5><i class="fas fa-fire"></i> Severe Drought</h5>
+            <p>More than 50% below normal rainfall compared to the long-term average (30 years)</p>
+          </div>
         </div>
         
         <p>Based on these patterns, farmers should consider implementing water conservation techniques and selecting frost-resistant crop varieties. The warming trend suggests that heat-tolerant varieties may become increasingly important in the coming decades.</p>
@@ -1675,7 +1762,6 @@
       const annualAvgTemp = [];
       const annualPrecip = [];
       const annualFrostDays = [];
-      const annualDroughtDays = [];
       
       const monthlyPrecip = Array(12).fill(0);
       const monthlyCounts = Array(12).fill(0);
@@ -1685,7 +1771,6 @@
       let maxTemp = -Infinity;
       let totalPrecip = 0;
       let frostDays = 0;
-      let droughtDays = 0;
       
       // Process each day
       for (let i = 0; i < times.length; i++) {
@@ -1701,7 +1786,6 @@
           annualAvgTemp.push(0);
           annualPrecip.push(0);
           annualFrostDays.push(0);
-          annualDroughtDays.push(0);
         }
         
         const yearIndex = years.indexOf(year);
@@ -1714,12 +1798,6 @@
         if (tempMin[i] < 0) {
           annualFrostDays[yearIndex]++;
           frostDays++;
-        }
-        
-        // Check for drought (no precipitation)
-        if (precipitation[i] === 0) {
-          annualDroughtDays[yearIndex]++;
-          droughtDays++;
         }
         
         // Track min/max temps
@@ -1764,11 +1842,24 @@
         }
       }
       
-      // Identify years with severe drought (above 50 days)
-      const droughtYears = [];
+      // Calculate long-term average precipitation (30 years)
+      const longTermAvg = annualPrecip.reduce((a, b) => a + b, 0) / annualPrecip.length;
+      
+      // Calculate precipitation departure for each year
+      const annualDeparture = annualPrecip.map(precip => 
+        parseFloat(((precip - longTermAvg) / longTermAvg * 100).toFixed(1))
+      );
+      
+      // Identify drought years based on departure
+      const moderateDroughtYears = [];
+      const severeDroughtYears = [];
+      
       for (let i = 0; i < years.length; i++) {
-        if (annualDroughtDays[i] > 50) {
-          droughtYears.push(years[i]);
+        const departure = annualDeparture[i];
+        if (departure < -50) {
+          severeDroughtYears.push(years[i]);
+        } else if (departure < -26) {
+          moderateDroughtYears.push(years[i]);
         }
       }
       
@@ -1795,19 +1886,20 @@
         },
         drought: {
           labels: yearLabels,
-          values: annualDroughtDays
+          values: annualDeparture
         },
         stats: {
           avgTemp: (annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length).toFixed(1),
           maxTemp: maxTemp.toFixed(1),
           minTemp: minTemp.toFixed(1),
           warming: warmingTrend,
-          annualPrecip: (totalPrecip / years.length).toFixed(1),
+          annualPrecip: longTermAvg.toFixed(1),
           maxMonthlyPrecip,
           drySpells: (drySpells / years.length).toFixed(1),
           precipTrend: precipTrend,
           highFrostYears,
-          droughtYears
+          moderateDroughtYears,
+          severeDroughtYears
         }
       };
     }
