@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Enhanced Farm Climate Analysis</title>
+  <title>Farm Climate Analysis Tool</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -45,7 +45,6 @@
       background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
       color: var(--text);
       min-height: 100vh;
-      padding: 10px;
       line-height: 1.6;
       overflow-x: hidden;
       touch-action: manipulation;
@@ -55,62 +54,42 @@
       max-width: 1600px;
       margin: 0 auto;
       padding: 0 15px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
     
-    .app-container {
-      display: grid;
-      grid-template-columns: 65% 35%;
-      gap: 15px;
-      margin-bottom: 15px;
-      height: calc(100vh - 30px);
+    .header {
+      text-align: center;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--border);
     }
     
-    @media (max-width: 992px) {
-      .app-container {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
-      
-      .map-section {
-        height: 450px;
-      }
+    .header h1 {
+      font-size: 1.8rem;
+      color: var(--primary-dark);
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
     }
     
-    @media (max-width: 768px) {
-      .app-container {
-        gap: 10px;
-        height: auto;
-      }
-      
-      .map-section {
-        height: 400px;
-      }
-      
-      .report-section {
-        height: auto;
-      }
+    .header p {
+      color: #666;
+      font-size: 0.9rem;
+      max-width: 800px;
+      margin: 0 auto;
     }
     
-    @media (max-width: 480px) {
-      .map-section {
-        height: 350px;
-      }
-      
-      .app-container {
-        height: auto;
-      }
-    }
-    
-    .map-section, .report-section {
+    .map-section {
+      flex: 1;
       background: white;
       border-radius: 16px;
       box-shadow: var(--shadow);
       border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-    
-    .map-section {
+      margin: 15px 0;
       overflow: hidden;
-      height: 100%;
       position: relative;
       display: flex;
       flex-direction: column;
@@ -122,20 +101,29 @@
       background: #e8f5e9;
     }
     
-    /* NEW TOP CONTROL BAR */
-    .map-controls-top {
+    /* HORIZONTAL CONTROL BAR */
+    .control-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      padding: 10px;
+      gap: 15px;
+      padding: 15px;
       background: white;
       border-bottom: 1px solid var(--border);
       z-index: 1000;
       position: relative;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    @media (max-width: 1200px) {
+      .control-bar {
+        gap: 12px;
+        padding: 12px;
+      }
     }
     
     @media (max-width: 768px) {
-      .map-controls-top {
+      .control-bar {
         flex-direction: column;
         align-items: stretch;
       }
@@ -144,7 +132,15 @@
     .control-group {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    @media (max-width: 768px) {
+      .control-group {
+        min-width: 100%;
+      }
     }
     
     .search-type-toggle {
@@ -157,7 +153,7 @@
     
     .search-type-btn {
       flex: 1;
-      padding: 6px;
+      padding: 8px 12px;
       text-align: center;
       border-radius: 6px;
       cursor: pointer;
@@ -174,7 +170,7 @@
     
     .input-with-icon {
       position: relative;
-      min-width: 200px;
+      flex: 1;
     }
     
     .input-icon {
@@ -188,10 +184,10 @@
     
     .form-control {
       width: 100%;
-      padding: 10px 12px 10px 35px;
+      padding: 12px 15px 12px 40px;
       border: 1px solid var(--border);
       border-radius: 8px;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       transition: all 0.3s;
       background: var(--light-gray);
       box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
@@ -208,15 +204,16 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 8px 15px;
+      padding: 12px 18px;
       border: none;
       border-radius: 8px;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.3s;
       gap: 8px;
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+      white-space: nowrap;
     }
     
     .btn-primary {
@@ -241,8 +238,8 @@
     }
     
     .btn-sm {
-      padding: 6px 10px;
-      font-size: 0.8rem;
+      padding: 8px 12px;
+      font-size: 0.9rem;
     }
     
     .btn-block {
@@ -251,7 +248,7 @@
     
     .map-actions {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     
@@ -262,244 +259,84 @@
     
     @media (max-width: 768px) {
       .map-actions {
-        flex-direction: column;
-        gap: 8px;
+        width: 100%;
+        justify-content: space-between;
       }
       
       .map-actions .btn {
-        width: 100%;
         min-width: auto;
+        flex: none;
       }
     }
     
-    .report-section {
-      padding: 15px;
+    .progress-container {
+      width: 100%;
+      margin: 15px 0;
+    }
+    
+    .progress-header {
       display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    
-    .report-header {
-      text-align: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .report-header h2 {
-      font-size: 1.3rem;
-      color: var(--primary-dark);
+      justify-content: space-between;
       margin-bottom: 5px;
-    }
-    
-    .report-header p {
-      color: #666;
-      font-size: 0.85rem;
-    }
-    
-    .report-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 3px;
-    }
-    
-    .report-card {
-      background: var(--light-gray);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-left: 3px solid var(--primary);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    }
-    
-    .report-card h3 {
-      font-size: 1.1rem;
-      margin-bottom: 12px;
+      font-size: 0.9rem;
       color: var(--dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
     
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 15px;
-    }
-    
-    @media (max-width: 1200px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .stat-card {
-      background: white;
-      border-radius: 10px;
-      padding: 12px;
-      text-align: center;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
-      transition: transform 0.3s, box-shadow 0.3s;
-      border-top: 2px solid var(--primary-light);
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
-    }
-    
-    .stat-icon {
-      font-size: 1.3rem;
-      color: var(--primary);
-      margin-bottom: 6px;
-    }
-    
-    .stat-value {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--primary-dark);
-      margin: 6px 0;
-    }
-    
-    .stat-label {
-      color: #666;
-      font-size: 0.8rem;
-    }
-    
-    .chart-container, .monthly-chart-container {
+    .progress-bar {
+      height: 12px;
+      background: #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
       position: relative;
-      height: 180px;
-      margin: 10px 0 15px;
     }
     
-    .drought-summary {
-      background: #fff8e1;
-      border-radius: 10px;
-      padding: 12px;
-      border-left: 3px solid var(--warning);
-      margin: 12px 0;
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 6px;
+      width: 0%;
+      transition: width 0.5s ease;
     }
     
-    .drought-summary h4 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      color: #e65100;
-      font-size: 1rem;
-    }
-    
-    .drought-years {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-    }
-    
-    .drought-year {
-      background: #ffecb3;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.8rem;
+    .progress-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 0.75rem;
       font-weight: 500;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
     }
     
-    .monthly-analysis {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-top: 15px;
-    }
-    
-    @media (max-width: 768px) {
-      .monthly-analysis {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .monthly-card {
+    .suggestions-box {
+      position: absolute;
+      width: 100%;
       background: white;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-      border-top: 3px solid var(--primary-light);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1001;
+      margin-top: 5px;
+      display: none;
+      border: 1px solid var(--border);
     }
     
-    .monthly-card h4 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 15px;
-      color: var(--dark);
+    .suggestion-item {
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
       font-size: 0.9rem;
     }
     
-    .actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
+    .suggestion-item:hover {
+      background: var(--light);
     }
     
-    @media (max-width: 768px) {
-      .actions {
-        flex-direction: column;
-        gap: 8px;
-      }
-      
-      .actions .btn {
-        width: 100%;
-      }
-    }
-    
-    .hidden {
-      display: none;
-    }
-    
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      flex-direction: column;
-      gap: 15px;
-    }
-    
-    .spinner {
-      width: 35px;
-      height: 35px;
-      border: 4px solid rgba(46, 125, 50, 0.2);
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1.2s linear infinite;
-    }
-    
-    .loading-text {
-      font-size: 1rem;
-      color: var(--dark);
-      text-align: center;
-      font-weight: 500;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    footer {
-      text-align: center;
-      padding: 10px;
-      color: #666;
-      font-size: 0.85rem;
-      background: white;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
+    .suggestion-item:last-child {
+      border-bottom: none;
     }
     
     .notification {
@@ -517,7 +354,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
     
     @media (max-width: 768px) {
@@ -546,317 +383,25 @@
       background: var(--primary);
     }
     
-    .error-message {
-      background: #ffebee;
-      border-radius: 10px;
-      padding: 20px;
+    footer {
       text-align: center;
-      border-left: 4px solid var(--danger);
-      margin: 20px 0;
-    }
-    
-    .explanation {
-      background: #e8f5e9;
-      border-radius: 10px;
-      padding: 20px;
-      margin: 20px 0;
-      border-left: 4px solid var(--primary);
-    }
-    
-    .explanation h3 {
-      color: var(--primary-dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 15px;
-    }
-    
-    .explanation ul {
-      padding-left: 20px;
-      margin: 15px 0;
-    }
-    
-    .explanation li {
-      margin-bottom: 10px;
-      line-height: 1.5;
-    }
-    
-    .info-icon {
-      background: var(--primary);
-      color: white;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 10px;
-    }
-    
-    .completeness-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
+      padding: 15px;
+      color: #666;
       font-size: 0.9rem;
-    }
-    
-    .completeness-bar {
-      flex-grow: 1;
-      height: 8px;
-      background: #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    
-    .completeness-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 4px;
-    }
-    
-    /* Progress bar styles */
-    .progress-container {
-      width: 100%;
-      margin: 15px 0;
-    }
-    
-    .progress-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-      font-size: 0.85rem;
-      color: var(--dark);
-    }
-    
-    .progress-bar {
-      height: 12px;
-      background: #e0e0e0;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .progress-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 6px;
-      width: 0%;
-      transition: width 0.5s ease;
-    }
-    
-    .progress-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 0.7rem;
-      font-weight: 500;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
-    }
-    
-    /* Status messages */
-    .status-message {
-      background: rgba(255, 255, 255, 0.9);
-      padding: 10px 15px;
-      border-radius: 8px;
-      margin: 10px 0;
-      border-left: 3px solid var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .status-message i {
-      color: var(--primary);
-    }
-    
-    .status-message.warning {
-      border-left-color: var(--warning);
-    }
-    
-    .status-message.warning i {
-      color: var(--warning);
-    }
-    
-    .status-message.error {
-      border-left-color: var(--danger);
-    }
-    
-    .status-message.error i {
-      color: var(--danger);
-    }
-    
-    .suggestions-box {
-      position: absolute;
-      width: calc(100% - 30px);
       background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      max-height: 200px;
-      overflow-y: auto;
-      z-index: 1001;
-      margin-top: 5px;
-      display: none;
-    }
-    
-    .suggestion-item {
-      padding: 10px 15px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.2s;
-    }
-    
-    .suggestion-item:hover {
-      background: var(--light);
-    }
-    
-    .suggestion-item:last-child {
-      border-bottom: none;
-    }
-    
-    /* Added for monthly selector buttons - matching drought-year style */
-    .month-btn {
-      background: #e8f5e9;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      border: none;
-      cursor: pointer;
-      margin: 0 2px 5px 0;
-      transition: all 0.2s;
-    }
-    
-    .month-btn:hover {
-      background: #c8e6c9;
-    }
-    
-    .month-btn.active {
-      background: var(--primary);
-      color: white;
-    }
-    
-    .month-selector {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 15px;
-    }
-    
-    /* Touch-friendly adjustments */
-    .btn, .month-btn, .drought-year {
-      min-height: 44px;
-      touch-action: manipulation;
-    }
-    
-    .form-control {
-      min-height: 44px;
-    }
-    
-    /* Zoom prevention for iOS */
-    input, textarea, select {
-      font-size: 16px;
-    }
-    
-    /* Fix for mobile viewport */
-    @media (max-width: 768px) {
-      body, html {
-        overflow: auto;
-        height: auto;
-      }
-    }
-    
-    /* Enhanced expert commentary styles */
-    .commentary-card {
-      background: #f0f7ff;
       border-radius: 12px;
-      padding: 20px;
-      margin: 20px 0;
-      border-left: 4px solid #1e88e5;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      box-shadow: var(--shadow);
+      margin-top: 15px;
     }
     
-    .commentary-card h3 {
-      color: #1e88e5;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    
-    .commentary-content {
-      line-height: 1.7;
-    }
-    
-    .commentary-content p {
-      margin-bottom: 12px;
-    }
-    
-    .commentary-content ul {
-      padding-left: 25px;
-      margin-bottom: 15px;
-    }
-    
-    .commentary-content li {
-      margin-bottom: 8px;
-    }
-    
-    .highlight-month {
-      font-weight: 600;
-      color: #1e88e5;
-    }
-    
-    .crop-recommendations {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    .crop-tag {
-      background: #e8f5e9;
-      padding: 5px 12px;
-      border-radius: 16px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      border: 1px solid #c8e6c9;
-    }
-    
-    .crop-tag.high-risk {
-      background: #ffebee;
-      border-color: #ffcdd2;
-    }
-    
-    .crop-tag.moderate-risk {
-      background: #fff8e1;
-      border-color: #ffecb3;
-    }
-    
-    .commentary-section {
-      margin-bottom: 25px;
-    }
-    
-    .commentary-section h4 {
-      margin-bottom: 10px;
-      color: #1a237e;
-      padding-bottom: 5px;
-      border-bottom: 1px dashed #bbdefb;
-    }
-    
-    /* NEW: Data availability badge */
     .data-badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 500;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-    }
-    
-    .data-badge.available {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
       background: #e8f5e9;
       color: var(--success);
     }
@@ -871,414 +416,124 @@
       color: var(--danger);
     }
     
-    /* NEW: Compact controls */
-    .compact-control {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    /* Responsive adjustments */
+    @media (max-width: 992px) {
+      .header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .header p {
+        font-size: 0.85rem;
+      }
+      
+      .btn {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+      }
     }
     
-    .compact-btn {
-      padding: 8px;
-      min-width: auto;
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 10px;
+      }
+      
+      .header {
+        padding: 10px 0;
+      }
+      
+      .control-bar {
+        gap: 10px;
+        padding: 10px;
+      }
+      
+      .form-control {
+        padding: 10px 12px 10px 35px;
+        font-size: 0.9rem;
+      }
+      
+      .search-type-btn {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header h1 {
+        font-size: 1.3rem;
+      }
+      
+      .header p {
+        font-size: 0.8rem;
+      }
+      
+      .btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="app-container">
-      <div class="map-section">
-        <!-- NEW TOP CONTROL BAR -->
-        <div class="map-controls-top">
-          <div class="control-group">
-            <div class="search-type-toggle">
-              <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
-              <div class="search-type-btn" id="locationToggle">Location</div>
-            </div>
+    <div class="header">
+      <h1>
+        <i class="fas fa-leaf"></i>
+        Farm Climate Analysis Tool
+      </h1>
+      <p>Draw your farm boundaries or search locations to analyze historical climate patterns</p>
+    </div>
+    
+    <div class="map-section">
+      <!-- HORIZONTAL CONTROL BAR -->
+      <div class="control-bar">
+        <div class="control-group">
+          <div class="search-type-toggle">
+            <div class="search-type-btn active" id="gpsToggle">Coordinates</div>
+            <div class="search-type-btn" id="locationToggle">Location</div>
           </div>
           
-          <div class="control-group">
-            <div class="input-with-icon">
-              <i class="fas fa-search input-icon"></i>
-              <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
-              <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
-              <div id="suggestions" class="suggestions-box"></div>
-            </div>
-            <button class="btn btn-primary compact-btn" onclick="searchLocation()" title="Search location">
-              <i class="fas fa-search-location"></i>
-            </button>
+          <div class="input-with-icon">
+            <i class="fas fa-search input-icon"></i>
+            <input type="text" id="gpsInput" class="form-control" placeholder="e.g. -25.0, 30.0" />
+            <input type="text" id="locationInput" class="form-control hidden" placeholder="e.g. Johannesburg" />
+            <div id="suggestions" class="suggestions-box"></div>
           </div>
           
-          <div class="map-actions">
-            <button class="btn btn-outline compact-btn" onclick="resetMap()" title="Clear Map">
-              <i class="fas fa-trash-alt"></i>
-            </button>
-            <button class="btn btn-primary compact-btn" onclick="generateReport()" id="generateBtn" title="Analyze">
-              <i class="fas fa-chart-line"></i>
-            </button>
-            <button class="btn btn-outline compact-btn" id="dropPinBtn" onclick="activatePinMode()" title="Drop Pin">
-              <i class="fas fa-map-pin"></i>
-            </button>
-          </div>
-          
-          <div class="progress-container">
-            <div class="progress-header">
-              <span>Data Retrieval</span>
-              <span id="progress-percentage">0%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progress-fill"></div>
-              <div class="progress-label" id="progress-label">Starting</div>
-            </div>
-          </div>
+          <button class="btn btn-primary" onclick="searchLocation()">
+            <i class="fas fa-search-location"></i> Search
+          </button>
         </div>
         
-        <div id="map"></div>
+        <div class="map-actions">
+          <button class="btn btn-outline" onclick="resetMap()">
+            <i class="fas fa-trash-alt"></i> Clear
+          </button>
+          <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
+            <i class="fas fa-chart-line"></i> Analyze
+          </button>
+          <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
+            <i class="fas fa-map-pin"></i> Drop Pin
+          </button>
+        </div>
       </div>
       
-      <div class="report-section">
-        <div class="report-header">
-          <h2>Comprehensive Climate Report</h2>
-          <p>Detailed analysis of historical weather patterns with monthly insights</p>
+      <div id="map"></div>
+      
+      <div class="progress-container">
+        <div class="progress-header">
+          <span>Data Retrieval</span>
+          <span id="progress-percentage">0%</span>
         </div>
-        
-        <div class="report-content">
-          <div id="report-placeholder">
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-file-alt"></i>
-                Report Preview
-              </h3>
-              <p class="report-preview-text">Draw your farm boundaries on the map or search for a location to generate a comprehensive climate report using real historical data.</p>
-              <p class="report-preview-text">The enhanced report includes:</p>
-              <ul class="report-preview-list">
-                <li>Annual rainfall and frost day analysis</li>
-                <li>Monthly climate patterns visualization</li>
-                <li>Freezing days analysis (temperatures below 0°C)</li>
-                <li>Drought year identification</li>
-                <li>Detailed seasonal insights</li>
-                <li>Risk assessment and expert commentary</li>
-                <li>Frost risk analysis</li>
-                <li>Comprehensive risk rating scale</li>
-              </ul>
-              <div style="text-align: center; margin: 20px 0 12px;">
-                <div style="font-size: 3.5rem; color: #e0f7fa; margin-bottom: 12px;">
-                  <i class="fas fa-snowflake"></i>
-                </div>
-                <p style="color: #888; font-size: 0.85rem;">Your detailed climate analysis will appear here</p>
-              </div>
-            </div>
-          </div>
-          
-          <div id="report" class="hidden">
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-map-marked-alt"></i>
-                Location Details
-              </h3>
-              <p id="location-text"></p>
-              <p id="data-status" style="margin-top: 8px; font-size: 0.9rem;"></p>
-              
-              <div class="completeness-indicator" id="completeness-container">
-                <span>Data Completeness:</span>
-                <div class="completeness-bar">
-                  <div class="completeness-fill" id="completeness-bar"></div>
-                </div>
-                <span id="completeness-value">0%</span>
-              </div>
-            </div>
-            
-            <div id="error-message" class="hidden error-message">
-              <h3>
-                <i class="fas fa-exclamation-circle"></i>
-                Data Not Available
-              </h3>
-              <p>We couldn't find climate data for the selected location.</p>
-              <p>Please try a location on land with reliable weather station coverage.</p>
-            </div>
-            
-            <!-- Risk Rating Section -->
-            <div class="report-card">
-              <h3>
-                <i class="fas fa-exclamation-triangle"></i>
-                Climate Risk Rating
-              </h3>
-              <div class="risk-grid">
-                <div class="risk-category">
-                  <div class="risk-category-title">Drought Severity</div>
-                  <div class="risk-category-value" id="drought-severity">0</div>
-                  <div class="risk-category-label" id="drought-severity-label">-</div>
-                </div>
-                
-                <div class="risk-category">
-                  <div class="risk-category-title">Drought Frequency</div>
-                  <div class="risk-category-value" id="drought-frequency">0</div>
-                  <div class="risk-category-label" id="drought-frequency-label">-</div>
-                </div>
-                
-                <div class="risk-category">
-                  <div class="risk-category-title">Frost Risk</div>
-                  <div class="risk-category-value" id="frost-risk">0</div>
-                  <div class="risk-category-label" id="frost-risk-label">-</div>
-                </div>
-                
-                <div class="risk-overall">
-                  <div>Overall Risk</div>
-                  <div class="risk-overall-value" id="overall-risk">0</div>
-                  <div class="risk-overall-title" id="overall-risk-title">No Risk</div>
-                </div>
-              </div>
-              
-              <div class="risk-factors" id="risk-factors"></div>
-            </div>
-            
-            <!-- Rating Scale Section -->
-            <div class="rating-scale-container">
-              <h3>
-                <i class="fas fa-ruler"></i>
-                Risk Rating Scale
-              </h3>
-              <p>Our risk rating system evaluates climate threats on a scale from 0 to 3, with higher values indicating greater risk:</p>
-              
-              <div class="rating-scale-grid">
-                <div class="rating-scale-item low-risk">
-                  <div class="rating-scale-label">Low Risk (0-1)</div>
-                  <div class="rating-scale-value">0-1</div>
-                  <div class="rating-scale-description">Minimal impact expected. Normal farming practices should be sufficient.</div>
-                </div>
-                
-                <div class="rating-scale-item moderate-risk">
-                  <div class="rating-scale-label">Moderate Risk (1-2)</div>
-                  <div class="rating-scale-value">1-2</div>
-                  <div class="rating-scale-description">Some risk present. Implement precautionary measures and monitoring.</div>
-                </div>
-                
-                <div class="rating-scale-item high-risk">
-                  <div class="rating-scale-label">High Risk (2-3)</div>
-                  <div class="rating-scale-value">2-3</div>
-                  <div class="rating-scale-description">Significant risk. Requires mitigation strategies and contingency planning.</div>
-                </div>
-              </div>
-              
-              <table class="rating-scale-table">
-                <thead>
-                  <tr>
-                    <th>Risk Category</th>
-                    <th>Low (0-1)</th>
-                    <th>Moderate (1-2)</th>
-                    <th>High (2-3)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Drought Severity</td>
-                    <td class="risk-level-low">Rainfall >600mm</td>
-                    <td class="risk-level-moderate">Rainfall 400-600mm</td>
-                    <td class="risk-level-high">Rainfall <400mm</td>
-                  </tr>
-                  <tr>
-                    <td>Drought Frequency</td>
-                    <td class="risk-level-low">Less than 5% of years</td>
-                    <td class="risk-level-moderate">5-20% of years</td>
-                    <td class="risk-level-high">More than 20% of years</td>
-                  </tr>
-                  <tr>
-                    <td>Frost Risk</td>
-                    <td class="risk-level-low">0-5 freezing days</td>
-                    <td class="risk-level-moderate">5-15 freezing days</td>
-                    <td class="risk-level-high">More than 15 freezing days</td>
-                  </tr>
-                  <tr>
-                    <td>Overall Risk</td>
-                    <td class="risk-level-low">Minimal impact</td>
-                    <td class="risk-level-moderate">Moderate impact</td>
-                    <td class="risk-level-high">Significant impact</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            
-            <!-- Enhanced Expert Commentary -->
-            <div class="commentary-card">
-              <h3>
-                <i class="fas fa-comment-alt"></i>
-                Expert Commentary
-              </h3>
-              <div id="expert-commentary" class="commentary-content">
-                <!-- Expanded commentary will be inserted here -->
-              </div>
-            </div>
-            
-            <div class="explanation">
-              <h3>
-                <i class="fas fa-info-circle"></i>
-                Enhanced Climate Analysis
-              </h3>
-              <p>This report provides detailed insights into your farm's climate patterns:</p>
-              <ul>
-                <li><span class="info-icon">1</span> <strong>Freezing days</strong>: Days with temperatures below 0°C</li>
-                <li><span class="info-icon">2</span> <strong>Monthly patterns</strong>: Average rainfall and frost days by month</li>
-                <li><span class="info-icon">3</span> <strong>Drought analysis</strong>: Years with less than 400mm rainfall</li>
-                <li><span class="info-icon">4</span> <strong>Long-term trends</strong>: Analysis of 25 years climate data</li>
-                <li><span class="info-icon">5</span> <strong>Risk assessment</strong>: Comprehensive climate risk rating</li>
-                <li><span class="info-icon">6</span> <strong>Frost risk</strong>: Detailed analysis of frost patterns</li>
-              </ul>
-            </div>
-            
-            <div id="analysis-content">
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="fas fa-calendar-alt"></i>
-                  </div>
-                  <div class="stat-value" id="years-count">19</div>
-                  <div class="stat-label">Years Analyzed</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="fas fa-cloud-rain"></i>
-                  </div>
-                  <div class="stat-value" id="avg-rain">0</div>
-                  <div class="stat-label">Avg. Rainfall (mm)</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="fas fa-temperature-low"></i>
-                  </div>
-                  <div class="stat-value" id="max-frost">0</div>
-                  <div class="stat-label">Max Freezing Days</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-icon">
-                    <i class="fas fa-fire"></i>
-                  </div>
-                  <div class="stat-value" id="drought-count">0</div>
-                  <div class="stat-label">Drought Years</div>
-                </div>
-              </div>
-              
-              <div class="report-card">
-                <h3>
-                  <i class="fas fa-cloud-showers-heavy"></i>
-                  Annual Rainfall (mm)
-                </h3>
-                <div class="chart-container">
-                  <canvas id="rainChart"></canvas>
-                </div>
-              </div>
-              
-              <div class="report-card">
-                <h3>
-                  <i class="fas fa-snowflake"></i>
-                  Freezing Days (temperature &lt; 0°C)
-                </h3>
-                <div id="frost-indicator-container" style="margin-bottom: 15px;">
-                  <!-- Frost indicator will be inserted here -->
-                </div>
-                <div class="chart-container">
-                  <canvas id="frostChart"></canvas>
-                </div>
-              </div>
-              
-              <div class="drought-summary">
-                <h4>
-                  <i class="fas fa-exclamation-triangle"></i>
-                  Drought Analysis
-                </h4>
-                <p id="drought-summary"></p>
-                <div class="drought-years" id="drought-years"></div>
-              </div>
-              
-              <div class="report-card">
-                <h3>
-                  <i class="fas fa-calendar-alt"></i>
-                  Monthly Climate Patterns
-                </h3>
-                
-                <div class="month-selector" id="month-selector"></div>
-                
-                <div class="monthly-analysis">
-                  <div class="monthly-card">
-                    <h4>
-                      <i class="fas fa-cloud-rain"></i>
-                      Monthly Rainfall
-                    </h4>
-                    <div class="monthly-chart-container">
-                      <canvas id="monthlyRainChart"></canvas>
-                    </div>
-                  </div>
-                  
-                  <div class="monthly-card">
-                    <h4>
-                      <i class="fas fa-snowflake"></i>
-                      Monthly Freezing Days
-                    </h4>
-                    <div class="monthly-chart-container">
-                      <canvas id="monthlyFrostChart"></canvas>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Monthly Rainfall Table -->
-              <div class="report-card">
-                <h3>
-                  <i class="fas fa-table"></i>
-                  Monthly Rainfall Analysis
-                </h3>
-                <table class="month-rain-table" id="month-rain-table">
-                  <thead>
-                    <tr>
-                      <th>Month</th>
-                      <th>Avg. Rainfall (mm)</th>
-                      <th>Classification</th>
-                    </tr>
-                  </thead>
-                  <tbody id="month-rain-table-body">
-                    <!-- Table rows will be inserted here -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          
-          <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <div class="loading-text">Analyzing climate patterns...</div>
-            
-            <!-- Processing Progress Bar -->
-            <div class="progress-container" style="width: 80%;">
-              <div class="progress-header">
-                <span>Processing Data</span>
-                <span id="processing-percentage">0%</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" id="processing-fill"></div>
-                <div class="progress-label" id="processing-label">Starting</div>
-              </div>
-            </div>
-            
-            <div class="status-message">
-              <i class="fas fa-info-circle"></i>
-              <span>Processing data: This may take a few moments for large datasets</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="actions">
-          <button class="btn btn-outline" onclick="resetReport()">
-            <i class="fas fa-sync-alt btn-icon"></i> Reset
-          </button>
-          <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()" disabled>
-            <i class="fas fa-download btn-icon"></i> Download Report
-          </button>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+          <div class="progress-label" id="progress-label">Ready</div>
         </div>
       </div>
     </div>
     
     <footer>
       <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
-      <p style="margin-top: 8px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
+      <p style="margin-top: 8px; font-size: 0.85rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
     </footer>
   </div>
   
@@ -1291,17 +546,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script>
-    // Month names for display
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    
-    const shortMonthNames = monthNames.map(m => m.substring(0, 3));
-    
     // Initialize map
     const map = L.map('map').setView([-25.0, 30.0], 5); // Set to South Africa coordinates
     
@@ -1322,8 +568,6 @@
     let lastPolygonCenter = null;
     let currentMarker = null;
     let dataAvailable = false;
-    let monthlyData = null;
-    let selectedMonth = 0;
     let pinModeActive = false;
     let geocodeTimeout = null;
     let currentRequest = null;
@@ -1344,41 +588,27 @@
       map.invalidateSize();
     }, 100);
 
-    // Optimized progress bar function
-    let lastProgressUpdate = 0;
-    function updateProgress(barId, percentage, text) {
-      const now = Date.now();
-      // Throttle updates to max 10 per second
-      if (now - lastProgressUpdate < 100) return;
-      lastProgressUpdate = now;
-      
-      const fill = document.getElementById(`${barId}-fill`);
-      const label = document.getElementById(`${barId}-label`);
-      const percentageDisplay = document.getElementById(`${barId}-percentage`);
+    // Progress bar function
+    function updateProgress(percentage, text) {
+      const fill = document.getElementById('progress-fill');
+      const label = document.getElementById('progress-label');
+      const percentageDisplay = document.getElementById('progress-percentage');
       
       if (fill) fill.style.width = `${percentage}%`;
       if (label) label.textContent = text;
       if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
     }
     
-    // Update status message
-    function updateStatus(message, type = 'info') {
-      const statusEl = document.createElement('div');
-      statusEl.className = `status-message ${type}`;
-      statusEl.innerHTML = `
-        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 
-                         type === 'warning' ? 'exclamation-circle' : 
-                         type === 'success' ? 'check-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-      `;
+    // Show notification
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      const notificationText = document.getElementById('notification-text');
       
-      const reportContent = document.querySelector('.report-content');
-      if (reportContent) {
-        reportContent.appendChild(statusEl);
-        
-        // Auto-scroll to new message
-        statusEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+      notification.className = `notification ${type}`;
+      notificationText.textContent = message;
+      notification.classList.add('show');
+      
+      setTimeout(() => notification.classList.remove('show'), 3000);
     }
 
     // Event handlers
@@ -1414,7 +644,7 @@
       let progress = 0;
       const interval = setInterval(() => {
         progress += 10;
-        updateProgress('progress', progress, `Checking data availability... ${progress}%`);
+        updateProgress(progress, `Checking data availability... ${progress}%`);
         
         if (progress >= 100) {
           clearInterval(interval);
@@ -1475,7 +705,7 @@
       pinModeActive = false;
       document.getElementById('dropPinBtn').classList.remove('btn-primary');
       document.getElementById('dropPinBtn').classList.add('btn-outline');
-      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i>';
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
       
       // Remove event listener
       map.off('click', handleMapClick);
@@ -1664,7 +894,7 @@
       document.getElementById('suggestions').style.display = 'none';
       
       // Reset progress bar
-      updateProgress('progress', 0, 'Ready');
+      updateProgress(0, 'Ready');
       
       // Reset pin mode if active
       if (pinModeActive) {
@@ -1672,7 +902,7 @@
         map.off('click', handleMapClick);
         document.getElementById('dropPinBtn').classList.remove('btn-primary');
         document.getElementById('dropPinBtn').classList.add('btn-outline');
-        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i>';
+        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
       }
     }
 
@@ -1688,23 +918,13 @@
         return;
       }
 
-      // Show loading indicator
-      document.getElementById('report-placeholder').classList.add('hidden');
-      document.getElementById('report').classList.add('hidden');
-      document.getElementById('loading').classList.remove('hidden');
-      document.getElementById('generateBtn').disabled = true;
-      
       const lat = lastPolygonCenter.lat.toFixed(4);
       const lon = lastPolygonCenter.lng.toFixed(4);
       
-      // API request parameters - FIXED API ENDPOINT
+      // API request parameters
       const startDate = "2000-01-01";
       const endDate = "2024-12-31";
       const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&timezone=auto`;
-      
-      // Performance tracking
-      const startTime = performance.now();
-      let fetchTime, processTime, chartTime;
       
       try {
         // Cancel any previous request
@@ -1717,17 +937,16 @@
         currentRequest = controller;
         
         // Step 1: Fetch data
-        updateStatus("Starting data retrieval from weather API...");
-        const fetchStart = performance.now();
+        updateProgress(0, "Starting data retrieval...");
         
         // Simulate progress during fetch
         let fetchProgress = 0;
         const fetchInterval = setInterval(() => {
           if (fetchProgress < 95) {
             fetchProgress += 5;
-            updateProgress('processing', fetchProgress, `Fetching data... ${fetchProgress}%`);
+            updateProgress(fetchProgress, `Fetching data... ${fetchProgress}%`);
           }
-        }, 100);
+        }, 200);
         
         const response = await fetch(apiUrl, { signal });
         if (!response.ok) {
@@ -1747,962 +966,40 @@
         
         // Clear interval immediately after fetch
         clearInterval(fetchInterval);
-        updateProgress('processing', 100, "Data fetched!");
+        updateProgress(100, "Data fetched!");
         
-        const fetchEnd = performance.now();
-        fetchTime = fetchEnd - fetchStart;
-        
-        updateStatus(`Data fetched successfully in ${fetchTime.toFixed(0)}ms`, 'success');
-        
-        // Process the data
-        updateStatus("Processing weather data...");
-        const processStart = performance.now();
-        const daily = data.daily;
-        
-        if (!daily || !daily.time || daily.time.length === 0) throw new Error('No data available for this location');
-        
-        // Optimized data processing
-        const yearsMap = new Map();
-        const monthlyRain = Array(12).fill().map(() => []);
-        const monthlyFrost = Array(12).fill().map(() => []);
-        
-        const totalDays = daily.time.length;
-        let completeDays = 0;
-        
-        // Precompute date objects and year/month indices
-        const dateInfo = daily.time.map(dateStr => {
-          const date = new Date(dateStr);
-          return {
-            year: date.getFullYear(),
-            month: date.getMonth(),
-            date
-          };
-        });
-        
-        // Process data in batches to avoid blocking UI
-        const batchSize = 1000;
-        let processed = 0;
-        
-        while (processed < totalDays) {
-          const end = Math.min(processed + batchSize, totalDays);
-          for (let i = processed; i < end; i++) {
-            const { year, month } = dateInfo[i];
-            const precipitation = daily.precipitation_sum[i];
-            const temperature = daily.temperature_2m_min[i];
-            
-            // Check data completeness
-            if (precipitation !== null && temperature !== null) completeDays++;
-            
-            // Aggregate precipitation
-            if (precipitation !== null) {
-              if (!yearsMap.has(year)) {
-                yearsMap.set(year, { precipitation: 0, frostDays: 0 });
-              }
-              const yearData = yearsMap.get(year);
-              yearData.precipitation += precipitation;
-              monthlyRain[month].push(precipitation);
-            }
-            
-            // Count freezing days
-            if (temperature !== null && temperature < 0) {
-              yearsMap.get(year).frostDays += 1;
-              monthlyFrost[month].push(1);
-            } else if (temperature !== null) {
-              monthlyFrost[month].push(0);
-            }
-          }
-          
-          processed = end;
-          const progress = Math.min(95, Math.round((processed / totalDays) * 100));
-          updateProgress('processing', progress, `Processing data: ${processed}/${totalDays} days`);
-          
-          // Yield to UI thread
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
-        
-        // Complete processing
-        updateProgress('processing', 100, "Data processed!");
-        const processEnd = performance.now();
-        processTime = processEnd - processStart;
-        
-        updateStatus(`Data processed in ${processTime.toFixed(0)}ms`, 'success');
-        
-        // Calculate data completeness
-        const completeness = Math.round((completeDays / totalDays) * 100);
-        document.getElementById('completeness-bar').style.width = `${completeness}%`;
-        document.getElementById('completeness-value').textContent = `${completeness}%`;
-        
-        // Extract data for each year
-        const years = [];
-        const rainData = [];
-        const frostData = [];
-        const droughtYears = [];
-        
-        // Sort years and extract data
-        const sortedYears = [...yearsMap.keys()].sort();
-        for (const year of sortedYears) {
-          const yearData = yearsMap.get(year);
-          years.push(year);
-          rainData.push(Math.round(yearData.precipitation * 10) / 10);
-          frostData.push(yearData.frostDays);
-          
-          if (yearData.precipitation < 400) droughtYears.push(year);
-        }
-        
-        // Calculate stats
-        const totalYears = years.length;
-        const avgRain = (rainData.reduce((a, b) => a + b, 0) / totalYears).toFixed(1);
-        const maxFrost = Math.max(...frostData);
-        
-        // Calculate monthly averages
-        const avgMonthlyRain = monthlyRain.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
-        const avgMonthlyFrost = monthlyFrost.map(month => month.length ? (month.reduce((a, b) => a + b, 0) / totalYears).toFixed(1) : 0);
-        
-        // Store monthly data
-        monthlyData = { rain: avgMonthlyRain, frost: avgMonthlyFrost };
-        
-        // Update report content
-        document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
-        document.getElementById("data-status").innerText = "Reliable data available for this location";
-        document.getElementById("data-status").style.color = "var(--success)";
-        
-        const droughtText = droughtYears.length ? 
-          `${droughtYears.length} drought years detected (rainfall < 400mm)` : 
-          "No significant drought years detected";
-          
-        document.getElementById("drought-summary").innerText = droughtText;
-        
-        // Add drought years using document fragment
-        const droughtYearsContainer = document.getElementById("drought-years");
-        droughtYearsContainer.innerHTML = '';
-        
-        const fragment = document.createDocumentFragment();
-        droughtYears.forEach(year => {
-          const el = document.createElement('div');
-          el.className = 'drought-year';
-          el.innerText = year;
-          fragment.appendChild(el);
-        });
-        droughtYearsContainer.appendChild(fragment);
-        
-        // Update stats
-        document.getElementById("years-count").innerText = totalYears;
-        document.getElementById("avg-rain").innerText = avgRain;
-        document.getElementById("max-frost").innerText = maxFrost;
-        document.getElementById("drought-count").innerText = droughtYears.length;
-        
-        // Create charts
-        updateStatus("Generating visualizations...");
-        const chartStart = performance.now();
-        createRainChart(years, rainData);
-        createFrostChart(years, frostData);
-        createMonthlyCharts();
-        createMonthSelector();
-        const chartEnd = performance.now();
-        chartTime = chartEnd - chartStart;
-        
-        updateStatus(`Visualizations generated in ${chartTime.toFixed(0)}ms`, 'success');
-        
-        // Generate risk rating and commentary
-        const analysisData = {
-          avgRain: parseFloat(avgRain),
-          maxFrost,
-          droughtCount: droughtYears.length,
-          monthlyRain: avgMonthlyRain,
-          monthlyFrost: avgMonthlyFrost,
-          completeness,
-          totalYears,
-          droughtYears
-        };
-        
-        calculateRiskRating(analysisData);
-        generateCommentary(analysisData);
-        createMonthlyRainTable(avgMonthlyRain, avgMonthlyFrost);
-        createFrostIndicator(maxFrost);
-        
-        // Hide error message and show analysis content
-        document.getElementById('error-message').classList.add('hidden');
-        document.getElementById('analysis-content').style.display = 'block';
-        
-        // Show report and enable download
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('report').classList.remove('hidden');
-        document.getElementById('downloadBtn').disabled = false;
-        document.getElementById('generateBtn').disabled = false;
-        
-        showNotification("Report generated successfully!", 'success');
+        showNotification("Climate data retrieved successfully!", 'success');
       } catch (err) {
         console.error('Error generating report:', err);
-        
-        // Show error message
-        document.getElementById('error-message').classList.remove('hidden');
-        document.getElementById('analysis-content').style.display = 'none';
-        
-        // Update location text
-        document.getElementById("location-text").innerText = `Farm center location: ${lat}, ${lon}`;
-        document.getElementById("data-status").innerText = "No data available for this location";
-        document.getElementById("data-status").style.color = "var(--danger)";
-        
-        // Hide completeness indicator
-        document.getElementById('completeness-container').style.display = 'none';
-        
-        // Show report with error
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('report').classList.remove('hidden');
-        document.getElementById('generateBtn').disabled = false;
-        document.getElementById('downloadBtn').disabled = false;
-        
-        updateStatus(`Error: ${err.message}`, 'error');
         showNotification("Couldn't fetch data for this location", 'error');
       } finally {
         currentRequest = null;
       }
     }
-
-    // Create frost indicator
-    function createFrostIndicator(maxFrost) {
-      const container = document.getElementById('frost-indicator-container');
-      container.innerHTML = '';
+    
+    // Initialize progress bar
+    updateProgress(0, 'Ready');
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      const suggestions = document.getElementById('suggestions');
+      const locationInput = document.getElementById('locationInput');
       
-      const indicator = document.createElement('div');
-      indicator.className = 'frost-indicator';
-      
-      if (maxFrost === 0) {
-        indicator.className += ' frost-none';
-        indicator.innerHTML = '<i class="fas fa-check-circle"></i> No frost risk in this region';
-      } else if (maxFrost <= 10) {
-        indicator.className += ' frost-low';
-        indicator.innerHTML = '<i class="fas fa-exclamation-circle"></i> Low frost risk';
-      } else if (maxFrost <= 30) {
-        indicator.className += ' frost-moderate';
-        indicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Moderate frost risk';
-      } else {
-        indicator.className += ' frost-high';
-        indicator.innerHTML = '<i class="fas fa-skull-crossbones"></i> High frost risk';
-      }
-      
-      container.appendChild(indicator);
-    }
-
-    // Create rainfall chart with optimization
-    function createRainChart(labels, data) {
-      const ctx = document.getElementById('rainChart').getContext('2d');
-      
-      // Reuse existing chart instance if available
-      if (window.rainChartInstance) {
-        window.rainChartInstance.data.labels = labels;
-        window.rainChartInstance.data.datasets[0].data = data;
-        window.rainChartInstance.update();
-        return;
-      }
-      
-      window.rainChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Rainfall (mm)',
-            data: data,
-            backgroundColor: 'rgba(46, 125, 50, 0.7)',
-            borderColor: 'rgba(46, 125, 50, 1)',
-            borderWidth: 1,
-            borderRadius: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: { label: context => `Rainfall: ${context.parsed.y} mm` }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Rainfall (mm)' },
-              grid: { color: 'rgba(0, 0, 0, 0.05)' }
-            },
-            x: { grid: { display: false } }
-          }
+      if (suggestions && locationInput) {
+        if (!locationInput.contains(e.target) && !suggestions.contains(e.target)) {
+          suggestions.style.display = 'none';
         }
-      });
-    }
-
-    // Create frost days chart with optimization
-    function createFrostChart(labels, data) {
-      const ctx = document.getElementById('frostChart').getContext('2d');
-      
-      // Reuse existing chart instance if available
-      if (window.frostChartInstance) {
-        window.frostChartInstance.data.labels = labels;
-        window.frostChartInstance.data.datasets[0].data = data;
-        window.frostChartInstance.update();
-        return;
-      }
-      
-      window.frostChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Freezing Days',
-            data: data,
-            backgroundColor: 'rgba(30, 136, 229, 0.2)',
-            borderColor: 'rgba(30, 136, 229, 1)',
-            borderWidth: 3,
-            pointBackgroundColor: 'rgba(30, 136, 229, 1)',
-            pointRadius: 5,
-            pointHoverRadius: 8,
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: { label: context => `Freezing days: ${context.parsed.y}` }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Freezing Days' },
-              grid: { color: 'rgba(0, 0, 0, 0.05)' }
-            },
-            x: { grid: { display: false } }
-          }
-        }
-      });
-    }
-
-    // Create monthly charts with optimization
-    function createMonthlyCharts() {
-      // Monthly rain chart
-      const rainCtx = document.getElementById('monthlyRainChart').getContext('2d');
-      
-      // Reuse existing chart instance if available
-      if (window.monthlyRainChartInstance) {
-        window.monthlyRainChartInstance.data.datasets[0].data = monthlyData.rain;
-        window.monthlyRainChartInstance.update();
-      } else {
-        window.monthlyRainChartInstance = new Chart(rainCtx, {
-          type: 'bar',
-          data: {
-            labels: shortMonthNames,
-            datasets: [{
-              label: 'Avg. Rainfall (mm)',
-              data: monthlyData.rain,
-              backgroundColor: 'rgba(46, 125, 50, 0.7)',
-              borderColor: 'rgba(46, 125, 50, 1)',
-              borderWidth: 1,
-              borderRadius: 5
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: {
-                beginAtZero: true,
-                title: { display: true, text: 'Rainfall (mm)' },
-                grid: { color: 'rgba(0, 0, 0, 0.05)' }
-              },
-              x: { grid: { display: false } }
-            }
-          }
-        });
-      }
-      
-      // Monthly frost chart
-      const frostCtx = document.getElementById('monthlyFrostChart').getContext('2d');
-      
-      // Reuse existing chart instance if available
-      if (window.monthlyFrostChartInstance) {
-        window.monthlyFrostChartInstance.data.datasets[0].data = monthlyData.frost;
-        window.monthlyFrostChartInstance.update();
-      } else {
-        window.monthlyFrostChartInstance = new Chart(frostCtx, {
-          type: 'bar',
-          data: {
-            labels: shortMonthNames,
-            datasets: [{
-              label: 'Avg. Freezing Days',
-              data: monthlyData.frost,
-              backgroundColor: 'rgba(30, 136, 229, 0.7)',
-            borderColor: 'rgba(30, 136, 229, 1)',
-            borderWidth: 1,
-            borderRadius: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Freezing Days' },
-              grid: { color: 'rgba(0, 0, 0, 0.05)' }
-            },
-            x: { grid: { display: false } }
-          }
-        }
-      });
-    }
-  }
-
-  // Create month selector with document fragment
-  function createMonthSelector() {
-    const container = document.getElementById('month-selector');
-    container.innerHTML = '';
-    
-    const fragment = document.createDocumentFragment();
-    
-    monthNames.forEach((name, index) => {
-      const btn = document.createElement('button');
-      btn.className = `month-btn ${index === selectedMonth ? 'active' : ''}`;
-      btn.textContent = name.substring(0, 3);
-      btn.title = name;
-      btn.dataset.month = index;
-      btn.onclick = () => selectMonth(index);
-      fragment.appendChild(btn);
-    });
-    
-    container.appendChild(fragment);
-  }
-  
-  // Select month for detailed view
-  function selectMonth(monthIndex) {
-    selectedMonth = monthIndex;
-    
-    document.querySelectorAll('.month-btn').forEach((btn, index) => {
-      btn.classList.toggle('active', index === monthIndex);
-    });
-    
-    showNotification(`Showing detailed analysis for ${monthNames[monthIndex]}`, 'info');
-  }
-
-  // Enhanced commentary function with more detailed analysis
-  function generateCommentary(analysisData) {
-    const commentaryContainer = document.getElementById('expert-commentary');
-    
-    const { 
-      avgRain, 
-      maxFrost, 
-      droughtCount,
-      monthlyRain,
-      monthlyFrost,
-      completeness,
-      totalYears,
-      droughtYears
-    } = analysisData;
-    
-    // Detailed analysis sections
-    let commentaryHTML = `
-      <div class="commentary-section">
-        <h4>Comprehensive Climate Analysis</h4>
-        <p>This detailed assessment is based on ${totalYears} years of historical weather data with ${completeness}% completeness. The region experiences an average annual rainfall of <strong>${avgRain}mm</strong>, which is considered ${avgRain < 400 ? 'below optimal' : avgRain < 600 ? 'adequate' : 'excellent'} for most agricultural activities.</p>
-      </div>
-      
-      <div class="commentary-section">
-        <h4>Drought Risk Assessment</h4>
-        <p>Our analysis identified ${droughtCount} drought years (annual rainfall < 400mm) in the historical record. This represents ${Math.round((droughtCount/totalYears)*100)}% of years analyzed, indicating a ${droughtCount > 5 ? 'significant' : droughtCount > 2 ? 'moderate' : 'low'} drought risk profile.</p>
-        ${droughtCount > 0 ? `<p>The most severe drought periods occurred in ${getDroughtYearsString(droughtYears)}. These dry spells typically lasted 2-3 seasons with rainfall deficits of 30-50% below average.</p>` : ''}
-      </div>
-      
-      <div class="commentary-section">
-        <h4>Frost Risk Evaluation</h4>
-        <p>The region experiences ${maxFrost} freezing days annually on average, with the highest concentrations occurring during ${getFrostMonthsString(monthlyFrost)}. This level of frost exposure is classified as ${getFrostRiskLevel(maxFrost)}.</p>
-        <p>Critical frost periods typically occur between ${getFrostTimeRange(monthlyFrost)}, with temperatures dropping to -2°C to -5°C during the coldest events. These conditions can cause ${maxFrost > 10 ? 'significant damage to sensitive crops' : 'limited damage to properly managed crops'}.</p>
-      </div>
-    `;
-    
-    // Crop recommendations based on climate profile
-    commentaryHTML += `
-      <div class="commentary-section">
-        <h4>Crop Suitability Recommendations</h4>
-        <p>Based on the climate profile, we recommend the following crop strategies:</p>
-        <div class="crop-recommendations">
-          ${generateCropRecommendations(avgRain, maxFrost)}
-        </div>
-        <p style="margin-top: 15px;">Note: These recommendations should be combined with local soil analysis and market conditions. Consider implementing protective measures like row covers for frost-sensitive crops during high-risk months.</p>
-      </div>
-    `;
-    
-    // Detailed monthly analysis
-    commentaryHTML += `
-      <div class="commentary-section">
-        <h4>Monthly Climate Patterns</h4>
-        <p>The region shows distinct seasonal patterns that impact agricultural planning:</p>
-        <ul>
-          <li><strong>Planting Season (${getMonthsWithRain(monthlyRain, 60)}):</strong> Optimal planting window with adequate soil moisture</li>
-          <li><strong>Critical Growth Period (${getMonthsWithRain(monthlyRain, 80)}):</strong> Higher water demand requiring monitoring</li>
-          <li><strong>Harvest Window (${getBestHarvestMonths(monthlyRain, monthlyFrost)}):</strong> Recommended harvest period with minimal weather disruption</li>
-          <li><strong>High Frost Risk (${getHighFrostMonths(monthlyFrost)}):</strong> Requires frost protection measures</li>
-        </ul>
-      </div>
-    `;
-    
-    // Water management recommendations
-    commentaryHTML += `
-      <div class="commentary-section">
-        <h4>Water Management Strategy</h4>
-        <p>Effective water management is ${avgRain < 500 ? 'critical' : 'recommended'} in this region:</p>
-        <ul>
-          <li>Implement rainwater harvesting to capture ${Math.max(...monthlyRain).toFixed(0)}mm peak monthly rainfall</li>
-          <li>Consider ${avgRain < 500 ? 'drip irrigation' : 'sprinkler systems'} for optimal water efficiency</li>
-          <li>Schedule irrigation during early morning hours to reduce evaporation</li>
-          <li>Monitor soil moisture during ${getDryMonths(monthlyRain)} when rainfall is typically lowest</li>
-        </ul>
-      </div>
-    `;
-    
-    // Long-term climate adaptation
-    commentaryHTML += `
-      <div class="commentary-section">
-        <h4>Long-Term Climate Adaptation</h4>
-        <p>Based on historical patterns and climate projections, we recommend:</p>
-        <ul>
-          <li>Implementing soil conservation practices to improve water retention</li>
-          <li>Diversifying crops to spread climate risk</li>
-          <li>${droughtCount > 3 ? 'Investing in water storage infrastructure' : 'Developing water conservation plans'}</li>
-          <li>Establishing windbreaks to reduce evapotranspiration</li>
-          <li>Monitoring seasonal forecasts for extreme weather preparedness</li>
-        </ul>
-        <p style="margin-top: 10px;"><em>Note: These insights are based on historical data analysis. Consult with local agricultural extension services for region-specific guidance.</em></p>
-      </div>
-    `;
-    
-    commentaryContainer.innerHTML = commentaryHTML;
-  }
-  
-  // Helper functions for commentary generation
-  function getDroughtYearsString(years) {
-    if (years.length === 0) return "no recent years";
-    if (years.length <= 3) return years.join(", ");
-    return `${years.slice(0, 3).join(", ")} and ${years.length - 3} other years`;
-  }
-  
-  function getFrostRiskLevel(frostDays) {
-    if (frostDays === 0) return "negligible";
-    if (frostDays <= 5) return "low";
-    if (frostDays <= 15) return "moderate";
-    if (frostDays <= 30) return "high";
-    return "very high";
-  }
-  
-  function getFrostMonthsString(monthlyFrost) {
-    const highFrostMonths = monthlyFrost
-      .map((days, index) => ({ days, month: monthNames[index] }))
-      .filter(item => item.days >= 2)
-      .map(item => item.month);
-    
-    return formatMonthList(highFrostMonths);
-  }
-  
-  function getFrostTimeRange(monthlyFrost) {
-    const frostMonths = monthlyFrost
-      .map((days, index) => ({ days, index }))
-      .filter(item => item.days > 0)
-      .map(item => item.index);
-    
-    if (frostMonths.length === 0) return "no significant frost period";
-    
-    const first = monthNames[Math.min(...frostMonths)].substring(0, 3);
-    const last = monthNames[Math.max(...frostMonths)].substring(0, 3);
-    return `${first} to ${last}`;
-  }
-  
-  function generateCropRecommendations(avgRain, frostDays) {
-    let crops = [];
-    
-    // Low water requirement crops
-    if (avgRain < 400) {
-      crops.push({name: "Sorghum", risk: "low"});
-      crops.push({name: "Millet", risk: "low"});
-      crops.push({name: "Pigeon Peas", risk: "low"});
-    } 
-    // Moderate water requirement crops
-    else if (avgRain < 600) {
-      crops.push({name: "Maize", risk: "moderate"});
-      crops.push({name: "Beans", risk: "low"});
-      crops.push({name: "Sunflowers", risk: "low"});
-    }
-    // Higher water requirement crops
-    else {
-      crops.push({name: "Sugarcane", risk: "low"});
-      crops.push({name: "Rice", risk: "moderate"});
-    }
-    
-    // Frost-tolerant crops
-    if (frostDays > 5) {
-      crops.push({name: "Winter Wheat", risk: "low"});
-      crops.push({name: "Canola", risk: "low"});
-      crops.push({name: "Garlic", risk: "low"});
-    }
-    
-    // Frost-sensitive crops (only if low frost risk)
-    if (frostDays < 3) {
-      crops.push({name: "Tomatoes", risk: frostDays > 0 ? "moderate" : "low"});
-      crops.push({name: "Citrus", risk: frostDays > 0 ? "high" : "low"});
-      crops.push({name: "Avocados", risk: frostDays > 0 ? "high" : "low"});
-    }
-    
-    // Deduplicate
-    const uniqueCrops = [];
-    const added = new Set();
-    crops.forEach(crop => {
-      if (!added.has(crop.name)) {
-        uniqueCrops.push(crop);
-        added.add(crop.name);
       }
     });
     
-    return uniqueCrops.map(crop => 
-      `<div class="crop-tag ${crop.risk === 'high' ? 'high-risk' : crop.risk === 'moderate' ? 'moderate-risk' : ''}">${crop.name}</div>`
-    ).join('');
-  }
-  
-  function getMonthsWithRain(monthlyRain, threshold) {
-    const months = monthlyRain
-      .map((rain, index) => ({ rain, month: monthNames[index] }))
-      .filter(item => item.rain >= threshold)
-      .map(item => item.month.substring(0, 3));
-    
-    return formatMonthList(months);
-  }
-  
-  function getHighFrostMonths(monthlyFrost) {
-    const months = monthlyFrost
-      .map((frost, index) => ({ frost, month: monthNames[index] }))
-      .filter(item => item.frost >= 2)
-      .map(item => item.month.substring(0, 3));
-    
-    return formatMonthList(months);
-  }
-  
-  function getDryMonths(monthlyRain) {
-    const months = monthlyRain
-      .map((rain, index) => ({ rain, month: monthNames[index] }))
-      .filter(item => item.rain < 30)
-      .map(item => item.month.substring(0, 3));
-    
-    return formatMonthList(months);
-  }
-  
-  function getBestHarvestMonths(monthlyRain, monthlyFrost) {
-    // Find months with low rain and low frost
-    const harvestMonths = monthlyRain
-      .map((rain, index) => ({
-        rain,
-        frost: monthlyFrost[index],
-        month: monthNames[index].substring(0, 3),
-        score: (100 - Math.min(rain, 100)) - (Math.min(monthlyFrost[index], 10) * 10)
-      }))
-      .filter(item => item.rain < 80 && item.frost < 1)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
-      .map(item => item.month);
-    
-    return formatMonthList(harvestMonths);
-  }
-  
-  function formatMonthList(months) {
-    if (months.length === 0) return "none";
-    if (months.length === 1) return months[0];
-    if (months.length === 2) return `${months[0]} and ${months[1]}`;
-    return `${months.slice(0, -1).join(", ")}, and ${months[months.length - 1]}`;
-  }
-
-  // Create monthly rainfall table with document fragment
-  function createMonthlyRainTable(monthlyRain, monthlyFrost) {
-    const tableBody = document.getElementById('month-rain-table-body');
-    tableBody.innerHTML = '';
-    
-    const fragment = document.createDocumentFragment();
-    
-    monthlyRain.forEach((rain, index) => {
-      const row = document.createElement('tr');
-      const monthCell = document.createElement('td');
-      const rainCell = document.createElement('td');
-      const classificationCell = document.createElement('td');
-      
-      monthCell.textContent = monthNames[index];
-      rainCell.textContent = rain;
-      
-      // Classification based on rainfall
-      let classification = '';
-      let rowClass = '';
-      
-      if (rain < 30) {
-        classification = 'Critical Dryness';
-        rowClass = 'critical-month';
-      } else if (rain < 60) {
-        classification = 'Dry';
-      } else if (rain < 100) {
-        classification = 'Moderate';
-      } else {
-        classification = 'Wet';
-        rowClass = 'favorable-month';
+    // Handle window resize for mobile devices
+    window.addEventListener('resize', function() {
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
       }
-      
-      // Add frost warning if needed
-      if (monthlyFrost[index] > 5) {
-        classification += ' (High Frost Risk)';
-        rowClass = 'critical-month';
-      } else if (monthlyFrost[index] > 2) {
-        classification += ' (Some Frost Risk)';
-      }
-      
-      classificationCell.textContent = classification;
-      
-      row.appendChild(monthCell);
-      row.appendChild(rainCell);
-      row.appendChild(classificationCell);
-      
-      if (rowClass) {
-        row.className = rowClass;
-      }
-      
-      fragment.appendChild(row);
     });
-    
-    tableBody.appendChild(fragment);
-  }
-  
-  // Function to calculate and display risk rating
-  function calculateRiskRating(analysisData) {
-    const { 
-      avgRain, 
-      maxFrost, 
-      droughtCount,
-      completeness,
-      totalYears
-    } = analysisData;
-    
-    // Calculate drought severity (0-3)
-    let droughtSeverity = 0;
-    if (avgRain < 300) {
-      droughtSeverity = 3;
-    } else if (avgRain < 400) {
-      droughtSeverity = 2.5;
-    } else if (avgRain < 500) {
-      droughtSeverity = 2;
-    } else if (avgRain < 600) {
-      droughtSeverity = 1;
-    }
-    
-    // Calculate drought frequency (0-3)
-    const droughtFrequencyPercent = (droughtCount / totalYears) * 100;
-    let droughtFrequency = 0;
-    if (droughtFrequencyPercent > 30) {
-      droughtFrequency = 3;
-    } else if (droughtFrequencyPercent > 20) {
-      droughtFrequency = 2.5;
-    } else if (droughtFrequencyPercent > 10) {
-      droughtFrequency = 2;
-    } else if (droughtFrequencyPercent > 5) {
-      droughtFrequency = 1;
-    }
-    
-    // Calculate frost risk (0-3)
-    let frostRisk = 0;
-    if (maxFrost > 50) {
-      frostRisk = 3;
-    } else if (maxFrost > 30) {
-      frostRisk = 2.5;
-    } else if (maxFrost > 15) {
-      frostRisk = 2;
-    } else if (maxFrost > 5) {
-      frostRisk = 1;
-    } else if (maxFrost > 0) {
-      frostRisk = 0.5;
-    }
-    
-    // Calculate overall risk (average of the three)
-    const overallRisk = (droughtSeverity + droughtFrequency + frostRisk) / 3;
-    
-    // Determine labels
-    const getSeverityLabel = (value) => {
-      if (value >= 2.5) return 'High';
-      if (value >= 1.5) return 'Moderate';
-      return 'Low';
-    };
-    
-    const getRiskLevel = (value) => {
-      if (value >= 2.0) return 'High Risk';
-      if (value >= 1.0) return 'Moderate Risk';
-      return 'Low Risk';
-    };
-    
-    // Update DOM with individual scores
-    document.getElementById('drought-severity').textContent = droughtSeverity.toFixed(1);
-    document.getElementById('drought-frequency').textContent = droughtFrequency.toFixed(1);
-    document.getElementById('frost-risk').textContent = frostRisk.toFixed(1);
-    document.getElementById('overall-risk').textContent = overallRisk.toFixed(1);
-    document.getElementById('overall-risk-title').textContent = getRiskLevel(overallRisk);
-    
-    // Set labels
-    document.getElementById('drought-severity-label').textContent = getSeverityLabel(droughtSeverity);
-    document.getElementById('drought-frequency-label').textContent = getSeverityLabel(droughtFrequency);
-    document.getElementById('frost-risk-label').textContent = getSeverityLabel(frostRisk);
-    
-    // Set label colors
-    const setLabelColor = (elementId, value) => {
-      const label = document.getElementById(elementId);
-      label.className = 'risk-category-label';
-      if (value >= 2.5) {
-        label.style.backgroundColor = '#ffebee';
-        label.style.color = '#d32f2f';
-      } else if (value >= 1.5) {
-        label.style.backgroundColor = '#fff8e1';
-        label.style.color = '#e65100';
-      } else {
-        label.style.backgroundColor = '#e8f5e9';
-        label.style.color = '#2e7d32';
-      }
-    };
-    
-    setLabelColor('drought-severity-label', droughtSeverity);
-    setLabelColor('drought-frequency-label', droughtFrequency);
-    setLabelColor('frost-risk-label', frostRisk);
-    
-    // Set overall risk color
-    const overallRiskEl = document.getElementById('overall-risk');
-    overallRiskEl.className = 'risk-overall-value';
-    if (overallRisk >= 2.0) {
-      overallRiskEl.style.color = '#d32f2f';
-    } else if (overallRisk >= 1.0) {
-      overallRiskEl.style.color = '#e65100';
-    } else {
-      overallRiskEl.style.color = '#2e7d32';
-    }
-    
-    // Risk factors
-    const riskFactors = [];
-    if (droughtSeverity >= 2) riskFactors.push('High drought severity');
-    if (droughtFrequency >= 2) riskFactors.push('Frequent drought years');
-    if (frostRisk >= 2) riskFactors.push('Significant frost risk');
-    if (completeness < 80) riskFactors.push('Partial data reliability');
-    
-    const riskFactorsContainer = document.getElementById('risk-factors');
-    riskFactorsContainer.innerHTML = '';
-    
-    const fragment = document.createDocumentFragment();
-    riskFactors.forEach(factor => {
-      const el = document.createElement('div');
-      el.className = 'risk-factor';
-      el.textContent = factor;
-      fragment.appendChild(el);
-    });
-    
-    riskFactorsContainer.appendChild(fragment);
-    
-    return overallRisk;
-  }
-
-  // Download PDF report
-  function downloadPDF() {
-    const reportElement = document.getElementById('report');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const originalText = downloadBtn.innerHTML;
-    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin btn-icon"></i> Generating PDF...';
-    downloadBtn.disabled = true;
-    
-    html2pdf()
-      .from(reportElement)
-      .set({
-        margin: 15,
-        filename: `farm-climate-report.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      })
-      .save()
-      .then(() => {
-        downloadBtn.innerHTML = originalText;
-        downloadBtn.disabled = false;
-        showNotification("PDF report downloaded!", 'success');
-      })
-      .catch((error) => {
-        console.error('PDF generation failed:', error);
-        downloadBtn.innerHTML = originalText;
-        downloadBtn.disabled = false;
-        showNotification("Failed to generate PDF", 'error');
-      });
-  }
-
-  // Reset report
-  function resetReport() {
-    document.getElementById('report').classList.add('hidden');
-    document.getElementById('report-placeholder').classList.remove('hidden');
-    document.getElementById('downloadBtn').disabled = true;
-    
-    // Reset risk rating
-    document.getElementById('drought-severity').textContent = "0";
-    document.getElementById('drought-frequency').textContent = "0";
-    document.getElementById('frost-risk').textContent = "0";
-    document.getElementById('overall-risk').textContent = "0";
-    document.getElementById('overall-risk-title').textContent = "No Risk";
-    
-    // Reset commentary
-    document.getElementById('expert-commentary').innerHTML = `
-      <p>Detailed commentary will be provided after analyzing your farm's climate data. This section will include:</p>
-      <ul>
-        <li>Analysis of rainfall patterns and drought risks</li>
-        <li>Impact of freezing days on crop selection</li>
-        <li>Long-term climate trends and projections</li>
-        <li>Recommendations for farming practices</li>
-        <li>Risk mitigation strategies</li>
-        <li>Specific monthly analysis of rainfall and frost patterns</li>
-        <li>Detailed frost risk assessment</li>
-      </ul>
-    `;
-    
-    resetMap();
-  }
-
-  // Show notification
-  function showNotification(message, type) {
-    const notification = document.getElementById('notification');
-    const notificationText = document.getElementById('notification-text');
-    
-    notification.className = `notification ${type}`;
-    notificationText.textContent = message;
-    notification.classList.add('show');
-    
-    setTimeout(() => notification.classList.remove('show'), 3000);
-  }
-  
-  // Initialize progress bars
-  updateProgress('progress', 0, 'Ready');
-  
-  // Close suggestions when clicking outside
-  document.addEventListener('click', function(e) {
-    const suggestions = document.getElementById('suggestions');
-    const locationInput = document.getElementById('locationInput');
-    
-    if (suggestions && locationInput) {
-      if (!locationInput.contains(e.target) && !suggestions.contains(e.target)) {
-        suggestions.style.display = 'none';
-      }
-    }
-  });
-  
-  // Handle window resize for mobile devices
-  window.addEventListener('resize', function() {
-    if (map) {
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 100);
-    }
-  });
-</script>
+  </script>
 </body>
 </html>
