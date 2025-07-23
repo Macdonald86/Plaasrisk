@@ -224,8 +224,8 @@
     }
     
     .progress-container {
-      width: 100%;
-      margin: 12px 0;
+      width: 200px;
+      margin-left: 15px;
     }
     
     .progress-header {
@@ -339,16 +339,16 @@
     
     footer {
       text-align: center;
-      padding: 12px;
+      padding: 8px;
       color: #666;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       background: white;
       border-radius: 12px;
       box-shadow: var(--shadow);
       margin-top: 12px;
     }
     
-    /* PlaasRisk Logo */
+    /* Redesigned PlaasRisk Logo */
     .logo-container {
       display: flex;
       align-items: center;
@@ -359,20 +359,40 @@
     .plaasrisk-logo {
       height: 40px;
       width: 40px;
-      background: linear-gradient(135deg, #1b5e20 0%, #4caf50 100%);
-      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1b5e20 0%, #4caf50 100%);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .logo-icon {
       color: white;
-      font-weight: bold;
-      font-size: 18px;
+      font-size: 22px;
+      position: relative;
+      z-index: 2;
     }
     
     .logo-text {
       font-weight: 700;
       color: var(--primary-dark);
-      font-size: 1.2rem;
+      font-size: 1.25rem;
+      letter-spacing: -0.5px;
+      position: relative;
+    }
+    
+    .logo-text::after {
+      content: "";
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 2px;
     }
     
     /* Report Modal */
@@ -641,6 +661,27 @@
       margin-bottom: 15px;
     }
     
+    .commentary-content h4 {
+      color: var(--frost-blue);
+      margin: 20px 0 10px 0;
+      border-bottom: 1px solid var(--frost-light);
+      padding-bottom: 5px;
+    }
+    
+    .commentary-content .drought-header {
+      color: var(--drought-brown);
+      border-bottom: 1px solid var(--drought-light);
+    }
+    
+    .parameters-box {
+      background: white;
+      border-left: 3px solid var(--primary);
+      padding: 10px 15px;
+      margin: 15px 0;
+      border-radius: 0 8px 8px 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    
     /* Report Headers */
     .report-header-section {
       grid-column: 1 / -1;
@@ -693,6 +734,11 @@
       .years-section {
         flex-direction: column;
       }
+      
+      .progress-container {
+        width: 100%;
+        margin: 12px 0 0 0;
+      }
     }
   </style>
 </head>
@@ -701,7 +747,9 @@
     <div class="map-section">
       <div class="control-bar">
         <div class="logo-container">
-          <div class="plaasrisk-logo">PR</div>
+          <div class="plaasrisk-logo">
+            <i class="fas fa-seedling logo-icon"></i>
+          </div>
           <div class="logo-text">PlaasRisk</div>
         </div>
         
@@ -715,6 +763,18 @@
           <button class="btn btn-primary" onclick="searchLocation()">
             <i class="fas fa-search-location"></i> Search
           </button>
+          
+          <!-- Progress bar moved next to GPS input -->
+          <div class="progress-container">
+            <div class="progress-header">
+              <span>Data Retrieval</span>
+              <span id="progress-percentage">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+              <div class="progress-label" id="progress-label">Ready</div>
+            </div>
+          </div>
         </div>
         
         <div class="map-actions">
@@ -731,22 +791,11 @@
       </div>
       
       <div id="map"></div>
-      
-      <div class="progress-container">
-        <div class="progress-header">
-          <span>Data Retrieval</span>
-          <span id="progress-percentage">0%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progress-fill"></div>
-          <div class="progress-label" id="progress-label">Ready</div>
-        </div>
-      </div>
     </div>
     
     <footer>
       <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
-      <p style="margin-top: 8px; font-size: 0.85rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
+      <p style="margin-top: 5px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
     </footer>
   </div>
   
@@ -874,7 +923,21 @@
           <h3><i class="fas fa-comment-alt"></i> Climate Commentary</h3>
           <div class="commentary-content" id="climateCommentary">
             <p>The analysis reveals a warming trend of +1.2°C over the past 25 years, with precipitation decreasing by 8% during the same period. This indicates significant climate shifts that may impact agricultural planning.</p>
-            <p>High frost occurrences were most notable in 2010, 2012, 2015, 2018, and 2021, posing risks to sensitive crops during winter months. Severe drought conditions were recorded in 2005, 2009, 2016, 2019, and 2023, with water shortages impacting crop yields.</p>
+            
+            <h4>Frost Analysis</h4>
+            <p>High frost occurrences were most notable in 2010, 2012, 2015, 2018, and 2021, posing risks to sensitive crops during winter months. These frost events primarily occurred during the months of June to August.</p>
+            
+            <div class="parameters-box">
+              <p><strong>Frost Classification Parameters:</strong> Frost events are classified when the minimum daily temperature drops below 0°C. High frost years are defined as years with more than 15 frost days.</p>
+            </div>
+            
+            <h4 class="drought-header">Drought Analysis</h4>
+            <p>Severe drought conditions were recorded in 2005, 2009, 2016, 2019, and 2023, with water shortages impacting crop yields. The most prolonged drought period occurred from March to November in 2016.</p>
+            
+            <div class="parameters-box">
+              <p><strong>Drought Classification Parameters:</strong> Drought is defined as periods with no precipitation for at least 10 consecutive days. Severe drought years are defined as years with more than 50 drought days.</p>
+            </div>
+            
             <p>These patterns suggest increasing challenges for water management and crop selection in the coming years. Farmers should consider implementing advanced irrigation techniques and selecting drought-resistant crop varieties.</p>
           </div>
         </div>
@@ -1215,9 +1278,19 @@
       commentary.innerHTML = `
         <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. This represents a significant shift in temperature patterns that may affect crop selection and growing seasons.</p>
         
-        <p>Annual precipitation averages <strong>${data.stats.annualPrecip} mm</strong>, with a ${data.stats.precipTrend >= 0 ? 'increase' : 'decrease'} of <strong>${Math.abs(data.stats.precipTrend)}%</strong> over the analysis period. The region experiences an average of <strong>${data.stats.drySpells} dry spells per year</strong> (months with less than 30mm precipitation).</p>
+        <h4>Frost Analysis</h4>
+        <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. The highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}. Frost typically occurs between May and August in this region.</p>
         
-        <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. Drought conditions were most severe in <strong>${data.stats.droughtYears.join(', ')}</strong>, requiring careful water management planning.</p>
+        <div class="parameters-box">
+          <p><strong>Frost Classification Parameters:</strong> Frost events are classified when the minimum daily temperature drops below 0°C. High frost years are defined as years with more than 15 frost days.</p>
+        </div>
+        
+        <h4 class="drought-header">Drought Analysis</h4>
+        <p>Drought conditions were most severe in <strong>${data.stats.droughtYears.join(', ')}</strong>, requiring careful water management planning. The longest drought period recorded was ${Math.max(...data.drought.values)} days in ${data.stats.droughtYears[0]}. Precipitation patterns show increasing variability during the rainy season.</p>
+        
+        <div class="parameters-box">
+          <p><strong>Drought Classification Parameters:</strong> Drought conditions are identified when there is no precipitation for at least 10 consecutive days. Severe drought years are defined as years with more than 50 drought days.</p>
+        </div>
         
         <p>Based on these patterns, farmers should consider implementing water conservation techniques and selecting frost-resistant crop varieties. The warming trend suggests that heat-tolerant varieties may become increasingly important in the coming decades.</p>
       `;
