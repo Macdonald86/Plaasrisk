@@ -348,36 +348,31 @@
       margin-top: 12px;
     }
     
-    .data-badge {
-      display: inline-flex;
+    /* PlaasRisk Logo */
+    .logo-container {
+      display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      background: #e8f5e9;
-      color: var(--success);
+      gap: 10px;
+      margin-right: 10px;
     }
     
-    .data-badge.warning {
-      background: #fff8e1;
-      color: var(--warning);
+    .plaasrisk-logo {
+      height: 40px;
+      width: 40px;
+      background: linear-gradient(135deg, #1b5e20 0%, #4caf50 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
     }
     
-    .data-badge.error {
-      background: #ffebee;
-      color: var(--danger);
-    }
-    
-    .data-badge.frost {
-      background: var(--frost-light);
-      color: var(--frost-blue);
-    }
-    
-    .data-badge.drought {
-      background: var(--drought-light);
-      color: var(--drought-brown);
+    .logo-text {
+      font-weight: 700;
+      color: var(--primary-dark);
+      font-size: 1.2rem;
     }
     
     /* Report Modal */
@@ -573,52 +568,50 @@
       gap: 8px;
     }
     
-    .frost-indicator {
-      display: inline-flex;
+    /* Years sections */
+    .years-section {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .years-container {
+      flex: 1;
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    
+    .years-container h4 {
+      margin-bottom: 10px;
+      color: var(--primary-dark);
+      display: flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
+      gap: 8px;
+    }
+    
+    .years-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .year-badge {
+      padding: 5px 10px;
+      background: #e8f5e9;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    
+    .year-badge.frost {
       background: var(--frost-light);
       color: var(--frost-blue);
-      border-radius: 20px;
-      font-size: 0.85rem;
-      margin-top: 10px;
     }
     
-    .drought-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
+    .year-badge.drought {
       background: var(--drought-light);
       color: var(--drought-brown);
-      border-radius: 20px;
-      font-size: 0.85rem;
-      margin-top: 10px;
-    }
-    
-    .risk-meter {
-      height: 8px;
-      background: #eee;
-      border-radius: 4px;
-      margin-top: 10px;
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .risk-fill {
-      height: 100%;
-      position: absolute;
-      left: 0;
-      top: 0;
-    }
-    
-    .risk-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.75rem;
-      color: #777;
-      margin-top: 5px;
     }
     
     /* Commentary Section */
@@ -646,6 +639,22 @@
     
     .commentary-content p {
       margin-bottom: 15px;
+    }
+    
+    /* Report Headers */
+    .report-header-section {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .report-header-section h2 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
     
     /* Responsive adjustments */
@@ -680,6 +689,10 @@
         width: 100%;
         justify-content: space-between;
       }
+      
+      .years-section {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -687,6 +700,11 @@
   <div class="container">
     <div class="map-section">
       <div class="control-bar">
+        <div class="logo-container">
+          <div class="plaasrisk-logo">PR</div>
+          <div class="logo-text">PlaasRisk</div>
+        </div>
+        
         <div class="control-group">
           <div class="input-with-icon">
             <i class="fas fa-search input-icon"></i>
@@ -749,6 +767,10 @@
       </div>
       
       <div class="report-body">
+        <div class="report-header-section">
+          <h2><i class="fas fa-tractor"></i> Farm Climate Risk Assessment</h2>
+        </div>
+        
         <div class="report-section">
           <h3><i class="fas fa-temperature-low"></i> Temperature Analysis</h3>
           <div class="chart-container">
@@ -813,19 +835,17 @@
             <canvas id="frostChart"></canvas>
           </div>
           
-          <div class="frost-indicator">
-            <i class="fas fa-info-circle"></i>
-            <span id="frostRisk">Moderate frost risk (15 days/year)</span>
-          </div>
-          
-          <div class="risk-meter">
-            <div class="risk-fill" id="frostRiskMeter" style="width: 40%; background: var(--frost-blue);"></div>
-          </div>
-          <div class="risk-labels">
-            <span>Low</span>
-            <span>Moderate</span>
-            <span>High</span>
-            <span>Severe</span>
+          <div class="years-section">
+            <div class="years-container">
+              <h4><i class="fas fa-calendar-day"></i> Years with High Frost Occurrence</h4>
+              <div class="years-list" id="highFrostYears">
+                <div class="year-badge frost">2010</div>
+                <div class="year-badge frost">2012</div>
+                <div class="year-badge frost">2015</div>
+                <div class="year-badge frost">2018</div>
+                <div class="year-badge frost">2021</div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -835,19 +855,17 @@
             <canvas id="droughtChart"></canvas>
           </div>
           
-          <div class="drought-indicator">
-            <i class="fas fa-info-circle"></i>
-            <span id="droughtRisk">Low drought risk (5 days/year)</span>
-          </div>
-          
-          <div class="risk-meter">
-            <div class="risk-fill" id="droughtRiskMeter" style="width: 20%; background: var(--drought-brown);"></div>
-          </div>
-          <div class="risk-labels">
-            <span>Low</span>
-            <span>Moderate</span>
-            <span>High</span>
-            <span>Severe</span>
+          <div class="years-section">
+            <div class="years-container">
+              <h4><i class="fas fa-calendar-day"></i> Years with Severe Drought</h4>
+              <div class="years-list" id="droughtYears">
+                <div class="year-badge drought">2005</div>
+                <div class="year-badge drought">2009</div>
+                <div class="year-badge drought">2016</div>
+                <div class="year-badge drought">2019</div>
+                <div class="year-badge drought">2023</div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -855,20 +873,20 @@
         <div class="commentary-section">
           <h3><i class="fas fa-comment-alt"></i> Climate Commentary</h3>
           <div class="commentary-content" id="climateCommentary">
-            <p>Based on our analysis of the historical climate data for your location, we've identified several key patterns and risks that are important for agricultural planning.</p>
-            <p>The region experiences a distinct seasonal pattern with significant temperature variations throughout the year. Frost events occur primarily during the winter months, posing a risk to sensitive crops. Drought conditions are most prevalent during the summer season when evaporation rates are highest.</p>
-            <p>The long-term data shows a warming trend of +1.2°C over the past 25 years, with precipitation decreasing by 8% during the same period. These trends suggest increasing challenges for water management and crop selection in the coming years.</p>
+            <p>The analysis reveals a warming trend of +1.2°C over the past 25 years, with precipitation decreasing by 8% during the same period. This indicates significant climate shifts that may impact agricultural planning.</p>
+            <p>High frost occurrences were most notable in 2010, 2012, 2015, 2018, and 2021, posing risks to sensitive crops during winter months. Severe drought conditions were recorded in 2005, 2009, 2016, 2019, and 2023, with water shortages impacting crop yields.</p>
+            <p>These patterns suggest increasing challenges for water management and crop selection in the coming years. Farmers should consider implementing advanced irrigation techniques and selecting drought-resistant crop varieties.</p>
           </div>
         </div>
         
         <div class="report-section" style="grid-column: 1 / -1; margin-top: 0;">
           <h3><i class="fas fa-lightbulb"></i> Farming Recommendations</h3>
           <ul style="padding-left: 20px; margin-top: 15px;">
-            <li style="margin-bottom: 10px;" id="rec1">Based on temperature trends, consider drought-resistant crop varieties</li>
-            <li style="margin-bottom: 10px;" id="rec2">Schedule planting in early October to maximize spring rainfall</li>
-            <li style="margin-bottom: 10px;" id="rec3">Implement water conservation techniques during summer months</li>
-            <li style="margin-bottom: 10px;" id="rec4">Monitor for potential heat stress in January and February</li>
-            <li style="margin-bottom: 10px;" id="rec5">Consider supplemental irrigation during November dry spells</li>
+            <li style="margin-bottom: 10px;">Plant frost-resistant crops during winter months in high-risk years</li>
+            <li style="margin-bottom: 10px;">Implement water harvesting systems to mitigate drought impact</li>
+            <li style="margin-bottom: 10px;">Use drought-tolerant crop varieties in anticipation of dry spells</li>
+            <li style="margin-bottom: 10px;">Schedule planting to avoid peak frost periods in high-risk years</li>
+            <li style="margin-bottom: 10px;">Install frost protection systems in vulnerable areas</li>
           </ul>
         </div>
       </div>
@@ -901,6 +919,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script>
     // Initialize map
@@ -982,26 +1002,37 @@
       document.body.style.overflow = 'auto';
     }
     
-    // Download report
+    // Download report as PDF
     function downloadReport() {
-      showNotification("Generating PDF report... This may take a moment.", 'info');
+      showNotification("Generating PDF report...", 'info');
       
-      // Simulate PDF generation delay
-      setTimeout(() => {
-        showNotification("Report downloaded successfully!", 'success');
+      // Use html2canvas to capture the report content
+      const reportContent = document.querySelector('.report-content');
+      
+      html2canvas(reportContent).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
         
-        // Create a dummy PDF download
-        const dummyContent = "This would be the PDF content of the climate report.";
-        const blob = new Blob([dummyContent], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `farm-climate-report-${new Date().toISOString().slice(0,10)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 2000);
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        
+        // Add additional pages if needed
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        // Save the PDF
+        pdf.save(`farm-climate-report-${new Date().toISOString().slice(0,10)}.pdf`);
+        showNotification("Report downloaded successfully!", 'success');
+      });
     }
     
     // Initialize charts in report
@@ -1151,11 +1182,26 @@
       document.getElementById('maxMonthlyPrecip').textContent = `${data.stats.maxMonthlyPrecip} mm`;
       document.getElementById('drySpells').textContent = `${data.stats.drySpells}/yr`;
       document.getElementById('precipTrend').textContent = `${data.stats.precipTrend >= 0 ? '+' : ''}${data.stats.precipTrend}%`;
-      document.getElementById('frostRisk').textContent = data.stats.frostRisk;
-      document.getElementById('droughtRisk').textContent = data.stats.droughtRisk;
-      document.getElementById('frostRiskMeter').style.width = data.stats.frostRiskPercent;
-      document.getElementById('droughtRiskMeter').style.width = data.stats.droughtRiskPercent;
       document.getElementById('reportLocation').textContent = `${data.location.coords} (${data.location.name})`;
+      
+      // Update years with drought and frost
+      const highFrostYears = document.getElementById('highFrostYears');
+      highFrostYears.innerHTML = '';
+      data.stats.highFrostYears.forEach(year => {
+        const badge = document.createElement('div');
+        badge.className = 'year-badge frost';
+        badge.textContent = year;
+        highFrostYears.appendChild(badge);
+      });
+      
+      const droughtYears = document.getElementById('droughtYears');
+      droughtYears.innerHTML = '';
+      data.stats.droughtYears.forEach(year => {
+        const badge = document.createElement('div');
+        badge.className = 'year-badge drought';
+        badge.textContent = year;
+        droughtYears.appendChild(badge);
+      });
       
       // Generate climate commentary
       generateClimateCommentary(data);
@@ -1165,21 +1211,15 @@
     function generateClimateCommentary(data) {
       const commentary = document.getElementById('climateCommentary');
       
-      // Determine risk levels
-      const frostRiskLevel = parseFloat(data.stats.frostRiskPercent);
-      const droughtRiskLevel = parseFloat(data.stats.droughtRiskPercent);
-      
       // Generate commentary based on data
       commentary.innerHTML = `
         <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. This represents a significant shift in temperature patterns that may affect crop selection and growing seasons.</p>
         
         <p>Annual precipitation averages <strong>${data.stats.annualPrecip} mm</strong>, with a ${data.stats.precipTrend >= 0 ? 'increase' : 'decrease'} of <strong>${Math.abs(data.stats.precipTrend)}%</strong> over the analysis period. The region experiences an average of <strong>${data.stats.drySpells} dry spells per year</strong> (months with less than 30mm precipitation).</p>
         
-        <p>Frost occurs on average <strong>${data.stats.frostRisk.split('(')[1]}</strong>, ${frostRiskLevel > 60 ? 'which presents significant challenges for agriculture' : frostRiskLevel > 40 ? 'requiring careful planning for frost-sensitive crops' : 'which is manageable with proper precautions'}.</p>
+        <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. Drought conditions were most severe in <strong>${data.stats.droughtYears.join(', ')}</strong>, requiring careful water management planning.</p>
         
-        <p>Drought conditions occur <strong>${data.stats.droughtRisk.split('(')[1]}</strong>, ${droughtRiskLevel > 60 ? 'indicating severe water stress that requires advanced irrigation systems' : droughtRiskLevel > 40 ? 'suggesting moderate water management challenges' : 'which is within manageable levels for most crops'}.</p>
-        
-        <p>Based on these patterns, farmers should consider implementing ${droughtRiskLevel > 40 ? 'advanced' : 'basic'} water conservation techniques and selecting ${frostRiskLevel > 40 ? 'frost-resistant' : 'cold-tolerant'} crop varieties. The warming trend suggests that heat-tolerant varieties may become increasingly important in the coming decades.</p>
+        <p>Based on these patterns, farmers should consider implementing water conservation techniques and selecting frost-resistant crop varieties. The warming trend suggests that heat-tolerant varieties may become increasingly important in the coming decades.</p>
       `;
     }
 
@@ -1643,34 +1683,21 @@
       // Calculate average dry spells (months with < 30mm precipitation)
       const drySpells = monthlyPrecip.filter(p => p < 30).length;
       
-      // Calculate frost risk
-      const avgFrostDays = frostDays / years.length;
-      let frostRisk = "Low frost risk";
-      let frostRiskPercent = "20%";
-      if (avgFrostDays > 15) {
-        frostRisk = "High frost risk";
-        frostRiskPercent = "70%";
-      } else if (avgFrostDays > 7) {
-        frostRisk = "Moderate frost risk";
-        frostRiskPercent = "40%";
+      // Identify years with high frost (above 15 days)
+      const highFrostYears = [];
+      for (let i = 0; i < years.length; i++) {
+        if (annualFrostDays[i] > 15) {
+          highFrostYears.push(years[i]);
+        }
       }
-      frostRisk += ` (${avgFrostDays.toFixed(1)} days/year)`;
       
-      // Calculate drought risk
-      const avgDroughtDays = droughtDays / years.length;
-      let droughtRisk = "Low drought risk";
-      let droughtRiskPercent = "25%";
-      if (avgDroughtDays > 60) {
-        droughtRisk = "Severe drought risk";
-        droughtRiskPercent = "90%";
-      } else if (avgDroughtDays > 40) {
-        droughtRisk = "High drought risk";
-        droughtRiskPercent = "60%";
-      } else if (avgDroughtDays > 20) {
-        droughtRisk = "Moderate drought risk";
-        droughtRiskPercent = "40%";
+      // Identify years with severe drought (above 50 days)
+      const droughtYears = [];
+      for (let i = 0; i < years.length; i++) {
+        if (annualDroughtDays[i] > 50) {
+          droughtYears.push(years[i]);
+        }
       }
-      droughtRisk += ` (${avgDroughtDays.toFixed(1)} days/year)`;
       
       // Generate labels for years
       const yearLabels = years.map(y => y.toString());
@@ -1706,10 +1733,8 @@
           maxMonthlyPrecip,
           drySpells: (drySpells / years.length).toFixed(1),
           precipTrend: precipTrend,
-          frostRisk,
-          droughtRisk,
-          frostRiskPercent,
-          droughtRiskPercent
+          highFrostYears,
+          droughtYears
         }
       };
     }
