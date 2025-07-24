@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PlaasRisk - Advanced Climate Analysis</title>
   
   <!-- Leaflet CSS -->
@@ -912,27 +912,39 @@
     .risk-moderate { background-color: #ff9800; }
     .risk-high { background-color: #f44336; }
     
-    /* Print specific styles */
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      .report-content, .report-content * {
-        visibility: visible;
-      }
-      .report-content {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        max-width: 100%;
-        box-shadow: none;
-        padding: 10px;
-        margin: 0;
-      }
-      .report-actions, .close-report {
-        display: none !important;
-      }
+    /* Report Letterhead */
+    .letterhead {
+      position: relative;
+      padding: 20px 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--primary);
+    }
+    
+    .letterhead-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .letterhead-logo {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .letterhead-text {
+      text-align: right;
+    }
+    
+    .letterhead-text h1 {
+      color: var(--primary-dark);
+      font-size: 2.2rem;
+      margin-bottom: 5px;
+    }
+    
+    .letterhead-text p {
+      color: #666;
+      font-size: 0.9rem;
     }
     
     /* PDF loading overlay */
@@ -964,6 +976,22 @@
     
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+    
+    /* Prepared by section */
+    .prepared-by {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 15px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      border-left: 3px solid var(--primary);
+    }
+    
+    .prepared-by strong {
+      color: var(--primary-dark);
     }
     
     /* Responsive adjustments */
@@ -1015,6 +1043,16 @@
       .prediction-value {
         font-size: 2rem;
       }
+      
+      .letterhead-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+      }
+      
+      .letterhead-text {
+        text-align: center;
+      }
     }
   </style>
 </head>
@@ -1063,6 +1101,9 @@
           <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
             <i class="fas fa-map-pin"></i> Drop Pin
           </button>
+          <button class="btn btn-outline" id="satelliteBtn" onclick="toggleSatellite()">
+            <i class="fas fa-satellite"></i> Vegetation
+          </button>
         </div>
       </div>
       
@@ -1090,6 +1131,25 @@
   <!-- Report Modal -->
   <div class="report-modal" id="reportModal">
     <div class="report-content">
+      <!-- Report Letterhead -->
+      <div class="letterhead">
+        <div class="letterhead-content">
+          <div class="letterhead-logo">
+            <div class="plaasrisk-logo">
+              <i class="fas fa-seedling logo-icon"></i>
+            </div>
+            <div>
+              <h1 class="logo-text">PlaasRisk</h1>
+              <p>Advanced Farm Climate Analysis</p>
+            </div>
+          </div>
+          <div class="letterhead-text">
+            <p>Date: <span id="reportDate">${new Date().toLocaleDateString()}</span></p>
+            <p>Prepared for: <strong>Macdonald Makoro</strong></p>
+          </div>
+        </div>
+      </div>
+      
       <div class="report-header">
         <h2 class="report-title">
           <i class="fas fa-file-alt"></i>
@@ -1261,7 +1321,7 @@
               </div>
             </div>
             
-            <!-- NEW: Frost Prediction Card -->
+            <!-- Frost Prediction Card -->
             <div class="prediction-card">
               <div class="prediction-title">
                 <i class="fas fa-snowflake"></i>
@@ -1363,6 +1423,11 @@
           </button>
         </div>
       </div>
+      
+      <!-- Prepared by section -->
+      <div class="prepared-by">
+        Prepared by: <strong>Macdonald Makoro</strong>
+      </div>
     </div>
   </div>
 
@@ -1378,10 +1443,24 @@
     const map = L.map('map').setView([-25.0, 30.0], 5); // Set to South Africa coordinates
     
     // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+    
+    // Add satellite vegetation layer
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri'
+    });
+    
+    // Add layer control
+    const baseLayers = {
+      "Standard Map": osmLayer,
+      "Satellite Vegetation": satelliteLayer
+    };
+    
+    L.control.layers(baseLayers).addTo(map);
     
     // Add a marker to South Africa
     L.marker([-25.0, 30.0]).addTo(map)
@@ -1463,6 +1542,23 @@
       window.print();
     }
     
+    // Toggle satellite layer
+    function toggleSatellite() {
+      if (map.hasLayer(satelliteLayer)) {
+        map.removeLayer(satelliteLayer);
+        map.addLayer(osmLayer);
+        document.getElementById('satelliteBtn').classList.remove('btn-primary');
+        document.getElementById('satelliteBtn').classList.add('btn-outline');
+        showNotification("Standard map view activated", 'info');
+      } else {
+        map.removeLayer(osmLayer);
+        map.addLayer(satelliteLayer);
+        document.getElementById('satelliteBtn').classList.add('btn-primary');
+        document.getElementById('satelliteBtn').classList.remove('btn-outline');
+        showNotification("Satellite vegetation view activated", 'success');
+      }
+    }
+    
     // Download report as PDF - IMPROVED VERSION
     function downloadReport() {
       const loadingOverlay = document.getElementById('pdfLoading');
@@ -1476,34 +1572,25 @@
       reportContent.style.height = 'auto';
       reportContent.style.overflow = 'visible';
       
-      // Add page numbers to each page
-      const pageNumbers = document.createElement('div');
-      pageNumbers.id = 'pageNumbers';
-      pageNumbers.style.position = 'fixed';
-      pageNumbers.style.bottom = '10px';
-      pageNumbers.style.right = '20px';
-      pageNumbers.style.color = '#666';
-      pageNumbers.style.fontSize = '12px';
-      pageNumbers.style.zIndex = '9999';
-      document.body.appendChild(pageNumbers);
+      // Add report title to each page
+      const header = document.createElement('div');
+      header.innerHTML = `
+        <div style="position:fixed; top:10px; left:0; right:0; text-align:center; font-size:14px; color:#2e7d32; z-index:9999;">
+          PlaasRisk Climate Report - ${new Date().toLocaleDateString()}
+        </div>
+      `;
+      document.body.appendChild(header);
       
       html2canvas(reportContent, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         onclone: function(clonedDoc) {
-          // Add report title to each page
-          const header = clonedDoc.createElement('div');
-          header.innerHTML = `
-            <div style="position:fixed; top:10px; left:0; right:0; text-align:center; font-size:14px; color:#2e7d32; z-index:9999;">
-              PlaasRisk Climate Report - ${new Date().toLocaleDateString()}
-            </div>
-          `;
-          clonedDoc.body.appendChild(header);
+          clonedDoc.body.appendChild(header.cloneNode(true));
         }
       }).then(canvas => {
-        // Remove page numbers
-        document.body.removeChild(pageNumbers);
+        // Remove temporary elements
+        document.body.removeChild(header);
         
         // Restore original styles
         reportContent.style.height = originalHeight;
@@ -1540,27 +1627,16 @@
         }
         
         // Save the PDF
-        pdf.save(`farm-climate-report-${new Date().toISOString().slice(0,10)}.pdf`);
+        pdf.save(`PlaasRisk_Report_${new Date().toISOString().slice(0,10)}.pdf`);
         loadingOverlay.style.display = 'none';
         showNotification("Report downloaded successfully!", 'success');
       })
       .catch(error => {
         console.error('Error generating PDF:', error);
+        document.body.removeChild(header);
         loadingOverlay.style.display = 'none';
         showNotification("Failed to generate PDF. Try the print option.", 'error');
       });
-    }
-    
-    // Alternative PDF generation method (simulated)
-    function generateAlternativePDF() {
-      const loadingOverlay = document.getElementById('pdfLoading');
-      loadingOverlay.style.display = 'flex';
-      
-      // Simulate server-side PDF generation
-      setTimeout(() => {
-        showNotification("PDF generated successfully via alternative method", 'success');
-        loadingOverlay.style.display = 'none';
-      }, 3000);
     }
     
     // Initialize charts in report
@@ -2100,6 +2176,14 @@
         document.getElementById('dropPinBtn').classList.remove('btn-primary');
         document.getElementById('dropPinBtn').classList.add('btn-outline');
         document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      }
+      
+      // Reset to standard map view
+      if (map.hasLayer(satelliteLayer)) {
+        map.removeLayer(satelliteLayer);
+        map.addLayer(osmLayer);
+        document.getElementById('satelliteBtn').classList.remove('btn-primary');
+        document.getElementById('satelliteBtn').classList.add('btn-outline');
       }
     }
 
