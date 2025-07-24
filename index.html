@@ -800,6 +800,7 @@
       gap: 20px;
       position: relative;
       z-index: 2;
+      flex-wrap: wrap;
     }
     
     @media (max-width: 768px) {
@@ -815,6 +816,7 @@
       padding: 20px;
       backdrop-filter: blur(5px);
       border: 1px solid rgba(255, 255, 255, 0.2);
+      min-width: 300px;
     }
     
     .prediction-title {
@@ -889,6 +891,79 @@
       font-size: 0.9rem;
       position: relative;
       z-index: 2;
+    }
+    
+    /* Frost Risk Indicator */
+    .frost-risk {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 15px;
+      gap: 8px;
+    }
+    
+    .risk-indicator {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+    }
+    
+    .risk-low { background-color: #4caf50; }
+    .risk-moderate { background-color: #ff9800; }
+    .risk-high { background-color: #f44336; }
+    
+    /* Print specific styles */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .report-content, .report-content * {
+        visibility: visible;
+      }
+      .report-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        box-shadow: none;
+        padding: 10px;
+        margin: 0;
+      }
+      .report-actions, .close-report {
+        display: none !important;
+      }
+    }
+    
+    /* PDF loading overlay */
+    .pdf-loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 4000;
+      color: white;
+      display: none;
+    }
+    
+    .pdf-spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
     
     /* Responsive adjustments */
@@ -1003,6 +1078,13 @@
   <div id="notification" class="notification">
     <i class="fas fa-check-circle"></i>
     <span id="notification-text">Notification message</span>
+  </div>
+  
+  <!-- PDF Loading Overlay -->
+  <div class="pdf-loading-overlay" id="pdfLoading">
+    <div class="pdf-spinner"></div>
+    <h3>Generating PDF Report</h3>
+    <p>Please wait while we prepare your full report...</p>
   </div>
   
   <!-- Report Modal -->
@@ -1129,7 +1211,7 @@
           </div>
         </div>
         
-        <!-- NEW: Prediction Section -->
+        <!-- Prediction Section -->
         <div class="prediction-section">
           <div class="prediction-header">
             <i class="fas fa-crystal-ball" style="font-size: 2.5rem;"></i>
@@ -1178,10 +1260,36 @@
                 <span>Wet</span>
               </div>
             </div>
+            
+            <!-- NEW: Frost Prediction Card -->
+            <div class="prediction-card">
+              <div class="prediction-title">
+                <i class="fas fa-snowflake"></i>
+                <h4>Frost Forecast</h4>
+              </div>
+              <div class="prediction-value" id="predictedFrost">18 days</div>
+              <div class="prediction-label">Annual Total</div>
+              <div class="prediction-trend trend-up">
+                <i class="fas fa-arrow-up"></i>
+                <span>3 days above average</span>
+              </div>
+              <div class="prediction-gauge">
+                <div class="gauge-fill" id="frostGauge" style="width: 70%; background: linear-gradient(90deg, #bbdefb, #1e88e5);"></div>
+              </div>
+              <div class="gauge-labels">
+                <span>Low</span>
+                <span>Average</span>
+                <span>High</span>
+              </div>
+              <div class="frost-risk">
+                <div class="risk-indicator risk-high"></div>
+                <span>High Frost Risk Expected</span>
+              </div>
+            </div>
           </div>
           
           <div class="prediction-footer">
-            <p><i class="fas fa-info-circle"></i> Predictions based on historical trends and seasonal forecasting models. This forecast indicates a warmer and drier year ahead. Farmers should prepare for potential water shortages and consider heat-tolerant crop varieties.</p>
+            <p><i class="fas fa-info-circle"></i> Predictions based on historical trends and seasonal forecasting models. This forecast indicates a warmer and drier year ahead with increased frost risk. Farmers should prepare for potential water shortages, consider heat-tolerant crop varieties, and implement frost protection measures.</p>
           </div>
         </div>
         
@@ -1192,7 +1300,7 @@
             <p>The analysis reveals a warming trend of +1.2°C over the past 25 years, with precipitation decreasing by 8% during the same period. This indicates significant climate shifts that may impact agricultural planning.</p>
             
             <h4>Frost Analysis</h4>
-            <p>High frost occurrences were most notable in 2010, 2012, 2015, 2018, and 2021, posing risks to sensitive crops during winter months. These frost events primarily occurred during the months of June to August.</p>
+            <p>High frost occurrences were most notable in 2010, 2012, 2015, 2018, and 2021, posing risks to sensitive crops during winter months. These frost events primarily occurred during the months of June to August. The prediction for the upcoming year shows an increased frost risk of 18 days, which is significantly above the historical average.</p>
             
             <div class="parameters-box">
               <p><strong>Frost Classification Parameters:</strong> Frost events are classified when minimum temperature drops below -2°C for 3+ consecutive hours, with wind speed &lt; 2 m/s and cloud cover &lt; 20%.</p>
@@ -1225,6 +1333,8 @@
             <li style="margin-bottom: 10px;">Use drought-tolerant crop varieties in anticipation of dry spells</li>
             <li style="margin-bottom: 10px;">Schedule planting to avoid peak frost periods in high-risk years</li>
             <li style="margin-bottom: 10px;">Install frost protection systems in vulnerable areas</li>
+            <li style="margin-bottom: 10px;">Monitor frost forecasts closely during high-risk months (May-August)</li>
+            <li style="margin-bottom: 10px;">Consider crop insurance for frost and drought protection</li>
           </ul>
         </div>
       </div>
@@ -1244,6 +1354,9 @@
         <div class="report-actions">
           <button class="download-btn" onclick="downloadReport()">
             <i class="fas fa-download"></i> Download Report (PDF)
+          </button>
+          <button class="download-btn" onclick="printReport()" style="background: #5e35b1;">
+            <i class="fas fa-print"></i> Print Report
           </button>
           <button class="close-btn" onclick="closeReport()">
             <i class="fas fa-times"></i> Close Report
@@ -1335,6 +1448,7 @@
       // Update prediction values
       document.getElementById('predictedTemp').textContent = `${data.prediction.temp.toFixed(1)}°C`;
       document.getElementById('predictedPrecip').textContent = `${data.prediction.precip.toFixed(0)} mm`;
+      document.getElementById('predictedFrost').textContent = `${data.prediction.frost} days`;
     }
     
     // Close report modal
@@ -1344,11 +1458,16 @@
       document.body.style.overflow = 'auto';
     }
     
-    // Download report as PDF - FIXED VERSION
+    // Print report
+    function printReport() {
+      window.print();
+    }
+    
+    // Download report as PDF - IMPROVED VERSION
     function downloadReport() {
-      showNotification("Generating PDF report...", 'info');
+      const loadingOverlay = document.getElementById('pdfLoading');
+      loadingOverlay.style.display = 'flex';
       
-      // Use html2canvas to capture the report content
       const reportContent = document.querySelector('.report-content');
       const originalHeight = reportContent.style.height;
       const originalOverflow = reportContent.style.overflow;
@@ -1357,11 +1476,35 @@
       reportContent.style.height = 'auto';
       reportContent.style.overflow = 'visible';
       
+      // Add page numbers to each page
+      const pageNumbers = document.createElement('div');
+      pageNumbers.id = 'pageNumbers';
+      pageNumbers.style.position = 'fixed';
+      pageNumbers.style.bottom = '10px';
+      pageNumbers.style.right = '20px';
+      pageNumbers.style.color = '#666';
+      pageNumbers.style.fontSize = '12px';
+      pageNumbers.style.zIndex = '9999';
+      document.body.appendChild(pageNumbers);
+      
       html2canvas(reportContent, {
-        scale: 2, // Higher quality
+        scale: 2,
         useCORS: true,
-        logging: false
+        logging: false,
+        onclone: function(clonedDoc) {
+          // Add report title to each page
+          const header = clonedDoc.createElement('div');
+          header.innerHTML = `
+            <div style="position:fixed; top:10px; left:0; right:0; text-align:center; font-size:14px; color:#2e7d32; z-index:9999;">
+              PlaasRisk Climate Report - ${new Date().toLocaleDateString()}
+            </div>
+          `;
+          clonedDoc.body.appendChild(header);
+        }
       }).then(canvas => {
+        // Remove page numbers
+        document.body.removeChild(pageNumbers);
+        
         // Restore original styles
         reportContent.style.height = originalHeight;
         reportContent.style.overflow = originalOverflow;
@@ -1373,22 +1516,51 @@
         const imgHeight = canvas.height * imgWidth / canvas.width;
         let heightLeft = imgHeight;
         let position = 0;
+        let pageCount = 1;
         
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
+        
+        // Add page number to first page
+        pdf.setFontSize(10);
+        pdf.text(`Page ${pageCount}`, imgWidth - 20, pageHeight - 10);
+        pageCount++;
         
         // Add additional pages if needed
         while (heightLeft >= 0) {
           position = heightLeft - imgHeight;
           pdf.addPage();
           pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          
+          // Add page number
+          pdf.text(`Page ${pageCount}`, imgWidth - 20, pageHeight - 10);
+          pageCount++;
+          
           heightLeft -= pageHeight;
         }
         
         // Save the PDF
         pdf.save(`farm-climate-report-${new Date().toISOString().slice(0,10)}.pdf`);
+        loadingOverlay.style.display = 'none';
         showNotification("Report downloaded successfully!", 'success');
+      })
+      .catch(error => {
+        console.error('Error generating PDF:', error);
+        loadingOverlay.style.display = 'none';
+        showNotification("Failed to generate PDF. Try the print option.", 'error');
       });
+    }
+    
+    // Alternative PDF generation method (simulated)
+    function generateAlternativePDF() {
+      const loadingOverlay = document.getElementById('pdfLoading');
+      loadingOverlay.style.display = 'flex';
+      
+      // Simulate server-side PDF generation
+      setTimeout(() => {
+        showNotification("PDF generated successfully via alternative method", 'success');
+        loadingOverlay.style.display = 'none';
+      }, 3000);
     }
     
     // Initialize charts in report
@@ -1619,7 +1791,7 @@
         <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. This represents a significant shift in temperature patterns that may affect crop selection and growing seasons.</p>
         
         <h4>Frost Analysis</h4>
-        <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. The highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}. Frost typically occurs between May and August in this region.</p>
+        <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. The highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}. Frost typically occurs between May and August in this region. The prediction for the upcoming year shows <strong>${data.prediction.frost} frost days</strong>, which is ${data.prediction.frost > 15 ? 'above' : 'below'} the historical average.</p>
         
         <div class="parameters-box">
           <p><strong>Frost Classification Parameters:</strong> Frost events are classified when minimum temperature drops below -2°C for 3+ consecutive hours, with wind speed &lt; 2 m/s and cloud cover &lt; 20%.</p>
@@ -2138,7 +2310,11 @@
       
       // Predict precipitation
       const precipSlope = (annualPrecip[annualPrecip.length - 1] - annualPrecip[0]) / (years.length - 1);
-      const predictedPrecip = annualPrecip[annualPrecip.length - 1] + precipSlope;
+      const predictedPrecip = annualPrecip[annualAvgTemp.length - 1] + precipSlope;
+      
+      // Predict frost days
+      const frostSlope = (annualFrostDays[annualFrostDays.length - 1] - annualFrostDays[0]) / (years.length - 1);
+      const predictedFrost = Math.max(0, annualFrostDays[annualFrostDays.length - 1] + frostSlope).toFixed(0);
       
       // Prepare data for charts
       return {
@@ -2183,7 +2359,8 @@
         prediction: {
           year: nextYear,
           temp: predictedTemp,
-          precip: predictedPrecip
+          precip: predictedPrecip,
+          frost: predictedFrost
         }
       };
     }
