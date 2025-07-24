@@ -1454,13 +1454,24 @@
       attribution: 'Tiles &copy; Esri'
     });
     
+    // Add administrative boundaries layer
+    const adminBoundaries = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      opacity: 0.3
+    });
+    
     // Add layer control
     const baseLayers = {
       "Standard Map": osmLayer,
       "Satellite Vegetation": satelliteLayer
     };
     
-    L.control.layers(baseLayers).addTo(map);
+    const overlays = {
+      "Administrative Boundaries": adminBoundaries
+    };
+    
+    L.control.layers(baseLayers, overlays).addTo(map);
     
     // Add a marker to South Africa
     L.marker([-25.0, 30.0]).addTo(map)
