@@ -34,6 +34,7 @@
       --frost-light: #bbdefb;
       --drought-brown: #8d6e63;
       --drought-light: #efebe9;
+      --geojson-blue: #1e88e5;
       --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
     
@@ -336,6 +337,10 @@
     
     .notification.info {
       background: var(--primary);
+    }
+    
+    .notification.geojson {
+      background: var(--geojson-blue);
     }
     
     footer {
@@ -1101,6 +1106,10 @@
           <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
             <i class="fas fa-map-pin"></i> Drop Pin
           </button>
+          <!-- New Export Button -->
+          <button class="btn btn-outline" onclick="exportGeoJSON()">
+            <i class="fas fa-file-download"></i> Export Boundary
+          </button>
           <button class="btn btn-outline" id="satelliteBtn" onclick="toggleSatellite()">
             <i class="fas fa-satellite"></i> Vegetation
           </button>
@@ -1807,8 +1816,8 @@
           }]
         },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true;
+          maintainAspectRatio: false;
           plugins: {
             title: {
               display: true,
@@ -2458,6 +2467,44 @@
           frost: predictedFrost
         }
       };
+    }
+    
+    // Export farm boundary as GeoJSON
+    function exportGeoJSON() {
+      const layers = drawnItems.getLayers();
+      const polygons = layers.filter(layer => layer instanceof L.Polygon);
+      
+      if (polygons.length === 0) {
+        showNotification("No farm boundary drawn. Draw a polygon first.", "error");
+        return;
+      }
+      
+      const geoJSON = {
+        type: "FeatureCollection",
+        features: polygons.map(polygon => ({
+          type: "Feature",
+          geometry: polygon.toGeoJSON().geometry,
+          properties: {
+            name: "Farm Boundary",
+            created: new Date().toISOString(),
+            source: "PlaasRisk"
+          }
+        }))
+      };
+      
+      const geoJSONString = JSON.stringify(geoJSON, null, 2);
+      const blob = new Blob([geoJSONString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `PlaasRisk_Farm_Boundary_${new Date().toISOString().split('T')[0]}.geojson`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showNotification("Farm boundary exported as GeoJSON", "geojson");
     }
     
     // Initialize progress bar
