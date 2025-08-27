@@ -1101,9 +1101,6 @@
           <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
             <i class="fas fa-map-pin"></i> Drop Pin
           </button>
-          <button class="btn btn-outline" id="satelliteBtn" onclick="toggleSatellite()">
-            <i class="fas fa-satellite"></i> Vegetation
-          </button>
         </div>
       </div>
       
@@ -1448,12 +1445,6 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     
-    // Add satellite vegetation layer
-    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
-      attribution: 'Tiles &copy; Esri'
-    });
-    
     // Add administrative boundaries layer
     const adminBoundaries = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -1463,8 +1454,7 @@
     
     // Add layer control
     const baseLayers = {
-      "Standard Map": osmLayer,
-      "Satellite Vegetation": satelliteLayer
+      "Standard Map": osmLayer
     };
     
     const overlays = {
@@ -1551,23 +1541,6 @@
     // Print report
     function printReport() {
       window.print();
-    }
-    
-    // Toggle satellite layer
-    function toggleSatellite() {
-      if (map.hasLayer(satelliteLayer)) {
-        map.removeLayer(satelliteLayer);
-        map.addLayer(osmLayer);
-        document.getElementById('satelliteBtn').classList.remove('btn-primary');
-        document.getElementById('satelliteBtn').classList.add('btn-outline');
-        showNotification("Standard map view activated", 'info');
-      } else {
-        map.removeLayer(osmLayer);
-        map.addLayer(satelliteLayer);
-        document.getElementById('satelliteBtn').classList.add('btn-primary');
-        document.getElementById('satelliteBtn').classList.remove('btn-outline');
-        showNotification("Satellite vegetation view activated", 'success');
-      }
     }
     
     // Download report as PDF - IMPROVED VERSION
@@ -2187,14 +2160,6 @@
         document.getElementById('dropPinBtn').classList.remove('btn-primary');
         document.getElementById('dropPinBtn').classList.add('btn-outline');
         document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
-      }
-      
-      // Reset to standard map view
-      if (map.hasLayer(satelliteLayer)) {
-        map.removeLayer(satelliteLayer);
-        map.addLayer(osmLayer);
-        document.getElementById('satelliteBtn').classList.remove('btn-primary');
-        document.getElementById('satelliteBtn').classList.add('btn-outline');
       }
     }
 
