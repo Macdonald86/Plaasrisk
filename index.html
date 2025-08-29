@@ -12,40 +12,389 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; }
-    #map { height: 60vh; width: 100%; }
-    .dashboard { padding: 15px; }
-    .controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
-    input, button { padding: 6px; border-radius: 6px; border: 1px solid #ccc; }
-    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    canvas { background: #fff; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    :root {
+      --primary-color: #2e7d32;
+      --secondary-color: #7cb342;
+      --accent-color: #ffa000;
+      --light-color: #f5f5f5;
+      --dark-color: #333;
+      --danger-color: #d32f2f;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background-color: #f8f9fa;
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    header {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 1rem;
+      box-shadow: var(--box-shadow);
+    }
+    
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .logo i {
+      font-size: 1.5rem;
+    }
+    
+    .main-content {
+      display: flex;
+      flex: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 1rem;
+      gap: 1rem;
+    }
+    
+    .map-container {
+      flex: 1;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      box-shadow: var(--box-shadow);
+    }
+    
+    #map { 
+      height: 100%; 
+      width: 100%; 
+      min-height: 400px;
+    }
+    
+    .dashboard {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--box-shadow);
+    }
+    
+    .card-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .controls { 
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .control-group label {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    
+    .input-with-button {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .input-with-button input {
+      flex: 1;
+    }
+    
+    input, button, select {
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      font-family: inherit;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--secondary-color);
+      box-shadow: 0 0 0 2px rgba(124, 179, 66, 0.2);
+    }
+    
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-weight: 500;
+    }
+    
+    button:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    button.secondary {
+      background-color: #6c757d;
+    }
+    
+    button.secondary:hover {
+      background-color: #5a6268;
+    }
+    
+    .charts { 
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    
+    @media (min-width: 992px) {
+      .main-content {
+        flex-direction: row;
+      }
+      
+      .charts {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    canvas { 
+      width: 100% !important;
+      height: 250px !important;
+    }
+    
+    .loading {
+      position: relative;
+    }
+    
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      background-color: var(--danger-color);
+      color: white;
+      box-shadow: var(--box-shadow);
+      transform: translateX(100%);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    
+    .map-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: white;
+      padding: 0.75rem;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      font-size: 0.8rem;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+    }
+    
+    footer {
+      background-color: var(--dark-color);
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      margin-top: 2rem;
+    }
   </style>
 </head>
 <body>
-  <div id="map"></div>
+  <div class="container">
+    <header>
+      <div class="header-content">
+        <div class="logo">
+          <i class="fas fa-tractor"></i>
+          <h1>PlaasRisk Dashboard</h1>
+        </div>
+        <div id="currentDate"></div>
+      </div>
+    </header>
 
-  <div class="dashboard">
-    <div class="controls">
-      <!-- Location Search -->
-      <input type="text" id="locationName" placeholder="Search location by name">
-      <button onclick="searchLocation()">Search</button>
+    <div class="main-content">
+      <div class="map-container card">
+        <div class="card-title">
+          <i class="fas fa-map"></i>
+          <span>Select Farm Area</span>
+        </div>
+        <div id="map"></div>
+        <div class="map-actions">
+          <button onclick="clearDrawnItems()" class="secondary">
+            <i class="fas fa-trash"></i> Clear Areas
+          </button>
+        </div>
+      </div>
 
-      <!-- GPS Search -->
-      <input type="number" id="lat" placeholder="Latitude" step="any">
-      <input type="number" id="lon" placeholder="Longitude" step="any">
-      <button onclick="goToCoordinates()">Go</button>
+      <div class="dashboard">
+        <div class="card">
+          <div class="card-title">
+            <i class="fas fa-sliders-h"></i>
+            <span>Data Controls</span>
+          </div>
+          <div class="controls">
+            <div class="control-group">
+              <label for="locationName">Search by Location Name</label>
+              <div class="input-with-button">
+                <input type="text" id="locationName" placeholder="Enter location name">
+                <button onclick="searchLocation()" title="Search location">
+                  <i class="fas fa-search"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="control-group">
+              <label for="lat">Coordinates</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="number" id="lat" placeholder="Latitude" step="any">
+                <input type="number" id="lon" placeholder="Longitude" step="any">
+                <button onclick="goToCoordinates()" title="Go to coordinates">
+                  <i class="fas fa-map-marker-alt"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="control-group">
+              <label for="startDate">Date Range</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="date" id="startDate">
+                <span>to</span>
+                <input type="date" id="endDate">
+                <button onclick="updateData()" title="Update data">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <!-- Date Range -->
-      <label>Start: <input type="date" id="startDate"></label>
-      <label>End: <input type="date" id="endDate"></label>
-      <button onclick="updateData()">Update</button>
+        <div class="charts">
+          <div class="card">
+            <div class="card-title">
+              <i class="fas fa-cloud-rain"></i>
+              <span>Rainfall Data</span>
+            </div>
+            <canvas id="rainChart"></canvas>
+          </div>
+          
+          <div class="card">
+            <div class="card-title">
+              <i class="fas fa-leaf"></i>
+              <span>Vegetation Health (NDVI)</span>
+            </div>
+            <canvas id="ndviChart"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="charts">
-      <canvas id="rainChart"></canvas>
-      <canvas id="ndviChart"></canvas>
+    <div class="legend">
+      <h4>NDVI Scale</h4>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #d73027;"></div>
+        <span>Low (0-0.2)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #fee08b;"></div>
+        <span>Moderate (0.2-0.5)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #1a9850;"></div>
+        <span>High (0.5-1.0)</span>
+      </div>
     </div>
+
+    <div id="notification" class="notification"></div>
+
+    <footer>
+      <p>PlaasRisk Dashboard &copy; 2023 | Agricultural Risk Assessment Tool</p>
+    </footer>
   </div>
 
   <!-- Leaflet JS -->
@@ -53,90 +402,344 @@
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 
   <script>
+    // Set current date in header
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Set default date range (last 30 days to today)
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+
     // --- INIT MAP ---
-    const map = L.map('map').setView([-23.9, 29.4], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const map = L.map('map').setView([-28.5, 25.0], 5); // Centered on South Africa
+    
+    // Add different base layers
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map);
+    
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    });
+    
+    // Add layer control
+    const baseMaps = {
+      "OpenStreetMap": osmLayer,
+      "Satellite": satelliteLayer
+    };
+    L.control.layers(baseMaps).addTo(map);
 
     // Draw controls
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
-    new L.Control.Draw({
-      edit: { featureGroup: drawnItems },
-      draw: { circle: false, marker: false }
-    }).addTo(map);
+    
+    const drawControl = new L.Control.Draw({
+      edit: { 
+        featureGroup: drawnItems,
+        remove: true
+      },
+      draw: { 
+        circle: false, 
+        marker: false,
+        circlemarker: false,
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          metric: true,
+          precision: { km: 2, mi: 2 }
+        },
+        rectangle: {
+          showArea: true,
+          metric: true,
+          precision: { km: 2, mi: 2 }
+        }
+      }
+    });
+    map.addControl(drawControl);
 
     // When field is drawn
     map.on(L.Draw.Event.CREATED, function (e) {
       const layer = e.layer;
       drawnItems.addLayer(layer);
+      
+      // Calculate area and show info
+      const area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+      const areaHa = (area / 10000).toFixed(2);
+      layer.bindPopup(`Area: ${areaHa} hectares`).openPopup();
+      
       const centroid = layer.getBounds().getCenter();
       fetchData(centroid.lat, centroid.lng);
     });
 
+    // Clear drawn items function
+    function clearDrawnItems() {
+      drawnItems.clearLayers();
+      rainChart.data.labels = [];
+      rainChart.data.datasets[0].data = [];
+      rainChart.update();
+      
+      ndviChart.data.labels = [];
+      ndviChart.data.datasets[0].data = [];
+      ndviChart.update();
+    }
+
+    // Show notification function
+    function showNotification(message, isError = true) {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.style.backgroundColor = isError ? 'var(--danger-color)' : 'var(--primary-color)';
+      notification.classList.add('show');
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 3000);
+    }
+
     // --- WEATHER CHART ---
     const rainChart = new Chart(document.getElementById('rainChart'), {
       type: 'line',
-      data: { labels: [], datasets: [{ label: 'Rainfall (mm)', data: [] }] }
+      data: { 
+        labels: [], 
+        datasets: [{
+          label: 'Rainfall (mm)',
+          data: [],
+          borderColor: 'rgb(54, 162, 235)',
+          backgroundColor: 'rgba(54, 162, 235, 0.1)',
+          fill: true,
+          tension: 0.3
+        }] 
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Daily Precipitation'
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Millimeters (mm)'
+            }
+          }
+        }
+      }
     });
 
     // --- NDVI CHART ---
     const ndviChart = new Chart(document.getElementById('ndviChart'), {
       type: 'line',
-      data: { labels: [], datasets: [{ label: 'NDVI', data: [], borderColor: 'green' }] }
+      data: { 
+        labels: [], 
+        datasets: [{
+          label: 'NDVI',
+          data: [],
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.1)',
+          fill: true,
+          tension: 0.3
+        }] 
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Normalized Difference Vegetation Index'
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
+        },
+        scales: {
+          y: {
+            min: 0,
+            max: 1,
+            title: {
+              display: true,
+              text: 'NDVI Value'
+            }
+          }
+        }
+      }
     });
 
     // --- FETCH WEATHER ---
     async function fetchData(lat, lon) {
-      let start = document.getElementById('startDate').value || '2024-01-01';
-      let end = document.getElementById('endDate').value || '2024-12-31';
-
-      // Weather API
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum&start_date=${start}&end_date=${end}&timezone=Africa%2FJohannesburg`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (data.daily) {
-        rainChart.data.labels = data.daily.time;
-        rainChart.data.datasets[0].data = data.daily.precipitation_sum;
-        rainChart.update();
+      let start = document.getElementById('startDate').value;
+      let end = document.getElementById('endDate').value;
+      
+      // Validate dates
+      if (!start || !end) {
+        showNotification('Please select both start and end dates');
+        return;
       }
+      
+      if (new Date(start) > new Date(end)) {
+        showNotification('Start date must be before end date');
+        return;
+      }
+      
+      // Show loading state
+      const updateButton = document.querySelector('button[onclick="updateData()"]');
+      const originalContent = updateButton.innerHTML;
+      updateButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      updateButton.disabled = true;
 
-      // NDVI (dummy for now, replace with GEE tiles)
-      let ndvi = data.daily.time.map((_, i) => Math.random() * 0.4 + 0.3);
-      ndviChart.data.labels = data.daily.time;
-      ndviChart.data.datasets[0].data = ndvi;
-      ndviChart.update();
+      try {
+        // Weather API
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum&start_date=${start}&end_date=${end}&timezone=Africa%2FJohannesburg`;
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+        
+        const data = await res.json();
+
+        if (data.daily) {
+          // Format dates for display
+          const formattedDates = data.daily.time.map(date => {
+            return new Date(date).toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric' 
+            });
+          });
+          
+          rainChart.data.labels = formattedDates;
+          rainChart.data.datasets[0].data = data.daily.precipitation_sum;
+          rainChart.update();
+        }
+
+        // NDVI (dummy for now, replace with GEE tiles)
+        let ndvi = data.daily.time.map((_, i) => {
+          // More realistic NDVI simulation with seasonal pattern
+          const baseDate = new Date(data.daily.time[i]);
+          const dayOfYear = baseDate.getDate() + baseDate.getMonth() * 30;
+          const seasonalFactor = 0.3 * Math.sin(dayOfYear / 365 * 2 * Math.PI - Math.PI/2) + 0.5;
+          return Math.random() * 0.2 + seasonalFactor * 0.5;
+        });
+        
+        ndviChart.data.labels = rainChart.data.labels;
+        ndviChart.data.datasets[0].data = ndvi;
+        ndviChart.update();
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        showNotification('Failed to fetch data. Please try again.');
+      } finally {
+        // Restore button state
+        updateButton.innerHTML = originalContent;
+        updateButton.disabled = false;
+      }
     }
 
     // --- SEARCH FUNCTIONS ---
     async function searchLocation() {
-      const name = document.getElementById('locationName').value;
-      if (!name) return;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}`;
-      const res = await fetch(url);
-      const places = await res.json();
-      if (places.length > 0) {
-        const { lat, lon } = places[0];
-        map.setView([lat, lon], 10);
+      const name = document.getElementById('locationName').value.trim();
+      if (!name) {
+        showNotification('Please enter a location name');
+        return;
+      }
+      
+      const searchButton = document.querySelector('button[onclick="searchLocation()"]');
+      const originalContent = searchButton.innerHTML;
+      searchButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      searchButton.disabled = true;
+      
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}`;
+        const res = await fetch(url);
+        const places = await res.json();
+        
+        if (places.length === 0) {
+          showNotification('Location not found');
+          return;
+        }
+        
+        const { lat, lon, display_name } = places[0];
+        map.setView([lat, lon], 12);
+        
+        // Add marker for the searched location
+        drawnItems.clearLayers();
+        L.marker([lat, lon])
+          .addTo(drawnItems)
+          .bindPopup(display_name)
+          .openPopup();
+        
         fetchData(lat, lon);
+      } catch (error) {
+        console.error('Search error:', error);
+        showNotification('Search failed. Please try again.');
+      } finally {
+        searchButton.innerHTML = originalContent;
+        searchButton.disabled = false;
       }
     }
 
     function goToCoordinates() {
       const lat = parseFloat(document.getElementById('lat').value);
       const lon = parseFloat(document.getElementById('lon').value);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        map.setView([lat, lon], 10);
-        fetchData(lat, lon);
+      
+      if (isNaN(lat) || isNaN(lon)) {
+        showNotification('Please enter valid coordinates');
+        return;
       }
+      
+      if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        showNotification('Latitude must be between -90 and 90, Longitude between -180 and 180');
+        return;
+      }
+      
+      map.setView([lat, lon], 12);
+      
+      // Add marker for the coordinate location
+      drawnItems.clearLayers();
+      L.marker([lat, lon])
+        .addTo(drawnItems)
+        .bindPopup(`Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`)
+        .openPopup();
+      
+      fetchData(lat, lon);
     }
 
     function updateData() {
-      const center = map.getCenter();
-      fetchData(center.lat, center.lng);
+      if (drawnItems.getLayers().length === 0) {
+        showNotification('Please draw an area on the map first');
+        return;
+      }
+      
+      // Get the last drawn item's center
+      const layers = drawnItems.getLayers();
+      const lastLayer = layers[layers.length - 1];
+      const centroid = lastLayer.getBounds().getCenter();
+      
+      fetchData(centroid.lat, centroid.lng);
     }
+
+    // Initialize with some data for demonstration
+    setTimeout(() => {
+      if (drawnItems.getLayers().length === 0) {
+        fetchData(-28.5, 25.0);
+      }
+    }, 1000);
   </script>
 </body>
 </html>
