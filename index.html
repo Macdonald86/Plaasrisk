@@ -1,366 +1,53 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Plaasrisk — Single-file</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  <style>
-    /* Minimal reset + layout */
-    :root{--bg:#f3f4f6;--card:#fff;--muted:#6b7280;--accent:#0f172a}
-    html,body,#app{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
-    body { background:var(--bg); color:var(--accent); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
-    .container{max-width:1200px;margin:18px auto;padding:16px;display:grid;grid-template-columns:1fr 360px;gap:16px}
-    header{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
-    h1{margin:0;font-size:20px}
-    .card{background:var(--card);border-radius:12px;padding:12px;border:1px solid rgba(15,23,42,0.06);box-shadow:0 1px 2px rgba(15,23,42,0.03)}
-    .controls{display:flex;gap:8px;align-items:center}
-    input[type=number]{width:140px;padding:8px;border-radius:10px;border:1px solid #e5e7eb}
-    button{background:#fff;border:1px solid #e5e7eb;padding:8px 10px;border-radius:10px;cursor:pointer}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    /* map & charts */
-    #map { height:420px;border-radius:10px;overflow:hidden }
-    .chart { height:220px }
-    .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-    .stat{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid rgba(15,23,42,0.03)}
-    .muted{color:var(--muted);font-size:13px}
-    footer{max-width:1200px;margin:8px auto 32px;padding:12px;color:var(--muted);font-size:13px}
-    .small{font-size:13px}
-    @media(max-width:1000px){ .container{grid-template-columns:1fr; } #map{height:360px} .chart{height:180px} }
-  </style>
-</head>
-<body>
-  <div id="app">
-    <header style="max-width:1200px;margin:18px auto;padding:0 16px 8px;">
-      <div style="display:flex;align-items:center;gap:12px">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="opacity:.9"><path d="M4 21h16" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round"/><path d="M12 3v18" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <div><h1>Plaasrisk — Field Risk Scout</h1><div class="muted">Draw fields, fetch rainfall, view NDVI & a simple risk score</div></div>
-      </div>
-      <div class="controls">
-        <button id="refreshBtn">Refresh</button>
-        <button id="exportBtn">Export JSON</button>
-      </div>
-    </header>
+/* Code.gs — Earth Engine NDVI timeseries API (free via Apps Script) */
+const EEDataset = 'MODIS/061/MOD13A2'; // 16-day, 1km. Band: NDVI (scale 1e-4)
+function toFeature(aoi) { return ee.Geometry.Polygon(aoi.coordinates); }
 
-    <div class="container">
-      <!-- Left column: map + rainfall chart -->
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div class="card">
-          <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;">
-            <div style="display:flex;align-items:center;gap:8px">
-              <label class="small muted">Lat</label>
-              <input id="latInput" type="number" step="0.000001" value="-23.908"/>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <label class="small muted">Lon</label>
-              <input id="lonInput" type="number" step="0.000001" value="29.451"/>
-            </div>
-            <div style="flex:1"></div>
-            <button id="gotoBtn">Jump to Lat/Lon</button>
-          </div>
-          <div id="map"></div>
-          <div class="muted small" style="margin-top:8px">Draw a polygon or rectangle on the map to select a field. Centroid is used to fetch weather.</div>
-        </div>
+function seriesNDVI(aoi, start, end) {
+  const geom = toFeature(aoi);
+  const col = ee.ImageCollection(EEDataset)
+    .filterDate(start, end)
+    .select('NDVI')
+    .map(img => img.updateMask(img.neq(-3000))); // mask fill
 
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div><strong>Rainfall (last 150 days)</strong><div class="muted small">Daily precipitation (mm)</div></div>
-            <div class="muted small">Reference: Open-Meteo</div>
-          </div>
-          <canvas id="rainChart" class="chart"></canvas>
-        </div>
+  const dates = col.aggregate_array('system:time_start');
+  const means = col.map(img => img.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: geom,
+    scale: 1000,
+    bestEffort: true,
+    maxPixels: 1e13
+  }).get('NDVI').divide(10000))
+    .aggregate_array('NDVI');
 
-      </div>
+  return ee.Dictionary({ dates, means });
+}
 
-      <!-- Right column: KPIs + NDVI chart + form -->
-      <aside style="display:flex;flex-direction:column;gap:12px">
-        <div class="card">
-          <strong>Risk Overview</strong>
-          <div style="margin-top:10px" class="stats-grid" id="statsGrid">
-            <div class="stat"><div class="muted small">Risk score</div><div id="riskScore" style="font-weight:700;font-size:18px">—</div></div>
-            <div class="stat"><div class="muted small">Max dry spell (60d)</div><div id="maxDry" style="font-weight:700">—</div></div>
-            <div class="stat"><div class="muted small">Rain (last 60d)</div><div id="rain60" style="font-weight:700">—</div></div>
-            <div class="stat"><div class="muted small">Avg NDVI (30d)</div><div id="avgNDVI" style="font-weight:700">—</div></div>
-          </div>
-        </div>
+function doGet(e) { return handle(e); }
+function doPost(e) { return handle(e); }
 
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div><strong>NDVI (generated)</strong><div class="muted small">Placeholder series — swap for Sentinel/GEE</div></div>
-            <div class="muted small">30–120 day series</div>
-          </div>
-          <canvas id="ndviChart" class="chart"></canvas>
-        </div>
+function handle(e) {
+  try {
+    const body = e.postData?.contents || e.parameter?.q || '{}';
+    const req = JSON.parse(body);
+    const aoi = req.aoi;     // GeoJSON Polygon
+    const start = req.start; // 'YYYY-MM-DD'
+    const end = req.end;     // 'YYYY-MM-DD'
 
-        <div class="card">
-          <strong>Get Advisory / Sign Up</strong>
-          <form id="signupForm" style="margin-top:10px;display:grid;gap:8px">
-            <input id="farmName" placeholder="Farm name (optional)" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb" />
-            <input id="email" placeholder="Email (optional)" type="email" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb" />
-            <div style="display:flex;gap:8px">
-              <button type="submit">Download Report</button>
-              <a id="waLink" href="#" target="_blank" style="display:inline-block;padding:8px;border-radius:8px;border:1px solid #e5e7eb;text-decoration:none;line-height:28px">WhatsApp</a>
-            </div>
-            <div class="muted small">Download JSON report or message the WhatsApp number for updates.</div>
-          </form>
-        </div>
-      </aside>
-    </div>
-
-    <footer>Built for static hosting. Replace NDVI generator with Sentinel Hub, VITO or Google Earth Engine for real NDVI time-series.</footer>
-  </div>
-
-  <!-- Dependencies -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw-src.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-  <script>
-  // ------------------ Utilities -------------------
-  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
-  const daysAgo = (n) => new Date(Date.now() - n * 86400000);
-  const fmtDate = d => new Date(d).toISOString().slice(0,10);
-  function debounce(fn, wait=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),wait) } }
-  function downloadJSON(filename,data){
-    const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // Deterministic pseudo-NDVI generator (placeholder)
-  function generatePseudoNDVI(lat, lon, days=120){
-    const seed = Math.abs(Math.sin((lat+90)*(lon+180)))*10000;
-    let x = seed;
-    const out = [];
-    for(let i=days-1;i>=0;i--){
-      x = (1103515245 * x + 12345) % 2147483648;
-      const base = 0.2 + 0.6*(x/2147483648);
-      const seasonal = 0.1 * Math.sin((i/90)*2*Math.PI);
-      const ndvi = clamp(base + seasonal, 0.05, 0.9);
-      out.push({ date: fmtDate(daysAgo(i)), ndvi: +ndvi.toFixed(3) });
-    }
-    return out;
-  }
-
-  // Simple risk computation
-  function computeRisk({ rainSeries=[], ndviSeries=[] }){
-    const last60 = rainSeries.slice(-60);
-    let curr=0, maxStreak=0, total=0;
-    last60.forEach(d => {
-      total += d.precip;
-      if(d.precip < 1){ curr +=1; maxStreak = Math.max(maxStreak, curr); } else curr = 0;
+    const dict = seriesNDVI(aoi, start, end);
+    const res = dict.evaluate(d => {
+      const out = (d.dates || []).map((t,i)=>({
+        date: new Date(t).toISOString().slice(0,10),
+        ndvi: +(d.means?.[i] ?? null)
+      })).filter(p => p.ndvi !== null);
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok:true, points: out }))
+        .setMimeType(ContentService.MimeType.JSON);
     });
-    const avgNDVI = (ndviSeries.slice(-30).reduce((a,b)=>a+(b.ndvi||0),0) / 30) || 0;
-    const score = clamp(Math.round(
-      0.55 * (maxStreak * (100/30)) +
-      0.25 * (100 - Math.round(avgNDVI*100)) +
-      0.20 * (100 - clamp(Math.round((total/60)*100),0,100))
-    ), 0, 100);
-    return { score, maxDrySpell: maxStreak, last60Total: +total.toFixed(1), avgNDVI: +avgNDVI.toFixed(3) };
+    // evaluate is async; Apps Script requires returning something; we’ll return a placeholder.
+    return ContentService.createTextOutput(JSON.stringify({ ok:true, note:"Processing"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok:false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
-
-  // Fetch Open-Meteo daily precipitation
-  async function fetchOpenMeteoDaily(lat, lon, days=150){
-    const end = new Date();
-    const start = new Date(Date.now() - days*86400000);
-    const url = new URL('https://api.open-meteo.com/v1/forecast');
-    url.searchParams.set('latitude', lat);
-    url.searchParams.set('longitude', lon);
-    url.searchParams.set('daily', 'precipitation_sum');
-    url.searchParams.set('timezone', 'auto');
-    url.searchParams.set('start_date', fmtDate(start));
-    url.searchParams.set('end_date', fmtDate(end));
-    const res = await fetch(url.toString());
-    if(!res.ok) throw new Error('Open-Meteo error ' + res.status);
-    const json = await res.json();
-    const times = json.daily?.time || [];
-    const prec = json.daily?.precipitation_sum || [];
-    const out = times.map((t,i)=>({ date:t, precip: +(prec[i] ?? 0) }));
-    return out;
-  }
-
-  // ------------------ App state -------------------
-  const latInput = document.getElementById('latInput');
-  const lonInput = document.getElementById('lonInput');
-  const gotoBtn = document.getElementById('gotoBtn');
-  const refreshBtn = document.getElementById('refreshBtn');
-  const exportBtn = document.getElementById('exportBtn');
-  const waLink = document.getElementById('waLink');
-  const signupForm = document.getElementById('signupForm');
-
-  const riskScoreEl = document.getElementById('riskScore');
-  const maxDryEl = document.getElementById('maxDry');
-  const rain60El = document.getElementById('rain60');
-  const avgNDVIE = document.getElementById('avgNDVI');
-
-  let mapCenter = { lat: parseFloat(latInput.value), lon: parseFloat(lonInput.value) };
-  let currentField = null; // {lat,lon, polygons}
-  let rainSeries = [];
-  let ndviSeries = [];
-
-  // ------------------ Map init + draw -------------------
-  const map = L.map('map', { preferCanvas:true }).setView([mapCenter.lat, mapCenter.lon], 10);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  const drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
-
-  const drawControl = new L.Control.Draw({
-    draw: { polyline:false, circlemarker:false, rectangle:true, polygon:true, circle:false, marker:false },
-    edit: { featureGroup: drawnItems }
-  });
-  map.addControl(drawControl);
-
-  function computeCentroidFromLayer(layer){
-    // handles polygons & rectangles
-    const latlngs = layer.getLatLngs ? layer.getLatLngs() : [];
-    const flat = (latlngs && latlngs.flat ? latlngs.flat(2) : []).filter(Boolean);
-    if(!flat.length) return null;
-    const lat = flat.reduce((a,p)=>a+p.lat,0)/flat.length;
-    const lon = flat.reduce((a,p)=>a+p.lng,0)/flat.length;
-    return { lat:+lat.toFixed(6), lon:+lon.toFixed(6) };
-  }
-
-  function notifyField(){
-    const polygons = [];
-    drawnItems.eachLayer(l => {
-      if(l.getLatLngs) polygons.push(l.getLatLngs());
-    });
-    if(!polygons.length){ currentField = null; return; }
-    const centroid = computeCentroidFromLayer(drawnItems.getLayers()[0]);
-    currentField = { lat: centroid.lat, lon: centroid.lon, polygons };
-    mapCenter = { lat: centroid.lat, lon: centroid.lon };
-    latInput.value = centroid.lat;
-    lonInput.value = centroid.lon;
-    // refresh data automatically when drawing
-    refreshAll();
-  }
-
-  map.on(L.Draw.Event.CREATED, function (e) {
-    drawnItems.addLayer(e.layer);
-    notifyField();
-  });
-  map.on(L.Draw.Event.EDITED, function (e){ notifyField(); });
-  map.on(L.Draw.Event.DELETED, function (e){ notifyField(); });
-
-  // ------------------ Charts -------------------
-  const rainCtx = document.getElementById('rainChart').getContext('2d');
-  const ndviCtx = document.getElementById('ndviChart').getContext('2d');
-
-  const rainChart = new Chart(rainCtx, {
-    type: 'bar',
-    data: { labels: [], datasets: [{ label:'Precip (mm)', data: [], borderWidth:0 }] },
-    options: { responsive:true, maintainAspectRatio:false, scales:{ x:{ ticks:{maxRotation:0,minRotation:0} }, y:{ beginAtZero:true }}, plugins:{ legend:{ display:false } } }
-  });
-
-  const ndviChart = new Chart(ndviCtx, {
-    type: 'line',
-    data: { labels: [], datasets:[ { label:'NDVI', data:[], fill:false, tension:0.3 } ] },
-    options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ min:0, max:1 } }, plugins:{ legend:{ display:false } } }
-  });
-
-  function updateCharts(){
-    // rain
-    rainChart.data.labels = rainSeries.map(d=>d.date);
-    rainChart.data.datasets[0].data = rainSeries.map(d=>d.precip);
-    rainChart.update();
-
-    // ndvi
-    ndviChart.data.labels = ndviSeries.map(d=>d.date);
-    ndviChart.data.datasets[0].data = ndviSeries.map(d=>d.ndvi);
-    ndviChart.update();
-  }
-
-  // ------------------ Core refresh -------------------
-  let refreshing = false;
-  async function refreshAll(target){
-    if(refreshing) return;
-    refreshing = true;
-    refreshBtn.disabled = true;
-    try{
-      const lat = (target?.lat ?? mapCenter.lat), lon = (target?.lon ?? mapCenter.lon);
-      // fetch rainfall
-      rainSeries = await fetchOpenMeteoDaily(lat, lon, 150);
-      // generated NDVI placeholder
-      ndviSeries = generatePseudoNDVI(lat, lon, 120);
-      // compute risk
-      const risk = computeRisk({ rainSeries, ndviSeries });
-      // update UI
-      document.getElementById('riskScore').innerText = risk.score + '/100';
-      document.getElementById('maxDry').innerText = risk.maxDrySpell + ' days';
-      document.getElementById('rain60').innerText = risk.last60Total + ' mm';
-      document.getElementById('avgNDVI').innerText = (risk.avgNDVI).toFixed(3);
-      updateCharts();
-      // update WhatsApp link
-      waLink.href = 'https://wa.me/27662232221?text=' + encodeURIComponent(`Hi Plaasrisk, I want crop insurance updates for lat=${lat}, lon=${lon}`);
-    }catch(err){
-      alert('Error fetching data: ' + err.message);
-    }finally{
-      refreshBtn.disabled = false;
-      refreshing = false;
-    }
-  }
-
-  // initial load
-  refreshAll({ lat:mapCenter.lat, lon:mapCenter.lon });
-
-  // ------------------ UI bindings -------------------
-  gotoBtn.addEventListener('click', ()=>{
-    const lat = parseFloat(latInput.value), lon = parseFloat(lonInput.value);
-    if(Number.isFinite(lat) && Number.isFinite(lon)){
-      map.setView([lat, lon], 11);
-      mapCenter = { lat, lon };
-      refreshAll({ lat, lon });
-    } else alert('Invalid coordinates');
-  });
-
-  refreshBtn.addEventListener('click', ()=> refreshAll({ lat: mapCenter.lat, lon: mapCenter.lon }));
-
-  exportBtn.addEventListener('click', ()=>{
-    const report = {
-      generatedAt: new Date().toISOString(),
-      location: mapCenter,
-      fieldPolygons: currentField ? currentField.polygons.length : 0,
-      metrics: computeRisk({ rainSeries, ndviSeries }),
-      rain: rainSeries,
-      ndvi: ndviSeries
-    };
-    downloadJSON(`Plaasrisk_Report_${fmtDate(new Date())}.json`, report);
-  });
-
-  signupForm.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const report = {
-      generatedAt: new Date().toISOString(),
-      farmName: document.getElementById('farmName').value || null,
-      email: document.getElementById('email').value || null,
-      location: mapCenter,
-      metrics: computeRisk({ rainSeries, ndviSeries }),
-      rain: rainSeries,
-      ndvi: ndviSeries
-    };
-    downloadJSON(`Plaasrisk_Report_${fmtDate(new Date())}.json`, report);
-  });
-
-  // sync inputs debounced
-  latInput.addEventListener('input', debounce((e)=>{
-    const v = parseFloat(e.target.value);
-    if(Number.isFinite(v)) mapCenter.lat = v;
-  }, 400));
-  lonInput.addEventListener('input', debounce((e)=>{
-    const v = parseFloat(e.target.value);
-    if(Number.isFinite(v)) mapCenter.lon = v;
-  }, 400));
-
-  // expose a window helper for debugging
-  window.Plaasrisk = {
-    refreshAll, computeRisk, generatePseudoNDVI, fetchOpenMeteoDaily
-  };
-  </script>
-</body>
-</html>
+}
