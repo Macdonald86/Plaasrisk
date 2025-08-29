@@ -1,394 +1,115 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1, maximum-scale=1"
-/>
-<title>Plaasrisk — Free NDVI + Rain</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlaasRisk – Farm Climate Risk Tool</title>
 
-<!-- Minimal styling (Tailwind CDN) -->
-<script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
 
-<!-- Leaflet + Draw -->
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
-/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-
-<!-- Recharts via UMD + React (for charts) -->
-<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
-
-<style>
-  html, body, #app { height: 100%; }
-  #map { height: 420px; }
-  .leaflet-container { background: #f8fafc; }
-  .panel { @apply rounded-2xl bg-white shadow-sm border overflow-hidden; }
-  .panel-head { @apply flex items-center justify-between px-4 py-3 border-b bg-gray-50; }
-  .panel-body { @apply p-4; }
-</style>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #map { height: 70vh; width: 100%; }
+    #controls { padding: 1rem; }
+    canvas { max-width: 100%; }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
-<div id="app" class="max-w-7xl mx-auto p-4 space-y-4">
-  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b rounded-b-xl">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="font-bold tracking-tight">Plaasrisk</span>
-        <span class="text-xs text-gray-500">— Field Risk Scout (Free NDVI)</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="btn-refresh" class="rounded-xl px-3 py-2 border shadow-sm hover:bg-gray-50">
-          Refresh
-        </button>
-        <button id="btn-export" class="rounded-xl px-3 py-2 border shadow-sm hover:bg-gray-50">
-          Export JSON
-        </button>
-      </div>
-    </div>
-  </header>
+<body>
+  <h2 style="text-align:center;">🌍 PlaasRisk – Farm Risk Dashboard</h2>
 
-  <!-- Map + controls -->
-  <section class="panel">
-    <div class="panel-head">
-      <h3 class="font-semibold">Select Location / Draw Field</h3>
-      <div class="text-xs text-gray-500 hidden md:block">Draw rectangle or polygon</div>
-    </div>
-    <div class="panel-body space-y-3">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <label class="col-span-1 text-sm">
-          <span class="text-gray-500">Lat</span>
-          <input id="lat" type="number" step="0.000001" value="-23.908"
-            class="w-full mt-1 rounded-xl border px-3 py-2" />
-        </label>
-        <label class="col-span-1 text-sm">
-          <span class="text-gray-500">Lon</span>
-          <input id="lon" type="number" step="0.000001" value="29.451"
-            class="w-full mt-1 rounded-xl border px-3 py-2" />
-        </label>
-        <button id="btn-jump" class="col-span-2 rounded-xl px-3 py-2 border shadow-sm hover:bg-gray-50">
-          Jump to Lat/Lon
-        </button>
-      </div>
+  <!-- Map -->
+  <div id="map"></div>
 
-      <div id="map" class="rounded-2xl overflow-hidden border"></div>
+  <!-- Controls -->
+  <div id="controls">
+    <label>Select NDVI Date Range:</label>
+    <input type="date" id="startDate"> to 
+    <input type="date" id="endDate">
+    <button id="loadNdvi">Load NDVI</button>
 
-      <div id="err" class="text-sm text-red-600"></div>
-    </div>
-  </section>
+    <h3>Rainfall (mm)</h3>
+    <canvas id="rainChart"></canvas>
 
-  <!-- NDVI Layer (NASA GIBS) -->
-  <section class="panel">
-    <div class="panel-head">
-      <h3 class="font-semibold">NDVI Layer (NASA GIBS — free)</h3>
-      <div class="text-xs text-gray-500">Pick a 16-day composite date</div>
-    </div>
-    <div class="panel-body space-y-3">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-        <label class="text-sm">
-          <span class="text-gray-500">NDVI Date (YYYY-MM-DD)</span>
-          <input id="ndvi-date" type="date" class="w-full mt-1 rounded-xl border px-3 py-2" />
-        </label>
-        <label class="text-sm">
-          <span class="text-gray-500">Resolution / Zoom preset</span>
-          <select id="ndvi-matrix" class="w-full mt-1 rounded-xl border px-3 py-2">
-            <option value="GoogleMapsCompatible_Level9">GoogleMapsCompatible_Level9 (general)</option>
-            <option value="250m">250m (max zoom lower)</option>
-            <option value="500m">500m</option>
-          </select>
-        </label>
-        <button id="btn-ndvi" class="rounded-xl px-3 py-2 border shadow-sm hover:bg-gray-50">
-          Apply NDVI Date
-        </button>
-      </div>
-      <p class="text-xs text-gray-500">
-        Source: NASA GIBS WMTS — layer <code>MODIS_Terra_L3_NDVI_16Day</code>. Dates snap to the nearest valid 16-day period.
-      </p>
-    </div>
-  </section>
+    <h3>NDVI</h3>
+    <canvas id="ndviChart"></canvas>
+  </div>
 
-  <!-- Rain + Risk -->
-  <section class="grid grid-cols-1 xl:grid-cols-5 gap-4">
-    <div class="xl:col-span-3 panel">
-      <div class="panel-head">
-        <h3 class="font-semibold">Rainfall (last 120 days)</h3>
-      </div>
-      <div class="panel-body">
-        <div id="rain-chart" style="height:280px;"></div>
-      </div>
-    </div>
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <div class="xl:col-span-2 panel">
-      <div class="panel-head">
-        <h3 class="font-semibold">Risk Overview</h3>
-      </div>
-      <div class="panel-body grid grid-cols-2 gap-3 text-sm">
-        <div class="rounded-2xl p-4 shadow-sm border bg-white">
-          <div class="text-xs text-gray-500">Risk Score</div>
-          <div id="risk-score" class="text-lg font-semibold">—</div>
-        </div>
-        <div class="rounded-2xl p-4 shadow-sm border bg-white">
-          <div class="text-xs text-gray-500">Max Dry Spell (60d)</div>
-          <div id="risk-dry" class="text-lg font-semibold">—</div>
-        </div>
-        <div class="rounded-2xl p-4 shadow-sm border bg-white">
-          <div class="text-xs text-gray-500">Rain (last 60d)</div>
-          <div id="risk-rain" class="text-lg font-semibold">—</div>
-        </div>
-        <div class="rounded-2xl p-4 shadow-sm border bg-white">
-          <div class="text-xs text-gray-500">Avg NDVI (30d)</div>
-          <div id="risk-ndvi" class="text-lg font-semibold">— (placeholder)</div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <script>
+    // Initialize Map
+    var map = L.map('map').setView([-23.9, 29.4], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-  <!-- Optional: Advisory / Download -->
-  <section class="panel">
-    <div class="panel-head">
-      <h3 class="font-semibold">Get Advisory / Download</h3>
-      <a id="wa" target="_blank" rel="noreferrer"
-         class="rounded-xl px-3 py-2 border shadow-sm hover:bg-gray-50">WhatsApp</a>
-    </div>
-    <div class="panel-body">
-      <p class="text-xs text-gray-500">
-        The JSON includes location, drawn geometry (if any), rainfall series and risk metrics.
-        NDVI averages per field require a backend; see “GEE Option” below if you want that later.
-      </p>
-    </div>
-  </section>
+    // Draw Tools
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    new L.Control.Draw({
+      edit: { featureGroup: drawnItems }
+    }).addTo(map);
 
-  <footer class="text-xs text-gray-500 py-6">
-    Built for static hosting (GitHub Pages/Netlify). Rain via Open-Meteo. NDVI via NASA GIBS. No API keys.
-  </footer>
-</div>
+    // Charts
+    const rainCtx = document.getElementById('rainChart').getContext('2d');
+    const ndviCtx = document.getElementById('ndviChart').getContext('2d');
+    let rainChart, ndviChart;
 
-<script>
-/* ---------------------------
-   Small helpers
-----------------------------*/
-const clamp = (v,min,max)=>Math.min(max,Math.max(min,v));
-const fmtDate = (d)=> new Date(d).toISOString().slice(0,10);
-const daysAgo = (n)=> new Date(Date.now()-n*86400000);
-function downloadJSON(filename, data) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
-  URL.revokeObjectURL(url);
-}
+    function fetchRainfall(lat, lon) {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum&past_days=90&timezone=Africa%2FJohannesburg`;
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          const labels = data.daily.time;
+          const values = data.daily.precipitation_sum;
+          if (rainChart) rainChart.destroy();
+          rainChart = new Chart(rainCtx, {
+            type: 'line',
+            data: { labels, datasets: [{ label: "Rainfall (mm)", data: values }] }
+          });
+        });
+    }
 
-/* ---------------------------
-   Risk (same logic as before)
-----------------------------*/
-function computeRisk({ rainSeries, ndviSeries }) {
-  const last60 = (rainSeries || []).slice(-60);
-  let curr=0, maxStreak=0, total=0;
-  last60.forEach(d=>{
-    const v = d.precip ?? d.prec ?? 0;
-    total += v;
-    if (v < 1) { curr += 1; maxStreak = Math.max(maxStreak, curr) } else curr = 0;
-  });
-  const last30 = (ndviSeries || []).slice(-30);
-  const avgNDVI = last30.length ? last30.reduce((a,b)=>a+(b.ndvi||0),0)/last30.length : 0.3; // fallback
-  const score = clamp(Math.round(
-    0.55 * (maxStreak * (100/30)) +
-    0.25 * (100 - Math.round(avgNDVI*100)) +
-    0.20 * (100 - clamp(Math.round((total/60)*100),0,100))
-  ), 0, 100);
-  return { score, maxDrySpell: maxStreak, last60Total: +total.toFixed(1), avgNDVI: +avgNDVI.toFixed(3) };
-}
+    function fetchNdvi(lat, lon, start, end) {
+      // 🚨 Replace this placeholder with your GEE tile URL
+      // Example from your output:
+      const geeUrl = "https://earthengine.googleapis.com/v1/projects/zimbabwe-underwriting/maps/c453f0d6009c4d8458053b7ba3f3d939-40151f500cecc9251e3b4e53126dc5bf/tiles/{z}/{x}/{y}";
+      
+      // Overlay GEE NDVI Layer
+      L.tileLayer(geeUrl, { attribution: "Google Earth Engine" }).addTo(map);
 
-/* ---------------------------
-   Open-Meteo rainfall (free)
-----------------------------*/
-async function fetchOpenMeteoDaily(lat, lon, days=120) {
-  const end = new Date();
-  const start = new Date(Date.now() - days*86400000);
-  const url = new URL('https://api.open-meteo.com/v1/forecast');
-  url.searchParams.set('latitude', lat);
-  url.searchParams.set('longitude', lon);
-  url.searchParams.set('daily','precipitation_sum');
-  url.searchParams.set('timezone','auto');
-  url.searchParams.set('start_date', fmtDate(start));
-  url.searchParams.set('end_date', fmtDate(end));
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('Open-Meteo error: '+res.status);
-  const j = await res.json();
-  return (j.daily?.time||[]).map((date,i)=>({ date, precip:+(j.daily.precipitation_sum?.[i]??0) }));
-}
+      // Fake NDVI chart until GEE JSON stats integrated
+      const labels = ["Jan", "Feb", "Mar", "Apr"];
+      const values = [0.3, 0.45, 0.55, 0.6];
+      if (ndviChart) ndviChart.destroy();
+      ndviChart = new Chart(ndviCtx, {
+        type: 'line',
+        data: { labels, datasets: [{ label: "NDVI", data: values, borderColor: "green" }] }
+      });
+    }
 
-/* ---------------------------
-   NDVI (NASA GIBS WMTS, free)
-   Layer: MODIS_Terra_L3_NDVI_16Day
-   Template (EPSG:3857 REST):
-   https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/LAYER/default/TIME/TILEMATRIX/{z}/{y}/{x}.jpg
-----------------------------*/
-const GIBS = {
-  layer: 'MODIS_Terra_L3_NDVI_16Day',
-  defaultMatrix: 'GoogleMapsCompatible_Level9'
-};
-function buildGibsUrl(time, matrix) {
-  const t = (time && /^\d{4}-\d{2}-\d{2}$/.test(time)) ? time : 'default';
-  const m = matrix || GIBS.defaultMatrix;
-  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${GIBS.layer}/default/${t}/${m}/{z}/{y}/{x}.jpg`;
-}
+    // On field drawn
+    map.on(L.Draw.Event.CREATED, function (event) {
+      const layer = event.layer;
+      drawnItems.addLayer(layer);
+      const center = layer.getBounds().getCenter();
+      fetchRainfall(center.lat, center.lng);
+    });
 
-/* ---------------------------
-   Leaflet map + draw
-----------------------------*/
-const latEl = document.getElementById('lat');
-const lonEl = document.getElementById('lon');
-const ndviDateEl = document.getElementById('ndvi-date');
-const ndviMatrixEl = document.getElementById('ndvi-matrix');
-const errEl = document.getElementById('err');
-
-const map = L.map('map').setView([-23.908, 29.451], 10);
-const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution:'&copy; OpenStreetMap contributors'
-}).addTo(map);
-
-// Draw
-const drawn = new L.FeatureGroup();
-map.addLayer(drawn);
-const drawControl = new L.Control.Draw({
-  draw: { polygon:true, rectangle:true, polyline:false, marker:false, circle:false, circlemarker:false },
-  edit: { featureGroup: drawn }
-});
-map.addControl(drawControl);
-
-let fieldCentroid = { lat: -23.908, lon: 29.451 };
-function getCentroidLatLngs(layer) {
-  const latlngs = layer.getLatLngs().flat(2);
-  const lat = latlngs.reduce((a,p)=>a+p.lat,0)/latlngs.length;
-  const lon = latlngs.reduce((a,p)=>a+p.lng,0)/latlngs.length;
-  return { lat:+lat.toFixed(6), lon:+lon.toFixed(6) };
-}
-map.on(L.Draw.Event.CREATED, (e)=>{
-  drawn.addLayer(e.layer);
-  fieldCentroid = getCentroidLatLngs(e.layer);
-  latEl.value = fieldCentroid.lat;
-  lonEl.value = fieldCentroid.lon;
-  refreshAll();
-});
-map.on(L.Draw.Event.EDITED, ()=>{
-  const first = Object.values(drawn._layers)[0];
-  if (first) {
-    fieldCentroid = getCentroidLatLngs(first);
-    latEl.value = fieldCentroid.lat;
-    lonEl.value = fieldCentroid.lon;
-    refreshAll();
-  }
-});
-map.on(L.Draw.Event.DELETED, ()=>{
-  fieldCentroid = { lat: parseFloat(latEl.value), lon: parseFloat(lonEl.value) };
-  refreshAll();
-});
-
-// NDVI overlay (GIBS)
-let ndviLayer = L.tileLayer(buildGibsUrl(null, GIBS.defaultMatrix), { opacity: 0.75 });
-ndviLayer.addTo(map);
-
-// Date default = today
-ndviDateEl.value = fmtDate(new Date());
-document.getElementById('btn-ndvi').addEventListener('click', ()=>{
-  const url = buildGibsUrl(ndviDateEl.value, ndviMatrixEl.value);
-  if (ndviLayer) map.removeLayer(ndviLayer);
-  ndviLayer = L.tileLayer(url, { opacity: 0.75 });
-  ndviLayer.addTo(map);
-});
-
-// Jump + refresh
-document.getElementById('btn-jump').addEventListener('click', ()=>{
-  const lat = parseFloat(latEl.value), lon = parseFloat(lonEl.value);
-  if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    map.setView([lat, lon], 10);
-    fieldCentroid = { lat, lon };
-    refreshAll();
-  }
-});
-
-/* ---------------------------
-   Rain chart (Recharts UMD)
-----------------------------*/
-const e = React.createElement;
-const { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, ReferenceLine } = Recharts;
-
-function RainChart({ data }) {
-  return e('div', { style: { width:'100%', height:'100%' } },
-    e(ResponsiveContainer, { width:'100%', height:260 },
-      e(LineChart, { data, margin:{ left:8, right:8, top:10, bottom:0 } },
-        e(CartesianGrid, { strokeDasharray:'3 3' }),
-        e(XAxis, { dataKey:'date', tick:{ fontSize:11 }, minTickGap:24 }),
-        e(YAxis, { tick:{ fontSize:11 }, unit:'mm' }),
-        e(Tooltip, { formatter:(v)=>`${v} mm` }),
-        e(ReferenceLine, { y:1, strokeDasharray:'4 4' }),
-        e(Line, { type:'monotone', dataKey:'precip', strokeWidth:2, dot:false })
-      )
-    )
-  );
-}
-
-let rainData = [];
-function renderRain() {
-  ReactDOM.render(e(RainChart, { data: rainData }), document.getElementById('rain-chart'));
-}
-
-/* ---------------------------
-   Refresh, Risk, Export
-----------------------------*/
-async function refreshAll() {
-  errEl.textContent = '';
-  document.getElementById('btn-refresh').disabled = true;
-  try {
-    const lat = fieldCentroid.lat, lon = fieldCentroid.lon;
-    // Rain
-    rainData = await fetchOpenMeteoDaily(lat, lon, 150);
-    renderRain();
-
-    // NDVI series placeholder (still empty – averages need backend).
-    const ndviSeries = []; // Keep empty; risk falls back to 0.3 avg if empty.
-    const r = computeRisk({ rainSeries: rainData, ndviSeries });
-
-    // Update metrics
-    document.getElementById('risk-score').textContent = `${r.score}/100`;
-    document.getElementById('risk-dry').textContent = `${r.maxDrySpell} days`;
-    document.getElementById('risk-rain').textContent = `${r.last60Total} mm`;
-    document.getElementById('risk-ndvi').textContent = `${r.avgNDVI} (placeholder)`;
-
-    // Update WhatsApp link
-    const wa = document.getElementById('wa');
-    wa.href = `https://wa.me/27662232221?text=${encodeURIComponent(
-      `Hi Plaasrisk, I want crop insurance updates for lat=${lat}, lon=${lon}.`
-    )}`;
-  } catch (e) {
-    errEl.textContent = e?.message || String(e);
-  } finally {
-    document.getElementById('btn-refresh').disabled = false;
-  }
-}
-document.getElementById('btn-refresh').addEventListener('click', refreshAll);
-document.getElementById('btn-export').addEventListener('click', ()=>{
-  const out = {
-    generatedAt: new Date().toISOString(),
-    location: fieldCentroid,
-    geometry: Object.values(drawn._layers).map(l => (l.toGeoJSON ? l.toGeoJSON() : null)).filter(Boolean),
-    rain: rainData,
-    metrics: computeRisk({ rainSeries: rainData, ndviSeries: [] })
-  };
-  downloadJSON(`Plaasrisk_Report_${fmtDate(new Date())}.json`, out);
-});
-
-// Initial load
-refreshAll();
-</script>
-
+    // NDVI button
+    document.getElementById('loadNdvi').addEventListener('click', () => {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      if (!start || !end) { alert("Pick start & end dates"); return; }
+      const center = map.getCenter();
+      fetchNdvi(center.lat, center.lng, start, end);
+    });
+  </script>
 </body>
 </html>
