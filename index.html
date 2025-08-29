@@ -2,114 +2,141 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>PlaasRisk Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlaasRisk – Farm Climate Risk Tool</title>
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     body { margin: 0; font-family: Arial, sans-serif; }
-    #map { height: 70vh; width: 100%; }
-    #controls { padding: 1rem; }
-    canvas { max-width: 100%; }
+    #map { height: 60vh; width: 100%; }
+    .dashboard { padding: 15px; }
+    .controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+    input, button { padding: 6px; border-radius: 6px; border: 1px solid #ccc; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    canvas { background: #fff; border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center;">🌍 PlaasRisk – Farm Risk Dashboard</h2>
-
-  <!-- Map -->
   <div id="map"></div>
 
-  <!-- Controls -->
-  <div id="controls">
-    <label>Select NDVI Date Range:</label>
-    <input type="date" id="startDate"> to 
-    <input type="date" id="endDate">
-    <button id="loadNdvi">Load NDVI</button>
+  <div class="dashboard">
+    <div class="controls">
+      <!-- Location Search -->
+      <input type="text" id="locationName" placeholder="Search location by name">
+      <button onclick="searchLocation()">Search</button>
 
-    <h3>Rainfall (mm)</h3>
-    <canvas id="rainChart"></canvas>
+      <!-- GPS Search -->
+      <input type="number" id="lat" placeholder="Latitude" step="any">
+      <input type="number" id="lon" placeholder="Longitude" step="any">
+      <button onclick="goToCoordinates()">Go</button>
 
-    <h3>NDVI</h3>
-    <canvas id="ndviChart"></canvas>
+      <!-- Date Range -->
+      <label>Start: <input type="date" id="startDate"></label>
+      <label>End: <input type="date" id="endDate"></label>
+      <button onclick="updateData()">Update</button>
+    </div>
+
+    <div class="charts">
+      <canvas id="rainChart"></canvas>
+      <canvas id="ndviChart"></canvas>
+    </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
-    // Initialize Map
-    var map = L.map('map').setView([-23.9, 29.4], 7);
+    // --- INIT MAP ---
+    const map = L.map('map').setView([-23.9, 29.4], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Draw Tools
-    var drawnItems = new L.FeatureGroup();
+    // Draw controls
+    const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     new L.Control.Draw({
-      edit: { featureGroup: drawnItems }
+      edit: { featureGroup: drawnItems },
+      draw: { circle: false, marker: false }
     }).addTo(map);
 
-    // Charts
-    const rainCtx = document.getElementById('rainChart').getContext('2d');
-    const ndviCtx = document.getElementById('ndviChart').getContext('2d');
-    let rainChart, ndviChart;
-
-    function fetchRainfall(lat, lon) {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum&past_days=90&timezone=Africa%2FJohannesburg`;
-      fetch(url)
-        .then(r => r.json())
-        .then(data => {
-          const labels = data.daily.time;
-          const values = data.daily.precipitation_sum;
-          if (rainChart) rainChart.destroy();
-          rainChart = new Chart(rainCtx, {
-            type: 'line',
-            data: { labels, datasets: [{ label: "Rainfall (mm)", data: values }] }
-          });
-        });
-    }
-
-    function fetchNdvi(lat, lon, start, end) {
-      // 🚨 Replace this placeholder with your GEE tile URL
-      // Example from your output:
-      const geeUrl = "https://earthengine.googleapis.com/v1/projects/zimbabwe-underwriting/maps/c453f0d6009c4d8458053b7ba3f3d939-40151f500cecc9251e3b4e53126dc5bf/tiles/{z}/{x}/{y}";
-      
-      // Overlay GEE NDVI Layer
-      L.tileLayer(geeUrl, { attribution: "Google Earth Engine" }).addTo(map);
-
-      // Fake NDVI chart until GEE JSON stats integrated
-      const labels = ["Jan", "Feb", "Mar", "Apr"];
-      const values = [0.3, 0.45, 0.55, 0.6];
-      if (ndviChart) ndviChart.destroy();
-      ndviChart = new Chart(ndviCtx, {
-        type: 'line',
-        data: { labels, datasets: [{ label: "NDVI", data: values, borderColor: "green" }] }
-      });
-    }
-
-    // On field drawn
-    map.on(L.Draw.Event.CREATED, function (event) {
-      const layer = event.layer;
+    // When field is drawn
+    map.on(L.Draw.Event.CREATED, function (e) {
+      const layer = e.layer;
       drawnItems.addLayer(layer);
-      const center = layer.getBounds().getCenter();
-      fetchRainfall(center.lat, center.lng);
+      const centroid = layer.getBounds().getCenter();
+      fetchData(centroid.lat, centroid.lng);
     });
 
-    // NDVI button
-    document.getElementById('loadNdvi').addEventListener('click', () => {
-      const start = document.getElementById('startDate').value;
-      const end = document.getElementById('endDate').value;
-      if (!start || !end) { alert("Pick start & end dates"); return; }
-      const center = map.getCenter();
-      fetchNdvi(center.lat, center.lng, start, end);
+    // --- WEATHER CHART ---
+    const rainChart = new Chart(document.getElementById('rainChart'), {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Rainfall (mm)', data: [] }] }
     });
+
+    // --- NDVI CHART ---
+    const ndviChart = new Chart(document.getElementById('ndviChart'), {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'NDVI', data: [], borderColor: 'green' }] }
+    });
+
+    // --- FETCH WEATHER ---
+    async function fetchData(lat, lon) {
+      let start = document.getElementById('startDate').value || '2024-01-01';
+      let end = document.getElementById('endDate').value || '2024-12-31';
+
+      // Weather API
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum&start_date=${start}&end_date=${end}&timezone=Africa%2FJohannesburg`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.daily) {
+        rainChart.data.labels = data.daily.time;
+        rainChart.data.datasets[0].data = data.daily.precipitation_sum;
+        rainChart.update();
+      }
+
+      // NDVI (dummy for now, replace with GEE tiles)
+      let ndvi = data.daily.time.map((_, i) => Math.random() * 0.4 + 0.3);
+      ndviChart.data.labels = data.daily.time;
+      ndviChart.data.datasets[0].data = ndvi;
+      ndviChart.update();
+    }
+
+    // --- SEARCH FUNCTIONS ---
+    async function searchLocation() {
+      const name = document.getElementById('locationName').value;
+      if (!name) return;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}`;
+      const res = await fetch(url);
+      const places = await res.json();
+      if (places.length > 0) {
+        const { lat, lon } = places[0];
+        map.setView([lat, lon], 10);
+        fetchData(lat, lon);
+      }
+    }
+
+    function goToCoordinates() {
+      const lat = parseFloat(document.getElementById('lat').value);
+      const lon = parseFloat(document.getElementById('lon').value);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        map.setView([lat, lon], 10);
+        fetchData(lat, lon);
+      }
+    }
+
+    function updateData() {
+      const center = map.getCenter();
+      fetchData(center.lat, center.lng);
+    }
   </script>
 </body>
 </html>
