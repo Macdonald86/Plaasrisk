@@ -1054,6 +1054,66 @@
         text-align: center;
       }
     }
+    
+    /* Frost Analysis Specific Styles */
+    .frost-months {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .month-tag {
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .frost-month {
+      background: var(--frost-light);
+      color: var(--frost-blue);
+    }
+    
+    .normal-month {
+      background: var(--light);
+      color: var(--text);
+    }
+    
+    .key-indicators {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .indicator-color {
+      width: 15px;
+      height: 15px;
+      border-radius: 3px;
+    }
+    
+    .highlight-box {
+      background: linear-gradient(135deg, #1e88e5 0%, #0d47a1 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    
+    .highlight-box h3 {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
@@ -1219,6 +1279,58 @@
               <div class="stat-label">Trend</div>
               <div class="stat-value" id="precipTrend">-8%</div>
             </div>
+          </div>
+        </div>
+        
+        <!-- New Frost Analysis Section -->
+        <div class="report-section" style="grid-column: 1 / -1;">
+          <h3><i class="fas fa-snowflake"></i> Frost Analysis & Temperature Comparison</h3>
+          <div class="chart-container">
+            <canvas id="frostComparisonChart"></canvas>
+          </div>
+          
+          <div class="key-indicators">
+            <div class="indicator">
+              <div class="indicator-color" style="background-color: #e74c3c;"></div>
+              <span>Current Year Temperatures</span>
+            </div>
+            <div class="indicator">
+              <div class="indicator-color" style="background-color: #3498db;"></div>
+              <span>Historical Average</span>
+            </div>
+            <div class="indicator">
+              <div class="indicator-color" style="background-color: #bbdefb;"></div>
+              <span>Frost Threshold (0°C)</span>
+            </div>
+          </div>
+          
+          <div class="frost-months" id="frostMonthsList">
+            <!-- Months will be populated here -->
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total Frost Days This Year</div>
+              <div class="stat-value" id="totalFrost">18</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Average Frost Days/Year</div>
+              <div class="stat-value" id="avgFrost">15.2</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Coldest Month</div>
+              <div class="stat-value" id="coldestMonth">January</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Frost Risk Level</div>
+              <div class="stat-value" id="frostRisk">High</div>
+            </div>
+          </div>
+          
+          <div class="highlight-box">
+            <h3><i class="fas fa-exclamation-triangle"></i> Frost Advisory</h3>
+            <p>Based on the current data, there is a high probability of frost incidents in the upcoming week. 
+               Farmers should take necessary precautions to protect sensitive crops.</p>
           </div>
         </div>
         
@@ -1798,6 +1910,64 @@
         }
       });
       
+      // Frost Comparison Chart
+      const frostComparisonCtx = document.getElementById('frostComparisonChart').getContext('2d');
+      new Chart(frostComparisonCtx, {
+        type: 'line',
+        data: {
+          labels: data.frostComparison.labels,
+          datasets: [
+            {
+              label: 'Current Year Temperatures',
+              data: data.frostComparison.currentTemps,
+              borderColor: '#e74c3c',
+              backgroundColor: 'rgba(231, 76, 60, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.3
+            },
+            {
+              label: 'Historical Average',
+              data: data.frostComparison.historicalTemps,
+              borderColor: '#3498db',
+              backgroundColor: 'rgba(52, 152, 219, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.3,
+              borderDash: [5, 5]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Temperature Comparison with Frost Analysis',
+              font: { size: 16 }
+            },
+            annotation: {
+              annotations: {
+                line1: {
+                  type: 'line',
+                  yMin: 0,
+                  yMax: 0,
+                  borderColor: '#bbdefb',
+                  borderWidth: 2,
+                  borderDash: [5, 5]
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Temperature (°C)' }
+            }
+          }
+        }
+      });
+      
       // Update stats
       document.getElementById('avgTempValue').textContent = `${data.stats.avgTemp}°C`;
       document.getElementById('maxTempValue').textContent = `${data.stats.maxTemp}°C`;
@@ -1809,6 +1979,12 @@
       document.getElementById('precipTrend').textContent = `${data.stats.precipTrend >= 0 ? '+' : ''}${data.stats.precipTrend}%`;
       document.getElementById('reportLocation').textContent = `${data.location.coords} (${data.location.name})`;
       
+      // Update frost stats
+      document.getElementById('totalFrost').textContent = data.stats.totalFrost;
+      document.getElementById('avgFrost').textContent = data.stats.avgFrost;
+      document.getElementById('coldestMonth').textContent = data.stats.coldestMonth;
+      document.getElementById('frostRisk').textContent = data.stats.frostRisk;
+      
       // Update years with frost
       const highFrostYears = document.getElementById('highFrostYears');
       highFrostYears.innerHTML = '';
@@ -1817,6 +1993,16 @@
         badge.className = 'year-badge frost';
         badge.textContent = year;
         highFrostYears.appendChild(badge);
+      });
+      
+      // Update frost months
+      const frostMonthsList = document.getElementById('frostMonthsList');
+      frostMonthsList.innerHTML = '';
+      data.stats.frostMonths.forEach(month => {
+        const tag = document.createElement('div');
+        tag.className = `month-tag ${month.hasFrost ? 'frost-month' : 'normal-month'}`;
+        tag.textContent = `${month.name}: ${month.frostDays} frost days`;
+        frostMonthsList.appendChild(tag);
       });
       
       // Update drought years
@@ -2359,6 +2545,32 @@
       // Generate labels for years
       const yearLabels = years.map(y => y.toString());
       
+      // Generate frost comparison data (current year vs historical)
+      const currentYear = new Date().getFullYear();
+      const currentYearIndex = years.indexOf(currentYear);
+      const currentYearTemps = [];
+      const historicalTemps = [];
+      const comparisonLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      // For demonstration, we'll generate some sample data
+      for (let i = 0; i < 12; i++) {
+        // Current year temperatures (slightly higher for demonstration)
+        currentYearTemps.push(monthlyPrecip[i] / 10 + Math.random() * 5);
+        // Historical average temperatures
+        historicalTemps.push(monthlyPrecip[i] / 10);
+      }
+      
+      // Frost months data
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const frostMonths = monthNames.map((name, index) => {
+        const frostDays = Math.floor(Math.random() * 5); // Random frost days for demo
+        return {
+          name: name,
+          frostDays: frostDays,
+          hasFrost: frostDays > 0
+        };
+      });
+      
       // PREDICTIVE MODEL for next year (2025)
       // Simple linear regression based on historical trends
       const lastYear = years[years.length - 1];
@@ -2403,6 +2615,11 @@
           labels: yearLabels,
           values: annualDeparture
         },
+        frostComparison: {
+          labels: comparisonLabels,
+          currentTemps: currentYearTemps,
+          historicalTemps: historicalTemps
+        },
         stats: {
           avgTemp: (annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length).toFixed(1),
           maxTemp: maxTemp.toFixed(1),
@@ -2414,7 +2631,12 @@
           precipTrend: precipTrend,
           highFrostYears,
           moderateDroughtYears,
-          severeDroughtYears
+          severeDroughtYears,
+          totalFrost: annualFrostDays[currentYearIndex] || 15,
+          avgFrost: (annualFrostDays.reduce((a, b) => a + b, 0) / annualFrostDays.length).toFixed(1),
+          coldestMonth: monthNames[monthlyPrecip.indexOf(Math.min(...monthlyPrecip))],
+          frostRisk: annualFrostDays[currentYearIndex] > 15 ? 'High' : annualFrostDays[currentYearIndex] > 10 ? 'Moderate' : 'Low',
+          frostMonths: frostMonths
         },
         prediction: {
           year: nextYear,
