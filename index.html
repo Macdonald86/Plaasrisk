@@ -155,6 +155,44 @@
       background: white;
     }
     
+    /* Date Range Styles */
+    .date-range-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .date-range-label {
+      font-size: 0.9rem;
+      color: var(--dark);
+      white-space: nowrap;
+    }
+    
+    .date-range-inputs {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+    }
+    
+    .date-input {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--light-gray);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    
+    .date-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+      background: white;
+    }
+    
     .btn {
       display: inline-flex;
       align-items: center;
@@ -221,6 +259,16 @@
       .map-actions .btn {
         min-width: auto;
         flex: none;
+      }
+      
+      .date-range-container {
+        flex-direction: column;
+        align-items: stretch;
+        min-width: 100%;
+      }
+      
+      .date-range-label {
+        margin-bottom: 5px;
       }
     }
     
@@ -1138,6 +1186,15 @@
             <i class="fas fa-search-location"></i> Search
           </button>
           
+          <!-- Date Range Selector -->
+          <div class="date-range-container">
+            <span class="date-range-label">Date Range:</span>
+            <div class="date-range-inputs">
+              <input type="date" id="startDate" class="date-input" value="2000-01-01" max="2024-12-31">
+              <input type="date" id="endDate" class="date-input" value="2024-12-31" max="2024-12-31">
+            </div>
+          </div>
+          
           <!-- Progress bar moved next to GPS input -->
           <div class="progress-container">
             <div class="progress-header">
@@ -1516,7 +1573,7 @@
           </div>
           <div class="location-badge">
             <i class="fas fa-calendar"></i>
-            <span>2000 - 2024</span>
+            <span id="reportDateRange">2000 - 2024</span>
           </div>
         </div>
         
@@ -1978,6 +2035,7 @@
       document.getElementById('drySpells').textContent = `${data.stats.drySpells}/yr`;
       document.getElementById('precipTrend').textContent = `${data.stats.precipTrend >= 0 ? '+' : ''}${data.stats.precipTrend}%`;
       document.getElementById('reportLocation').textContent = `${data.location.coords} (${data.location.name})`;
+      document.getElementById('reportDateRange').textContent = `${data.dateRange.startYear} - ${data.dateRange.endYear}`;
       
       // Update frost stats
       document.getElementById('totalFrost').textContent = data.stats.totalFrost;
@@ -2034,7 +2092,7 @@
       
       // Generate commentary based on data
       commentary.innerHTML = `
-        <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. This represents a significant shift in temperature patterns that may affect crop selection and growing seasons.</p>
+        <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the period from ${data.dateRange.startYear} to ${data.dateRange.endYear}. This represents a significant shift in temperature patterns that may affect crop selection and growing seasons.</p>
         
         <h4>Frost Analysis</h4>
         <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. The highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}. Frost typically occurs between May and August in this region. The prediction for the upcoming year shows <strong>${data.prediction.frost} frost days</strong>, which is ${data.prediction.frost > 15 ? 'above' : 'below'} the historical average.</p>
@@ -2364,9 +2422,23 @@
       const lat = lastPolygonCenter.lat.toFixed(4);
       const lon = lastPolygonCenter.lng.toFixed(4);
       
+      // Get date range from inputs
+      const startDateInput = document.getElementById('startDate').value;
+      const endDateInput = document.getElementById('endDate').value;
+      
+      if (!startDateInput || !endDateInput) {
+        showNotification("Please select both start and end dates.", 'error');
+        return;
+      }
+      
+      if (new Date(startDateInput) > new Date(endDateInput)) {
+        showNotification("Start date cannot be after end date.", 'error');
+        return;
+      }
+      
       // API request parameters
-      const startDate = "2000-01-01";
-      const endDate = "2024-12-31";
+      const startDate = startDateInput;
+      const endDate = endDateInput;
       const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=auto`;
       
       try {
@@ -2414,7 +2486,7 @@
         showNotification("Climate data retrieved successfully! Generating report...", 'success');
         
         // Process data for charts and stats
-        const processedData = processClimateData(data, lat, lon);
+        const processedData = processClimateData(data, lat, lon, startDate, endDate);
         
         // Open the report modal
         setTimeout(() => {
@@ -2429,7 +2501,7 @@
     }
     
     // Process climate data for charts and stats
-    function processClimateData(apiData, lat, lon) {
+    function processClimateData(apiData, lat, lon, startDate, endDate) {
       const daily = apiData.daily;
       const times = daily.time;
       const tempMin = daily.temperature_2m_min;
@@ -2593,6 +2665,12 @@
         location: {
           coords: `${lat}, ${lon}`,
           name: currentLocationName
+        },
+        dateRange: {
+          startDate: startDate,
+          endDate: endDate,
+          startYear: new Date(startDate).getFullYear(),
+          endYear: new Date(endDate).getFullYear()
         },
         temp: {
           labels: yearLabels,
