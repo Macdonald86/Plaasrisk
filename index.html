@@ -2365,53 +2365,76 @@
       const lon = lastPolygonCenter.lng.toFixed(4);
       
       // API request parameters
-      const startDate = "2000-01-01";
-      const endDate = "2024-12-31";
-      const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=auto`;
-      
-      try {
-        // Cancel any previous request
-        if (currentRequest) {
-          currentRequest.abort();
-        }
-        
-        const controller = new AbortController();
-        const signal = controller.signal;
-        currentRequest = controller;
-        
-        // Step 1: Fetch data
-        updateProgress(0, "Starting data retrieval...");
-        
-        // Simulate progress during fetch
-        let fetchProgress = 0;
-        const fetchInterval = setInterval(() => {
-          if (fetchProgress < 95) {
-            fetchProgress += 5;
-            updateProgress(fetchProgress, `Fetching data... ${fetchProgress}%`);
-          }
-        }, 200);
-        
-        const response = await fetch(apiUrl, { signal });
-        if (!response.ok) {
-          let errorMessage = `API request failed with status ${response.status}`;
-          try {
-            const errorData = await response.json();
-            if (errorData.reason) {
-              errorMessage = errorData.reason;
-            }
-          } catch (e) {
-            // Ignore JSON parse error
-          }
-          throw new Error(errorMessage);
-        }
-        
-        const data = await response.json();
-        
-        // Clear interval immediately after fetch
-        clearInterval(fetchInterval);
-        updateProgress(100, "Data fetched!");
-        
-        showNotification("Climate data retrieved successfully! Generating report...", 'success');
+   // API request parameters
+const startDate = "1970-01-01";
+const endDate = "2025-12-31";
+const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=auto`;
+
+try {
+  // Cancel any previous request
+  if (currentRequest) {
+    currentRequest.abort();
+  }
+
+  // Create a new abort controller for this request
+  const controller = new AbortController();
+  currentRequest = controller;
+  const { signal } = controller;
+
+  // Step 1: Begin data retrieval
+  updateProgress(0, "Starting climate data retrieval...");
+
+  // Simulated fetch progress for UX feedback
+  let fetchProgress = 0;
+  const fetchInterval = setInterval(() => {
+    if (fetchProgress < 90) {
+      fetchProgress += 5;
+      updateProgress(fetchProgress, `Fetching data... ${fetchProgress}%`);
+    }
+  }, 250);
+
+  // Step 2: Make the API request
+  const response = await fetch(apiUrl, { signal });
+
+  // Step 3: Handle failed responses gracefully
+  if (!response.ok) {
+    let errorMessage = `API request failed with status ${response.status}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.reason) {
+        errorMessage = errorData.reason;
+      }
+    } catch {
+      // If parsing fails, keep default errorMessage
+    }
+    throw new Error(errorMessage);
+  }
+
+  // Step 4: Parse JSON data
+  const data = await response.json();
+
+  // Stop progress simulation as soon as fetch is done
+  clearInterval(fetchInterval);
+  updateProgress(100, "Data retrieved successfully!");
+
+  // Notify user of successful fetch
+  showNotification("Climate data retrieved successfully! Generating report...", "success");
+
+  // Step 5: Process data for charts and statistics
+  const processedData = processClimateData(data, lat, lon);
+
+  return processedData;
+
+} catch (error) {
+  // Step 6: Handle errors and cancellation
+  if (error.name === "AbortError") {
+    showNotification("Previous request was canceled.", "info");
+  } else {
+    showNotification(`Error: ${error.message}`, "error");
+  }
+  throw error; // Rethrow for upstream handling if needed
+}
+
         
         // Process data for charts and stats
         const processedData = processClimateData(data, lat, lon);
