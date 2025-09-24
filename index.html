@@ -2450,7 +2450,34 @@ try {
         currentRequest = null;
       }
     }
-    
+    /**
+ * Detects first onset of planting season based on rainfall threshold
+ * @param {Object} data - The JSON climate data from Open-Meteo
+ * @param {number} threshold - Minimum rainfall (mm) in the window (default = 10mm)
+ * @param {number} windowSize - Size of moving window in days (default = 10)
+ * @returns {string|null} - The first onset date (YYYY-MM-DD) or null if none found
+ */
+function detectPlantingOnset(data, threshold = 10, windowSize = 10) {
+  if (!data?.daily?.time || !data?.daily?.precipitation_sum) {
+    throw new Error("Invalid data format for planting onset detection.");
+  }
+
+  const dates = data.daily.time;
+  const rainfall = data.daily.precipitation_sum;
+
+  // Sliding window sum
+  for (let i = 0; i <= rainfall.length - windowSize; i++) {
+    const windowRain = rainfall
+      .slice(i, i + windowSize)
+      .reduce((sum, val) => sum + val, 0);
+
+    if (windowRain >= threshold) {
+      return dates[i]; // First date of that 10-day window
+    }
+  }
+
+  return null; // No planting onset found
+}
     // Process climate data for charts and stats
     function processClimateData(apiData, lat, lon) {
       const daily = apiData.daily;
