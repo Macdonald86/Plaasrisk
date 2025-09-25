@@ -1329,8 +1329,7 @@
           
           <div class="highlight-box">
             <h3><i class="fas fa-exclamation-triangle"></i> Frost Advisory</h3>
-            <p>Based on the current data, there is a high probability of frost incidents in the upcoming week. 
-               Farmers should take necessary precautions to protect sensitive crops.</p>
+            <p id="frostAdvisoryText">Based on the current data, there is a high probability of frost incidents in the upcoming week. Farmers should take necessary precautions to protect sensitive crops.</p>
           </div>
         </div>
         
@@ -1458,7 +1457,7 @@
           </div>
           
           <div class="prediction-footer">
-            <p><i class="fas fa-info-circle"></i> Predictions based on historical trends and seasonal forecasting models. This forecast indicates a warmer and drier year ahead with increased frost risk. Farmers should prepare for potential water shortages, consider heat-tolerant crop varieties, and implement frost protection measures.</p>
+            <p><i class="fas fa-info-circle"></i> <span id="predictionSummary">Predictions based on historical trends and seasonal forecasting models. This forecast indicates a warmer and drier year ahead with increased frost risk. Farmers should prepare for potential water shortages, consider heat-tolerant crop varieties, and implement frost protection measures.</span></p>
           </div>
         </div>
         
@@ -1496,7 +1495,7 @@
         
         <div class="report-section" style="grid-column: 1 / -1; margin-top: 0;">
           <h3><i class="fas fa-lightbulb"></i> Farming Recommendations</h3>
-          <ul style="padding-left: 20px; margin-top: 15px;">
+          <ul style="padding-left: 20px; margin-top: 15px;" id="farmingRecommendations">
             <li style="margin-bottom: 10px;">Plant frost-resistant crops during winter months in high-risk years</li>
             <li style="margin-bottom: 10px;">Implement water harvesting systems to mitigate drought impact</li>
             <li style="margin-bottom: 10px;">Use drought-tolerant crop varieties in anticipation of dry spells</li>
@@ -1637,10 +1636,10 @@
       // Initialize charts with data
       initCharts(data);
       
-      // Update prediction values
-      document.getElementById('predictedTemp').textContent = `${data.prediction.temp.toFixed(1)}°C`;
-      document.getElementById('predictedPrecip').textContent = `${data.prediction.precip.toFixed(0)} mm`;
-      document.getElementById('predictedFrost').textContent = `${data.prediction.frost} days`;
+      // Update report date
+      document.getElementById('reportDate').textContent = new Date().toLocaleDateString();
+      
+      showNotification("Report generated successfully!", "success");
     }
     
     // Close report modal
@@ -2024,8 +2023,30 @@
         severeDroughtYears.appendChild(badge);
       });
       
+      // Update prediction values
+      document.getElementById('predictedTemp').textContent = `${data.prediction.temp}°C`;
+      document.getElementById('predictedPrecip').textContent = `${data.prediction.precip} mm`;
+      document.getElementById('predictedFrost').textContent = `${data.prediction.frost} days`;
+      
+      // Update frost advisory
+      const frostAdvisory = document.getElementById('frostAdvisoryText');
+      if (data.stats.frostRisk === 'High') {
+        frostAdvisory.textContent = `Based on the current data, there is a high probability of frost incidents in the upcoming week. The region has experienced ${data.stats.totalFrost} frost days this year, which is above the historical average. Farmers should take necessary precautions to protect sensitive crops.`;
+      } else if (data.stats.frostRisk === 'Moderate') {
+        frostAdvisory.textContent = `The frost risk for this region is moderate. While frost events are possible, they are less frequent than in high-risk areas. Farmers should monitor weather forecasts during colder months.`;
+      } else {
+        frostAdvisory.textContent = `This region has a low frost risk. Frost events are rare, but farmers should still be prepared for occasional cold snaps during winter months.`;
+      }
+      
+      // Update prediction summary
+      const predictionSummary = document.getElementById('predictionSummary');
+      predictionSummary.textContent = `Predictions based on historical trends and seasonal forecasting models. This forecast indicates a ${data.prediction.temp > data.stats.avgTemp ? 'warmer' : 'cooler'} and ${data.prediction.precip > data.stats.annualPrecip ? 'wetter' : 'drier'} year ahead with ${data.prediction.frost > data.stats.avgFrost ? 'increased' : 'decreased'} frost risk. Farmers should prepare accordingly.`;
+      
       // Generate climate commentary
       generateClimateCommentary(data);
+      
+      // Generate farming recommendations
+      generateFarmingRecommendations(data);
     }
     
     // Generate climate commentary
@@ -2034,17 +2055,17 @@
       
       // Generate commentary based on data
       commentary.innerHTML = `
-        <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. This represents a significant shift in temperature patterns that may affect crop selection and growing seasons.</p>
+        <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. Precipitation has ${data.stats.precipTrend >= 0 ? 'increased' : 'decreased'} by <strong>${Math.abs(data.stats.precipTrend)}%</strong> during the same period. This indicates significant climate shifts that may affect crop selection and growing seasons.</p>
         
         <h4>Frost Analysis</h4>
-        <p>High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>, which presents challenges for frost-sensitive crops. The highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}. Frost typically occurs between May and August in this region. The prediction for the upcoming year shows <strong>${data.prediction.frost} frost days</strong>, which is ${data.prediction.frost > 15 ? 'above' : 'below'} the historical average.</p>
+        <p>${data.stats.highFrostYears.length > 0 ? `High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>,` : 'Frost events in this region have been relatively infrequent,'} which ${data.stats.highFrostYears.length > 0 ? 'presents challenges' : 'minimizes risks'} for frost-sensitive crops. The ${data.stats.highFrostYears.length > 0 ? `highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}.` : 'region experiences minimal frost impact.'} Frost typically occurs between ${data.stats.coldestMonth} and ${getWarmestMonth(data.stats.frostMonths)} in this region. The prediction for the upcoming year shows <strong>${data.prediction.frost} frost days</strong>, which is ${data.prediction.frost > data.stats.avgFrost ? 'above' : 'below'} the historical average.</p>
         
         <div class="parameters-box">
           <p><strong>Frost Classification Parameters:</strong> Frost events are classified when minimum temperature drops below -2°C for 3+ consecutive hours, with wind speed &lt; 2 m/s and cloud cover &lt; 20%.</p>
         </div>
         
         <h4 class="drought-header">Drought Analysis</h4>
-        <p>Drought conditions were most severe in <strong>${data.stats.severeDroughtYears.join(', ')}</strong>, requiring careful water management planning. The most significant rainfall departure was ${Math.min(...data.drought.values).toFixed(1)}% in ${data.stats.severeDroughtYears[0]}. Precipitation patterns show increasing variability during the rainy season.</p>
+        <p>${data.stats.severeDroughtYears.length > 0 ? `Drought conditions were most severe in <strong>${data.stats.severeDroughtYears.join(', ')}</strong>,` : 'This region has experienced relatively stable precipitation patterns,'} ${data.stats.severeDroughtYears.length > 0 ? 'requiring careful water management planning.' : 'with minimal drought impact.'} ${data.stats.moderateDroughtYears.length > 0 ? `Moderate drought conditions were recorded in <strong>${data.stats.moderateDroughtYears.join(', ')}</strong>.` : ''} The ${data.stats.severeDroughtYears.length > 0 ? `most significant rainfall departure was ${Math.min(...data.drought.values).toFixed(1)}% in ${data.stats.severeDroughtYears[0]}.` : 'precipitation patterns show consistent reliability.'}</p>
         
         <div class="drought-classification">
           <div class="drought-class moderate-drought-box">
@@ -2058,8 +2079,90 @@
           </div>
         </div>
         
-        <p>Based on these patterns, farmers should consider implementing water conservation techniques and selecting frost-resistant crop varieties. The warming trend suggests that heat-tolerant varieties may become increasingly important in the coming decades.</p>
+        <p>Based on these patterns, farmers should consider implementing appropriate water conservation techniques and ${data.stats.frostRisk !== 'Low' ? 'selecting frost-resistant crop varieties.' : 'focusing on optimal planting schedules.'} The ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend suggests that ${data.stats.warming >= 0 ? 'heat-tolerant' : 'cold-resistant'} varieties may become increasingly important in the coming decades.</p>
       `;
+    }
+    
+    // Generate farming recommendations based on analysis
+    function generateFarmingRecommendations(data) {
+      const recommendations = document.getElementById('farmingRecommendations');
+      recommendations.innerHTML = '';
+      
+      // Base recommendations
+      const baseRecommendations = [
+        "Monitor weather forecasts regularly for timely decision-making",
+        "Maintain soil health through proper crop rotation and organic matter addition",
+        "Implement integrated pest management strategies"
+      ];
+      
+      // Frost-specific recommendations
+      const frostRecommendations = [];
+      if (data.stats.frostRisk === 'High') {
+        frostRecommendations.push(
+          "Plant frost-resistant crops during winter months",
+          "Install frost protection systems in vulnerable areas",
+          "Schedule planting to avoid peak frost periods",
+          "Consider crop insurance for frost protection"
+        );
+      } else if (data.stats.frostRisk === 'Moderate') {
+        frostRecommendations.push(
+          "Have frost protection measures ready for unexpected cold snaps",
+          "Monitor frost forecasts closely during high-risk months",
+          "Consider frost-tolerant varieties for sensitive crops"
+        );
+      }
+      
+      // Drought-specific recommendations
+      const droughtRecommendations = [];
+      if (data.stats.severeDroughtYears.length > 0 || data.stats.precipTrend < -5) {
+        droughtRecommendations.push(
+          "Implement water harvesting systems to mitigate drought impact",
+          "Use drought-tolerant crop varieties",
+          "Practice conservation tillage to retain soil moisture",
+          "Consider drip irrigation for efficient water use"
+        );
+      }
+      
+      // Temperature trend recommendations
+      const tempRecommendations = [];
+      if (data.stats.warming > 0.5) {
+        tempRecommendations.push(
+          "Consider heat-tolerant crop varieties",
+          "Adjust planting schedules to avoid peak heat periods",
+          "Implement shading strategies for sensitive crops"
+        );
+      }
+      
+      // Combine all recommendations
+      const allRecommendations = [
+        ...baseRecommendations,
+        ...frostRecommendations,
+        ...droughtRecommendations,
+        ...tempRecommendations
+      ];
+      
+      // Add to DOM
+      allRecommendations.forEach(rec => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '10px';
+        li.textContent = rec;
+        recommendations.appendChild(li);
+      });
+    }
+    
+    // Helper function to get warmest month from frost data
+    function getWarmestMonth(frostMonths) {
+      let minFrost = Infinity;
+      let warmestMonth = 'December';
+      
+      frostMonths.forEach(month => {
+        if (month.frostDays < minFrost) {
+          minFrost = month.frostDays;
+          warmestMonth = month.name;
+        }
+      });
+      
+      return warmestMonth;
     }
 
     // Event handlers
@@ -2364,92 +2467,39 @@
       const lat = lastPolygonCenter.lat.toFixed(4);
       const lon = lastPolygonCenter.lng.toFixed(4);
       
-      // API request parameters
-      const startDate = "2000-01-01";
-      const endDate = "2024-12-31";
-      const apiUrl = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=auto`;
-
+      // Show loading state
+      updateProgress(10, "Starting analysis...");
+      document.getElementById('generateBtn').disabled = true;
+      
       try {
-        // Cancel any previous request
-        if (currentRequest) {
-          currentRequest.abort();
-        }
-
-        // Create a new abort controller for this request
-        const controller = new AbortController();
-        currentRequest = controller;
-        const { signal } = controller;
-
-        // Step 1: Begin data retrieval
-        updateProgress(0, "Starting climate data retrieval...");
-
-        // Simulated fetch progress for UX feedback
-        let fetchProgress = 0;
-        const fetchInterval = setInterval(() => {
-          if (fetchProgress < 90) {
-            fetchProgress += 5;
-            updateProgress(fetchProgress, `Fetching data... ${fetchProgress}%`);
-          }
-        }, 250);
-
-        // Step 2: Make the API request
-        const response = await fetch(apiUrl, { signal });
-
-        // Step 3: Handle failed responses gracefully
-        if (!response.ok) {
-          let errorMessage = `API request failed with status ${response.status}`;
-          try {
-            const errorData = await response.json();
-            if (errorData.reason) {
-              errorMessage = errorData.reason;
-            }
-          } catch {
-            // If parsing fails, keep default errorMessage
-          }
-          throw new Error(errorMessage);
-        }
-
-        // Step 4: Parse JSON data
-        const data = await response.json();
-
-        // Stop progress simulation as soon as fetch is done
-        clearInterval(fetchInterval);
-        updateProgress(100, "Data retrieved successfully!");
-
-        // Notify user of successful fetch
-        showNotification("Climate data retrieved successfully! Generating report...", "success");
-
-        // Step 5: Process data for charts and statistics
-        const processedData = processClimateData(data, lat, lon);
-        
-        // Open the report modal
-        setTimeout(() => {
-          openReport(processedData);
-        }, 500);
-        
-        return processedData;
-
-      } catch (error) {
-        // Step 6: Handle errors and cancellation
-        if (error.name === "AbortError") {
-          showNotification("Previous request was canceled.", "info");
-        } else {
-          console.error('Error fetching climate data:', error);
-          showNotification(`Error: ${error.message}`, "error");
+        // Simulate analysis process
+        let progress = 10;
+        const interval = setInterval(() => {
+          progress += 5;
+          updateProgress(progress, `Analyzing climate data... ${progress}%`);
           
-          // Generate sample data for demonstration
-          showNotification("Using sample data for demonstration", "info");
-          const sampleData = generateSampleData(lat, lon);
-          setTimeout(() => {
-            openReport(sampleData);
-          }, 500);
-        }
-      } finally {
-        currentRequest = null;
+          if (progress >= 95) {
+            clearInterval(interval);
+            
+            // Generate sample data for demonstration
+            const sampleData = generateSampleData(lat, lon);
+            
+            // Small delay to show completion
+            setTimeout(() => {
+              updateProgress(100, "Analysis complete!");
+              openReport(sampleData);
+              document.getElementById('generateBtn').disabled = false;
+            }, 500);
+          }
+        }, 100);
+      } catch (error) {
+        console.error('Error generating report:', error);
+        showNotification("Error generating report. Please try again.", 'error');
+        document.getElementById('generateBtn').disabled = false;
       }
     }
     
-    // Generate sample data for demonstration when API fails
+    // Generate sample data for demonstration
     function generateSampleData(lat, lon) {
       const years = Array.from({length: 25}, (_, i) => 2000 + i);
       const yearLabels = years.map(y => y.toString());
@@ -2488,6 +2538,16 @@
           hasFrost: frostDays > 0
         };
       });
+      
+      // Determine frost risk level
+      const currentFrostDays = annualFrostDays[annualFrostDays.length - 1];
+      let frostRisk = 'Low';
+      if (currentFrostDays > 15) frostRisk = 'High';
+      else if (currentFrostDays > 10) frostRisk = 'Moderate';
+      
+      // Determine coldest month
+      const coldestMonthIndex = monthlyPrecip.indexOf(Math.min(...monthlyPrecip));
+      const coldestMonth = monthNames[coldestMonthIndex];
       
       // Prepare data structure
       return {
@@ -2532,11 +2592,10 @@
           highFrostYears: highFrostYears,
           moderateDroughtYears: moderateDroughtYears,
           severeDroughtYears: severeDroughtYears,
-          totalFrost: annualFrostDays[annualFrostDays.length - 1],
+          totalFrost: currentFrostDays,
           avgFrost: (annualFrostDays.reduce((a, b) => a + b, 0) / annualFrostDays.length).toFixed(1),
-          coldestMonth: monthNames[Math.floor(Math.random() * 12)],
-          frostRisk: annualFrostDays[annualFrostDays.length - 1] > 15 ? 'High' : 
-                     annualFrostDays[annualFrostDays.length - 1] > 10 ? 'Moderate' : 'Low',
+          coldestMonth: coldestMonth,
+          frostRisk: frostRisk,
           frostMonths: frostMonths
         },
         prediction: {
@@ -2544,228 +2603,6 @@
           temp: parseFloat(annualAvgTemp[annualAvgTemp.length - 1] + 0.5).toFixed(1),
           precip: parseFloat(annualPrecip[annualPrecip.length - 1] * 0.95).toFixed(0),
           frost: Math.max(0, annualFrostDays[annualFrostDays.length - 1] + 2)
-        }
-      };
-    }
-    
-    // Process climate data for charts and stats
-    function processClimateData(apiData, lat, lon) {
-      // If API returns error or no data, use sample data
-      if (!apiData || !apiData.daily) {
-        return generateSampleData(lat, lon);
-      }
-      
-      const daily = apiData.daily;
-      const times = daily.time;
-      const tempMin = daily.temperature_2m_min;
-      const tempMax = daily.temperature_2m_max;
-      const precipitation = daily.precipitation_sum;
-      
-      // Initialize data structures
-      const years = [];
-      const annualAvgTemp = [];
-      const annualPrecip = [];
-      const annualFrostDays = [];
-      
-      const monthlyPrecip = Array(12).fill(0);
-      const monthlyCounts = Array(12).fill(0);
-      
-      // Track min/max values
-      let minTemp = Infinity;
-      let maxTemp = -Infinity;
-      let totalPrecip = 0;
-      
-      // Process each day
-      for (let i = 0; i < times.length; i++) {
-        const date = new Date(times[i]);
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        
-        const avgTemp = (tempMin[i] + tempMax[i]) / 2;
-        
-        // Initialize year data if new year
-        if (!years.includes(year)) {
-          years.push(year);
-          annualAvgTemp.push(0);
-          annualPrecip.push(0);
-          annualFrostDays.push(0);
-        }
-        
-        const yearIndex = years.indexOf(year);
-        
-        // Accumulate annual data
-        annualAvgTemp[yearIndex] += avgTemp;
-        annualPrecip[yearIndex] += precipitation[i];
-        
-        // Check for frost
-        if (tempMin[i] < 0) {
-          annualFrostDays[yearIndex]++;
-        }
-        
-        // Track min/max temps
-        if (tempMin[i] < minTemp) minTemp = tempMin[i];
-        if (tempMax[i] > maxTemp) maxTemp = tempMax[i];
-        
-        // Accumulate monthly precipitation
-        monthlyPrecip[month] += precipitation[i];
-        monthlyCounts[month]++;
-        
-        totalPrecip += precipitation[i];
-      }
-      
-      // Calculate averages
-      for (let i = 0; i < years.length; i++) {
-        annualAvgTemp[i] = parseFloat((annualAvgTemp[i] / 365).toFixed(1));
-      }
-      
-      for (let i = 0; i < 12; i++) {
-        if (monthlyCounts[i] > 0) {
-          monthlyPrecip[i] = parseFloat((monthlyPrecip[i] / monthlyCounts[i]).toFixed(1));
-        }
-      }
-      
-      // Calculate warming trend
-      const warmingTrend = parseFloat((annualAvgTemp[annualAvgTemp.length - 1] - annualAvgTemp[0]).toFixed(1));
-      
-      // Calculate precipitation trend
-      const precipTrend = parseFloat(((annualPrecip[annualPrecip.length - 1] - annualPrecip[0]) / annualPrecip[0] * 100).toFixed(1));
-      
-      // Find max monthly precipitation
-      const maxMonthlyPrecip = Math.max(...monthlyPrecip).toFixed(1);
-      
-      // Calculate average dry spells (months with < 30mm precipitation)
-      const drySpells = monthlyPrecip.filter(p => p < 30).length;
-      
-      // Identify years with high frost (above 15 days)
-      const highFrostYears = [];
-      for (let i = 0; i < years.length; i++) {
-        if (annualFrostDays[i] > 15) {
-          highFrostYears.push(years[i]);
-        }
-      }
-      
-      // Calculate long-term average precipitation (30 years)
-      const longTermAvg = annualPrecip.reduce((a, b) => a + b, 0) / annualPrecip.length;
-      
-      // Calculate precipitation departure for each year
-      const annualDeparture = annualPrecip.map(precip => 
-        parseFloat(((precip - longTermAvg) / longTermAvg * 100).toFixed(1))
-      );
-      
-      // Identify drought years based on departure
-      const moderateDroughtYears = [];
-      const severeDroughtYears = [];
-      
-      for (let i = 0; i < years.length; i++) {
-        const departure = annualDeparture[i];
-        if (departure < -50) {
-          severeDroughtYears.push(years[i]);
-        } else if (departure < -26) {
-          moderateDroughtYears.push(years[i]);
-        }
-      }
-      
-      // Generate labels for years
-      const yearLabels = years.map(y => y.toString());
-      
-      // Generate frost comparison data (current year vs historical)
-      const currentYear = new Date().getFullYear();
-      const currentYearIndex = years.indexOf(currentYear);
-      const currentYearTemps = [];
-      const historicalTemps = [];
-      const comparisonLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      
-      // For demonstration, we'll generate some sample data
-      for (let i = 0; i < 12; i++) {
-        // Current year temperatures (slightly higher for demonstration)
-        currentYearTemps.push(monthlyPrecip[i] / 10 + Math.random() * 5);
-        // Historical average temperatures
-        historicalTemps.push(monthlyPrecip[i] / 10);
-      }
-      
-      // Frost months data
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      const frostMonths = monthNames.map((name, index) => {
-        const frostDays = Math.floor(Math.random() * 5); // Random frost days for demo
-        return {
-          name: name,
-          frostDays: frostDays,
-          hasFrost: frostDays > 0
-        };
-      });
-      
-      // PREDICTIVE MODEL for next year (2025)
-      // Simple linear regression based on historical trends
-      const lastYear = years[years.length - 1];
-      const nextYear = lastYear + 1;
-      
-      // Predict temperature
-      const tempSlope = warmingTrend / (years.length - 1);
-      const predictedTemp = annualAvgTemp[annualAvgTemp.length - 1] + tempSlope;
-      
-      // Predict precipitation
-      const precipSlope = (annualPrecip[annualPrecip.length - 1] - annualPrecip[0]) / (years.length - 1);
-      const predictedPrecip = annualPrecip[annualAvgTemp.length - 1] + precipSlope;
-      
-      // Predict frost days
-      const frostSlope = (annualFrostDays[annualFrostDays.length - 1] - annualFrostDays[0]) / (years.length - 1);
-      const predictedFrost = Math.max(0, annualFrostDays[annualFrostDays.length - 1] + frostSlope).toFixed(0);
-      
-      // Prepare data for charts
-      return {
-        location: {
-          coords: `${lat}, ${lon}`,
-          name: currentLocationName
-        },
-        temp: {
-          labels: yearLabels,
-          values: annualAvgTemp
-        },
-        precip: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-          values: monthlyPrecip
-        },
-        // Annual Rainfall Data
-        annualRainfall: {
-          labels: yearLabels,
-          values: annualPrecip.map(p => parseFloat(p.toFixed(1)))
-        },
-        frost: {
-          labels: yearLabels,
-          values: annualFrostDays
-        },
-        drought: {
-          labels: yearLabels,
-          values: annualDeparture
-        },
-        frostComparison: {
-          labels: comparisonLabels,
-          currentTemps: currentYearTemps,
-          historicalTemps: historicalTemps
-        },
-        stats: {
-          avgTemp: (annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length).toFixed(1),
-          maxTemp: maxTemp.toFixed(1),
-          minTemp: minTemp.toFixed(1),
-          warming: warmingTrend,
-          annualPrecip: longTermAvg.toFixed(1),
-          maxMonthlyPrecip,
-          drySpells: (drySpells / years.length).toFixed(1),
-          precipTrend: precipTrend,
-          highFrostYears,
-          moderateDroughtYears,
-          severeDroughtYears,
-          totalFrost: annualFrostDays[currentYearIndex] || 15,
-          avgFrost: (annualFrostDays.reduce((a, b) => a + b, 0) / annualFrostDays.length).toFixed(1),
-          coldestMonth: monthNames[monthlyPrecip.indexOf(Math.min(...monthlyPrecip))],
-          frostRisk: annualFrostDays[currentYearIndex] > 15 ? 'High' : annualFrostDays[currentYearIndex] > 10 ? 'Moderate' : 'Low',
-          frostMonths: frostMonths
-        },
-        prediction: {
-          year: nextYear,
-          temp: predictedTemp,
-          precip: predictedPrecip,
-          frost: predictedFrost
         }
       };
     }
