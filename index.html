@@ -2504,109 +2504,172 @@
       const years = Array.from({length: 25}, (_, i) => 2000 + i);
       const yearLabels = years.map(y => y.toString());
       
-      // Generate realistic sample data
-      const annualAvgTemp = years.map(() => 15 + Math.random() * 10);
-      const annualPrecip = years.map(() => 400 + Math.random() * 600);
-      const annualFrostDays = years.map(() => Math.floor(Math.random() * 30));
-      
-      // Calculate trends
-      const warmingTrend = parseFloat((annualAvgTemp[annualAvgTemp.length - 1] - annualAvgTemp[0]).toFixed(1));
-      const precipTrend = parseFloat(((annualPrecip[annualPrecip.length - 1] - annualPrecip[0]) / annualPrecip[0] * 100).toFixed(1));
-      
-      // Identify years with high frost
-      const highFrostYears = years.filter((_, i) => annualFrostDays[i] > 15);
-      
-      // Identify drought years
-      const avgPrecip = annualPrecip.reduce((a, b) => a + b, 0) / annualPrecip.length;
-      const moderateDroughtYears = years.filter((_, i) => annualPrecip[i] < avgPrecip * 0.74);
-      const severeDroughtYears = years.filter((_, i) => annualPrecip[i] < avgPrecip * 0.5);
-      
-      // Generate monthly precipitation data
-      const monthlyPrecip = Array(12).fill().map(() => 20 + Math.random() * 100);
-      
-      // Generate frost comparison data
-      const currentYearTemps = Array(12).fill().map(() => 10 + Math.random() * 15);
-      const historicalTemps = Array(12).fill().map(() => 8 + Math.random() * 12);
-      
-      // Generate frost months data
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      const frostMonths = monthNames.map((name, index) => {
-        const frostDays = index >= 4 && index <= 8 ? Math.floor(Math.random() * 5) : 0;
-        return {
-          name: name,
-          frostDays: frostDays,
-          hasFrost: frostDays > 0
-        };
-      });
-      
-      // Determine frost risk level
-      const currentFrostDays = annualFrostDays[annualFrostDays.length - 1];
-      let frostRisk = 'Low';
-      if (currentFrostDays > 15) frostRisk = 'High';
-      else if (currentFrostDays > 10) frostRisk = 'Moderate';
-      
-      // Determine coldest month
-      const coldestMonthIndex = monthlyPrecip.indexOf(Math.min(...monthlyPrecip));
-      const coldestMonth = monthNames[coldestMonthIndex];
-      
-      // Prepare data structure
-      return {
-        location: {
-          coords: `${lat}, ${lon}`,
-          name: currentLocationName
-        },
-        temp: {
-          labels: yearLabels,
-          values: annualAvgTemp
-        },
-        precip: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-          values: monthlyPrecip
-        },
-        annualRainfall: {
-          labels: yearLabels,
-          values: annualPrecip
-        },
-        frost: {
-          labels: yearLabels,
-          values: annualFrostDays
-        },
-        drought: {
-          labels: yearLabels,
-          values: annualPrecip.map(p => parseFloat(((p - avgPrecip) / avgPrecip * 100).toFixed(1)))
-        },
-        frostComparison: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-          currentTemps: currentYearTemps,
-          historicalTemps: historicalTemps
-        },
-        stats: {
-          avgTemp: (annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length).toFixed(1),
-          maxTemp: (Math.max(...annualAvgTemp) + 15).toFixed(1),
-          minTemp: (Math.min(...annualAvgTemp) - 10).toFixed(1),
-          warming: warmingTrend,
-          annualPrecip: avgPrecip.toFixed(1),
-          maxMonthlyPrecip: Math.max(...monthlyPrecip).toFixed(1),
-          drySpells: (monthlyPrecip.filter(p => p < 30).length / years.length).toFixed(1),
-          precipTrend: precipTrend,
-          highFrostYears: highFrostYears,
-          moderateDroughtYears: moderateDroughtYears,
-          severeDroughtYears: severeDroughtYears,
-          totalFrost: currentFrostDays,
-          avgFrost: (annualFrostDays.reduce((a, b) => a + b, 0) / annualFrostDays.length).toFixed(1),
-          coldestMonth: coldestMonth,
-          frostRisk: frostRisk,
-          frostMonths: frostMonths
-        },
-        prediction: {
-          year: 2025,
-          temp: parseFloat(annualAvgTemp[annualAvgTemp.length - 1] + 0.5).toFixed(1),
-          precip: parseFloat(annualPrecip[annualPrecip.length - 1] * 0.95).toFixed(0),
-          frost: Math.max(0, annualFrostDays[annualFrostDays.length - 1] + 2)
-        }
-      };
+     function generateSampleData(lat, lon) {
+  const years = Array.from({ length: 25 }, (_, i) => 2000 + i);
+  const yearLabels = years.map(String);
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+
+  // --- Generate Annual Data ---
+  const annualAvgTemp = years.map(() => +(14 + Math.random() * 6).toFixed(2)); // 14–20°C
+  const annualPrecip = years.map(() => +(500 + Math.random() * 400).toFixed(2)); // 500–900mm
+  const annualFrostDays = years.map(() => Math.floor(Math.random() * 20)); // 0–20 frost days
+
+  // --- Averages ---
+  const avgTemp = +(annualAvgTemp.reduce((a, b) => a + b, 0) / annualAvgTemp.length).toFixed(1);
+  const avgPrecip = +(annualPrecip.reduce((a, b) => a + b, 0) / annualPrecip.length).toFixed(1);
+  const avgFrost = +(annualFrostDays.reduce((a, b) => a + b, 0) / annualFrostDays.length).toFixed(1);
+
+  // --- Monthly Data (latest year only) ---
+  const monthlyPrecip = Array.from({ length: 12 }, () => +(30 + Math.random() * 90).toFixed(1));
+  const currentYearTemps = Array.from({ length: 12 }, () => +(10 + Math.random() * 10).toFixed(1));
+  const historicalTemps = Array.from({ length: 12 }, () => +(8 + Math.random() * 8).toFixed(1));
+
+  // --- Trends ---
+  const warmingTrend = +(annualAvgTemp.at(-1) - annualAvgTemp[0]).toFixed(2);
+  const precipTrend = +(((annualPrecip.at(-1) - annualPrecip[0]) / annualPrecip[0]) * 100).toFixed(2);
+
+  // --- Derived Data ---
+  const highFrostYears = years.filter((_, i) => annualFrostDays[i] > 15);
+  const moderateDroughtYears = years.filter((_, i) => annualPrecip[i] < avgPrecip * 0.74);
+  const severeDroughtYears = years.filter((_, i) => annualPrecip[i] < avgPrecip * 0.5);
+
+  const frostMonths = monthNames.map((name, index) => {
+    const frostDays = (index <= 2 || index >= 10) ? Math.floor(Math.random() * 6) : 0;
+    return { name, frostDays, hasFrost: frostDays > 0 };
+  });
+
+  const coldestMonthIndex = currentYearTemps.indexOf(Math.min(...currentYearTemps));
+  const coldestMonth = monthNames[coldestMonthIndex];
+
+  const currentFrostDays = annualFrostDays.at(-1);
+  const frostRisk = currentFrostDays > 15 ? 'High' : currentFrostDays > 10 ? 'Moderate' : 'Low';
+
+  const drySpellCount = monthlyPrecip.filter(p => p < 30).length;
+
+  // --- Prediction for Next Year ---
+  const nextYear = years.at(-1) + 1;
+  const predictedTemp = +(annualAvgTemp.at(-1) + 0.4).toFixed(1);
+  const predictedPrecip = Math.max(0, +(annualPrecip.at(-1) * 0.96).toFixed(0));
+  const predictedFrost = Math.max(0, currentFrostDays + 1);
+
+  // --- Rainfall Std Dev ---
+  const precipStdDev = +Math.sqrt(
+    annualPrecip.reduce((sum, val) => sum + Math.pow(val - avgPrecip, 2), 0) / annualPrecip.length
+  ).toFixed(1);
+
+  // --- Return Full Weather Object ---
+  return {
+    location: {
+      coords: `${lat}, ${lon}`,
+      name: typeof currentLocationName !== 'undefined' ? currentLocationName : "Unknown Location"
+    },
+    temp: {
+      labels: yearLabels,
+      values: annualAvgTemp
+    },
+    precip: {
+      labels: monthNames,
+      values: monthlyPrecip
+    },
+    annualRainfall: {
+      labels: yearLabels,
+      values: annualPrecip
+    },
+    frost: {
+      labels: yearLabels,
+      values: annualFrostDays
+    },
+    drought: {
+      labels: yearLabels,
+      values: annualPrecip.map(p => +(((p - avgPrecip) / avgPrecip) * 100).toFixed(1))
+    },
+    frostComparison: {
+      labels: monthNames,
+      currentTemps: currentYearTemps,
+      historicalTemps: historicalTemps
+    },
+    rainfallAnalysis: {
+      averageAnnual: avgPrecip,
+      maxAnnual: +(Math.max(...annualPrecip)).toFixed(1),
+      minAnnual: +(Math.min(...annualPrecip)).toFixed(1),
+      stdDev: precipStdDev,
+      precipTrend: precipTrend,
+      moderateDroughtCount: moderateDroughtYears.length,
+      severeDroughtCount: severeDroughtYears.length
+    },
+    stats: {
+      avgTemp,
+      maxTemp: +(Math.max(...annualAvgTemp)).toFixed(1),
+      minTemp: +(Math.min(...annualAvgTemp)).toFixed(1),
+      warming: warmingTrend,
+      annualPrecip: avgPrecip,
+      maxMonthlyPrecip: Math.max(...monthlyPrecip).toFixed(1),
+      drySpells: drySpellCount,
+      precipTrend,
+      highFrostYears,
+      moderateDroughtYears,
+      severeDroughtYears,
+      totalFrost: currentFrostDays,
+      avgFrost,
+      coldestMonth,
+      frostRisk,
+      frostMonths
+    },
+    prediction: {
+      year: nextYear,
+      temp: predictedTemp,
+      precip: predictedPrecip,
+      frost: predictedFrost
     }
-    
+  };
+}
+
+// --- Future Climate Simulation Function ---
+function simulateFutureClimate(baseData, yearsToSimulate = 25, scenario = 'moderate') {
+  const warmingRate = scenario === 'severe' ? 0.35 : 0.2;       // °C per decade
+  const precipChangeRate = scenario === 'severe' ? -0.02 : 0;   // % per year
+  const frostReductionRate = scenario === 'severe' ? -0.8 : -0.4; // days/year
+
+  const startYear = baseData.prediction.year;
+  const futureYears = Array.from({ length: yearsToSimulate }, (_, i) => startYear + i);
+  const yearLabels = futureYears.map(String);
+
+  let lastTemp = parseFloat(baseData.prediction.temp);
+  let lastPrecip = parseFloat(baseData.prediction.precip);
+  let lastFrost = parseInt(baseData.prediction.frost);
+
+  const futureTemps = [];
+  const futurePrecip = [];
+  const futureFrostDays = [];
+
+  for (let i = 0; i < yearsToSimulate; i++) {
+    lastTemp += warmingRate;
+    futureTemps.push(+lastTemp.toFixed(2));
+
+    lastPrecip += lastPrecip * precipChangeRate;
+    futurePrecip.push(+lastPrecip.toFixed(1));
+
+    lastFrost = Math.max(0, lastFrost + frostReductionRate);
+    futureFrostDays.push(Math.round(lastFrost));
+  }
+
+  return {
+    labels: yearLabels,
+    temp: futureTemps,
+    precip: futurePrecip,
+    frost: futureFrostDays,
+    scenario: scenario,
+    fromYear: startYear,
+    toYear: startYear + yearsToSimulate - 1,
+    assumptions: {
+      warmingRate: `${warmingRate}°C/decade`,
+      precipChange: `${(precipChangeRate * 100).toFixed(1)}%/year`,
+      frostReduction: `${frostReductionRate} days/year`
+    }
+  };
+}
+
     // Initialize progress bar
     updateProgress(0, 'Ready');
     
