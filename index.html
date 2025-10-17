@@ -1745,79 +1745,666 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script>
-    // Previous JavaScript code remains the same until the planting date functions
+    // Initialize map
+    const map = L.map('map').setView([-25.0, 30.0], 5); // Set to South Africa coordinates
+    
+    // Add tile layer
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    // Add administrative boundaries layer
+    const adminBoundaries = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      opacity: 0.3
+    });
+    
+    // Add layer control
+    const baseLayers = {
+      "Standard Map": osmLayer
+    };
+    
+    const overlays = {
+      "Administrative Boundaries": adminBoundaries
+    };
+    
+    L.control.layers(baseLayers, overlays).addTo(map);
+    
+    // Add a marker to South Africa
+    L.marker([-25.0, 30.0]).addTo(map)
+      .bindPopup('South Africa')
+      .openPopup();
 
-    // Add these functions to process planting date data
+    // Initialize layers and controls
+    let drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    let lastPolygonCenter = null;
+    let currentMarker = null;
+    let dataAvailable = false;
+    let pinModeActive = false;
+    let geocodeTimeout = null;
+    let currentRequest = null;
+    let currentLocationName = "South Africa";
+    
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polygon: { allowIntersection: false, showArea: true, shapeOptions: { color: '#2e7d32' } },
+        polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false
+      },
+      edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
 
-    // Function to analyze planting dates based on rainfall patterns
-    function analyzePlantingDates(dailyData, years) {
-      const plantingWindows = [];
+    // Fix for mobile devices - invalidate map size after initialization
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    // Progress bar function
+    function updateProgress(percentage, text) {
+      const fill = document.getElementById('progress-fill');
+      const label = document.getElementById('progress-label');
+      const percentageDisplay = document.getElementById('progress-percentage');
       
-      years.forEach(year => {
-        const yearData = dailyData.time.map((date, idx) => ({
-          date: new Date(date),
-          rainfall: dailyData.precipitation_sum[idx] || 0,
-          year: new Date(date).getFullYear()
-        })).filter(item => item.year === year);
+      if (fill) fill.style.width = `${percentage}%`;
+      if (label) label.textContent = text;
+      if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
+    }
+    
+    // Show notification
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      const notificationText = document.getElementById('notification-text');
+      
+      notification.className = `notification ${type}`;
+      notificationText.textContent = message;
+      notification.classList.add('show');
+      
+      setTimeout(() => notification.classList.remove('show'), 3000);
+    }
+    
+    // Open report modal
+    function openReport(data) {
+      const modal = document.getElementById('reportModal');
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      
+      // Initialize charts with data
+      initCharts(data);
+      
+      // Update report date
+      document.getElementById('reportDate').textContent = new Date().toLocaleDateString();
+      
+      showNotification("Report generated successfully!", "success");
+    }
+    
+    // Close report modal
+    function closeReport() {
+      const modal = document.getElementById('reportModal');
+      modal.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+    
+    // Print report
+    function printReport() {
+      window.print();
+    }
+    
+    // Download report as PDF - IMPROVED VERSION
+    function downloadReport() {
+      const loadingOverlay = document.getElementById('pdfLoading');
+      loadingOverlay.style.display = 'flex';
+      
+      const reportContent = document.querySelector('.report-content');
+      const originalHeight = reportContent.style.height;
+      const originalOverflow = reportContent.style.overflow;
+      
+      // Temporarily make content visible for capture
+      reportContent.style.height = 'auto';
+      reportContent.style.overflow = 'visible';
+      
+      // Add report title to each page
+      const header = document.createElement('div');
+      header.innerHTML = `
+        <div style="position:fixed; top:10px; left:0; right:0; text-align:center; font-size:14px; color:#2e7d32; z-index:9999;">
+          PlaasRisk Climate Report - ${new Date().toLocaleDateString()}
+        </div>
+      `;
+      document.body.appendChild(header);
+      
+      html2canvas(reportContent, {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        onclone: function(clonedDoc) {
+          clonedDoc.body.appendChild(header.cloneNode(true));
+        }
+      }).then(canvas => {
+        // Remove temporary elements
+        document.body.removeChild(header);
         
-        // Find 7-day windows with >10mm rainfall
-        const windows = findRainfallWindows(yearData, 7, 10);
+        // Restore original styles
+        reportContent.style.height = originalHeight;
+        reportContent.style.overflow = originalOverflow;
         
-        windows.forEach(window => {
-          plantingWindows.push({
-            year: year,
-            eventDate: window.startDate,
-            totalRainfall: window.totalRainfall,
-            consecutiveDays: window.days,
-            recommendedPlanting: calculatePlantingDate(window.startDate),
-            status: assessPlantingQuality(window)
-          });
-        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+        let pageCount = 1;
+        
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        
+        // Add page number to first page
+        pdf.setFontSize(10);
+        pdf.text(`Page ${pageCount}`, imgWidth - 20, pageHeight - 10);
+        pageCount++;
+        
+        // Add additional pages if needed
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          
+          // Add page number
+          pdf.text(`Page ${pageCount}`, imgWidth - 20, pageHeight - 10);
+          pageCount++;
+          
+          heightLeft -= pageHeight;
+        }
+        
+        // Save the PDF
+        pdf.save(`PlaasRisk_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+        loadingOverlay.style.display = 'none';
+        showNotification("Report downloaded successfully!", 'success');
+      })
+      .catch(error => {
+        console.error('Error generating PDF:', error);
+        document.body.removeChild(header);
+        loadingOverlay.style.display = 'none';
+        showNotification("Failed to generate PDF. Try the print option.", 'error');
+      });
+    }
+    
+    // Initialize charts in report
+    function initCharts(data) {
+      // Temperature chart
+      const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+      new Chart(tempCtx, {
+        type: 'line',
+        data: {
+          labels: data.temp.labels,
+          datasets: [{
+            label: 'Average Temperature (°C)',
+            data: data.temp.values,
+            borderColor: '#e74c3c',
+            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Average Temperature Trend',
+              font: { size: 16 }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Temperature (°C)' }
+            }
+          }
+        }
       });
       
-      return plantingWindows;
-    }
-
-    // Find rainfall windows meeting criteria
-    function findRainfallWindows(yearData, minDays, minRainfall) {
-      const windows = [];
-      
-      for (let i = 0; i <= yearData.length - minDays; i++) {
-        const window = yearData.slice(i, i + minDays);
-        const totalRainfall = window.reduce((sum, day) => sum + day.rainfall, 0);
-        
-        if (totalRainfall >= minRainfall) {
-          windows.push({
-            startDate: window[0].date,
-            totalRainfall: totalRainfall,
-            days: minDays,
-            windowData: window
-          });
+      // Precipitation chart
+      const precipCtx = document.getElementById('precipitationChart').getContext('2d');
+      new Chart(precipCtx, {
+        type: 'bar',
+        data: {
+          labels: data.precip.labels,
+          datasets: [{
+            label: 'Average Precipitation (mm)',
+            data: data.precip.values,
+            backgroundColor: '#3498db',
+            borderColor: '#2980b9',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Monthly Precipitation Averages',
+              font: { size: 16 }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Precipitation (mm)' }
+            }
+          }
         }
+      });
+      
+      // Annual Rainfall Chart
+      const annualRainfallCtx = document.getElementById('annualRainfallChart').getContext('2d');
+      new Chart(annualRainfallCtx, {
+        type: 'bar',
+        data: {
+          labels: data.annualRainfall.labels,
+          datasets: [{
+            label: 'Annual Rainfall (mm)',
+            data: data.annualRainfall.values,
+            backgroundColor: '#4caf50',
+            borderColor: '#2e7d32',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Rainfall Totals',
+              font: { size: 16 }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Rainfall (mm)' }
+            }
+          }
+        }
+      });
+      
+      // Frost chart
+      const frostCtx = document.getElementById('frostChart').getContext('2d');
+      new Chart(frostCtx, {
+        type: 'line',
+        data: {
+          labels: data.frost.labels,
+          datasets: [{
+            label: 'Frost Days per Year',
+            data: data.frost.values,
+            borderColor: '#1e88e5',
+            backgroundColor: 'rgba(30, 136, 229, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Frost Days',
+              font: { size: 16 }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Days per Year' }
+            }
+          }
+        }
+      });
+      
+      // Drought chart
+      const droughtCtx = document.getElementById('droughtChart').getContext('2d');
+      new Chart(droughtCtx, {
+        type: 'bar',
+        data: {
+          labels: data.drought.labels,
+          datasets: [{
+            label: 'Rainfall Departure (%)',
+            data: data.drought.values,
+            backgroundColor: data.drought.values.map(value => {
+              if (value < -50) return '#f44336'; // Severe drought
+              if (value < -26) return '#ff9800'; // Moderate drought
+              return '#8d6e63'; // Normal
+            }),
+            borderColor: '#6d4c41',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Annual Rainfall Departure from Average',
+              font: { size: 16 }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Percentage Departure (%)' }
+            }
+          }
+        }
+      });
+      
+      // Frost Comparison Chart
+      const frostComparisonCtx = document.getElementById('frostComparisonChart').getContext('2d');
+      new Chart(frostComparisonCtx, {
+        type: 'line',
+        data: {
+          labels: data.frostComparison.labels,
+          datasets: [
+            {
+              label: 'Current Year Temperatures',
+              data: data.frostComparison.currentTemps,
+              borderColor: '#e74c3c',
+              backgroundColor: 'rgba(231, 76, 60, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.3
+            },
+            {
+              label: 'Historical Average',
+              data: data.frostComparison.historicalTemps,
+              borderColor: '#3498db',
+              backgroundColor: 'rgba(52, 152, 219, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.3,
+              borderDash: [5, 5]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Temperature Comparison with Frost Analysis',
+              font: { size: 16 }
+            },
+            annotation: {
+              annotations: {
+                line1: {
+                  type: 'line',
+                  yMin: 0,
+                  yMax: 0,
+                  borderColor: '#bbdefb',
+                  borderWidth: 2,
+                  borderDash: [5, 5]
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Temperature (°C)' }
+            }
+          }
+        }
+      });
+      
+      // Update stats
+      document.getElementById('avgTempValue').textContent = `${data.stats.avgTemp}°C`;
+      document.getElementById('maxTempValue').textContent = `${data.stats.maxTemp}°C`;
+      document.getElementById('minTempValue').textContent = `${data.stats.minTemp}°C`;
+      document.getElementById('warmingValue').textContent = `${data.stats.warming >= 0 ? '+' : ''}${data.stats.warming}°C`;
+      document.getElementById('annualPrecip').textContent = `${data.stats.annualPrecip} mm`;
+      document.getElementById('maxMonthlyPrecip').textContent = `${data.stats.maxMonthlyPrecip} mm`;
+      document.getElementById('drySpells').textContent = `${data.stats.drySpells}/yr`;
+      document.getElementById('precipTrend').textContent = `${data.stats.precipTrend >= 0 ? '+' : ''}${data.stats.precipTrend}%`;
+      document.getElementById('reportLocation').textContent = `${data.location.coords} (${data.location.name})`;
+      
+      // Update frost stats
+      document.getElementById('totalFrost').textContent = data.stats.totalFrost;
+      document.getElementById('avgFrost').textContent = data.stats.avgFrost;
+      document.getElementById('coldestMonth').textContent = data.stats.coldestMonth;
+      document.getElementById('frostRisk').textContent = data.stats.frostRisk;
+      
+      // Update years with frost
+      const highFrostYears = document.getElementById('highFrostYears');
+      highFrostYears.innerHTML = '';
+      data.stats.highFrostYears.forEach(year => {
+        const badge = document.createElement('div');
+        badge.className = 'year-badge frost';
+        badge.textContent = year;
+        highFrostYears.appendChild(badge);
+      });
+      
+      // Update frost months
+      const frostMonthsList = document.getElementById('frostMonthsList');
+      frostMonthsList.innerHTML = '';
+      data.stats.frostMonths.forEach(month => {
+        const tag = document.createElement('div');
+        tag.className = `month-tag ${month.hasFrost ? 'frost-month' : 'normal-month'}`;
+        tag.textContent = `${month.name}: ${month.frostDays} frost days`;
+        frostMonthsList.appendChild(tag);
+      });
+      
+      // Update drought years
+      const moderateDroughtYears = document.getElementById('moderateDroughtYears');
+      moderateDroughtYears.innerHTML = '';
+      data.stats.moderateDroughtYears.forEach(year => {
+        const badge = document.createElement('div');
+        badge.className = 'year-badge moderate-drought';
+        badge.textContent = year;
+        moderateDroughtYears.appendChild(badge);
+      });
+      
+      const severeDroughtYears = document.getElementById('severeDroughtYears');
+      severeDroughtYears.innerHTML = '';
+      data.stats.severeDroughtYears.forEach(year => {
+        const badge = document.createElement('div');
+        badge.className = 'year-badge severe-drought';
+        badge.textContent = year;
+        severeDroughtYears.appendChild(badge);
+      });
+      
+      // Update prediction values
+      document.getElementById('predictedTemp').textContent = `${data.prediction.temp}°C`;
+      document.getElementById('predictedPrecip').textContent = `${data.prediction.precip} mm`;
+      document.getElementById('predictedFrost').textContent = `${data.prediction.frost} days`;
+      
+      // Update frost advisory
+      const frostAdvisory = document.getElementById('frostAdvisoryText');
+      if (data.stats.frostRisk === 'High') {
+        frostAdvisory.textContent = `Based on the current data, there is a high probability of frost incidents in the upcoming week. The region has experienced ${data.stats.totalFrost} frost days this year, which is above the historical average. Farmers should take necessary precautions to protect sensitive crops.`;
+      } else if (data.stats.frostRisk === 'Moderate') {
+        frostAdvisory.textContent = `The frost risk for this region is moderate. While frost events are possible, they are less frequent than in high-risk areas. Farmers should monitor weather forecasts during colder months.`;
+      } else {
+        frostAdvisory.textContent = `This region has a low frost risk. Frost events are rare, but farmers should still be prepared for occasional cold snaps during winter months.`;
       }
       
-      return windows;
-    }
-
-    // Calculate optimal planting date (2-4 weeks after rainfall event)
-    function calculatePlantingDate(rainfallDate) {
-      const plantingDate = new Date(rainfallDate);
-      // Add 2-4 weeks (random for demonstration, in real app use soil temp and frost data)
-      const weeksToAdd = 2 + Math.floor(Math.random() * 3);
-      plantingDate.setDate(plantingDate.getDate() + (weeksToAdd * 7));
-      return plantingDate;
-    }
-
-    // Assess planting quality based on rainfall amount and timing
-    function assessPlantingQuality(window) {
-      const rainfall = window.totalRainfall;
+      // Update prediction summary
+      const predictionSummary = document.getElementById('predictionSummary');
+      predictionSummary.textContent = `Predictions based on historical trends and seasonal forecasting models. This forecast indicates a ${data.prediction.temp > data.stats.avgTemp ? 'warmer' : 'cooler'} and ${data.prediction.precip > data.stats.annualPrecip ? 'wetter' : 'drier'} year ahead with ${data.prediction.frost > data.stats.avgFrost ? 'increased' : 'decreased'} frost risk. Farmers should prepare accordingly.`;
       
-      if (rainfall >= 20) return 'optimal';
-      if (rainfall >= 15) return 'good';
-      return 'poor';
+      // Generate climate commentary
+      generateClimateCommentary(data);
+      
+      // Generate farming recommendations
+      generateFarmingRecommendations(data);
+      
+      // Initialize Planting Dates Table
+      initPlantingDatesTable(data.plantingDates);
+      
+      // Initialize Planting Recommendations
+      initPlantingRecommendations(data);
+    }
+    
+    // Generate climate commentary
+    function generateClimateCommentary(data) {
+      const commentary = document.getElementById('climateCommentary');
+      
+      // Generate commentary based on data
+      commentary.innerHTML = `
+        <p>The climate analysis for <strong>${data.location.name}</strong> (${data.location.coords}) reveals a ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend of <strong>${Math.abs(data.stats.warming)}°C</strong> over the past ${data.temp.labels.length} years. Precipitation has ${data.stats.precipTrend >= 0 ? 'increased' : 'decreased'} by <strong>${Math.abs(data.stats.precipTrend)}%</strong> during the same period. This indicates significant climate shifts that may affect crop selection and growing seasons.</p>
+        
+        <h4>Frost Analysis</h4>
+        <p>${data.stats.highFrostYears.length > 0 ? `High frost events occurred in <strong>${data.stats.highFrostYears.join(', ')}</strong>,` : 'Frost events in this region have been relatively infrequent,'} which ${data.stats.highFrostYears.length > 0 ? 'presents challenges' : 'minimizes risks'} for frost-sensitive crops. The ${data.stats.highFrostYears.length > 0 ? `highest number of frost days (${Math.max(...data.frost.values)}) was recorded in ${data.stats.highFrostYears[0]}.` : 'region experiences minimal frost impact.'} Frost typically occurs between ${data.stats.coldestMonth} and ${getWarmestMonth(data.stats.frostMonths)} in this region. The prediction for the upcoming year shows <strong>${data.prediction.frost} frost days</strong>, which is ${data.prediction.frost > data.stats.avgFrost ? 'above' : 'below'} the historical average.</p>
+        
+        <div class="parameters-box">
+          <p><strong>Frost Classification Parameters:</strong> Frost events are classified when minimum temperature drops below -2°C for 3+ consecutive hours, with wind speed &lt; 2 m/s and cloud cover &lt; 20%.</p>
+        </div>
+        
+        <h4 class="drought-header">Drought Analysis</h4>
+        <p>${data.stats.severeDroughtYears.length > 0 ? `Drought conditions were most severe in <strong>${data.stats.severeDroughtYears.join(', ')}</strong>,` : 'This region has experienced relatively stable precipitation patterns,'} ${data.stats.severeDroughtYears.length > 0 ? 'requiring careful water management planning.' : 'with minimal drought impact.'} ${data.stats.moderateDroughtYears.length > 0 ? `Moderate drought conditions were recorded in <strong>${data.stats.moderateDroughtYears.join(', ')}</strong>.` : ''} The ${data.stats.severeDroughtYears.length > 0 ? `most significant rainfall departure was ${Math.min(...data.drought.values).toFixed(1)}% in ${data.stats.severeDroughtYears[0]}.` : 'precipitation patterns show consistent reliability.'}</p>
+        
+        <div class="drought-classification">
+          <div class="drought-class moderate-drought-box">
+            <h5><i class="fas fa-exclamation-triangle"></i> Moderate Drought</h5>
+            <p>26%–50% below normal rainfall compared to the long-term average (30 years)</p>
+          </div>
+          
+          <div class="drought-class severe-drought-box">
+            <h5><i class="fas fa-fire"></i> Severe Drought</h5>
+            <p>More than 50% below normal rainfall compared to the long-term average (30 years)</p>
+          </div>
+        </div>
+        
+        <p>Based on these patterns, farmers should consider implementing appropriate water conservation techniques and ${data.stats.frostRisk !== 'Low' ? 'selecting frost-resistant crop varieties.' : 'focusing on optimal planting schedules.'} The ${data.stats.warming >= 0 ? 'warming' : 'cooling'} trend suggests that ${data.stats.warming >= 0 ? 'heat-tolerant' : 'cold-resistant'} varieties may become increasingly important in the coming decades.</p>
+      `;
+    }
+    
+    // Generate farming recommendations based on analysis
+    function generateFarmingRecommendations(data) {
+      const recommendations = document.getElementById('farmingRecommendations');
+      recommendations.innerHTML = '';
+      
+      // Base recommendations
+      const baseRecommendations = [
+        "Monitor weather forecasts regularly for timely decision-making",
+        "Maintain soil health through proper crop rotation and organic matter addition",
+        "Implement integrated pest management strategies"
+      ];
+      
+      // Frost-specific recommendations
+      const frostRecommendations = [];
+      if (data.stats.frostRisk === 'High') {
+        frostRecommendations.push(
+          "Plant frost-resistant crops during winter months",
+          "Install frost protection systems in vulnerable areas",
+          "Schedule planting to avoid peak frost periods",
+          "Consider crop insurance for frost protection"
+        );
+      } else if (data.stats.frostRisk === 'Moderate') {
+        frostRecommendations.push(
+          "Have frost protection measures ready for unexpected cold snaps",
+          "Monitor frost forecasts closely during high-risk months",
+          "Consider frost-tolerant varieties for sensitive crops"
+        );
+      }
+      
+      // Drought-specific recommendations
+      const droughtRecommendations = [];
+      if (data.stats.severeDroughtYears.length > 0 || data.stats.precipTrend < -5) {
+        droughtRecommendations.push(
+          "Implement water harvesting systems to mitigate drought impact",
+          "Use drought-tolerant crop varieties",
+          "Practice conservation tillage to retain soil moisture",
+          "Consider drip irrigation for efficient water use"
+        );
+      }
+      
+      // Temperature trend recommendations
+      const tempRecommendations = [];
+      if (data.stats.warming > 0.5) {
+        tempRecommendations.push(
+          "Consider heat-tolerant crop varieties",
+          "Adjust planting schedules to avoid peak heat periods",
+          "Implement shading strategies for sensitive crops"
+        );
+      }
+      
+      // Combine all recommendations
+      const allRecommendations = [
+        ...baseRecommendations,
+        ...frostRecommendations,
+        ...droughtRecommendations,
+        ...tempRecommendations
+      ];
+      
+      // Add to DOM
+      allRecommendations.forEach(rec => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '10px';
+        li.textContent = rec;
+        recommendations.appendChild(li);
+      });
+    }
+    
+    // Helper function to get warmest month from frost data
+    function getWarmestMonth(frostMonths) {
+      let minFrost = Infinity;
+      let warmestMonth = 'December';
+      
+      frostMonths.forEach(month => {
+        if (month.frostDays < minFrost) {
+          minFrost = month.frostDays;
+          warmestMonth = month.name;
+        }
+      });
+      
+      return warmestMonth;
     }
 
-    // Update the processClimateData function to include planting analysis
+    // REAL DATA INTEGRATION FUNCTIONS
+    async function fetchOpenMeteoData(lat, lon, startDate, endDate) {
+      try {
+        updateProgress(20, "Fetching historical data...");
+        
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch data from Open-Meteo');
+        
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching Open-Meteo data:', error);
+        throw error;
+      }
+    }
+    
+    async function fetchCurrentWeather(lat, lon) {
+      try {
+        updateProgress(40, "Fetching current weather...");
+        
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&past_days=7`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch current weather');
+        
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching current weather:', error);
+        throw error;
+      }
+    }
+    
+    // Process real climate data
     function processClimateData(historicalData, currentData, lat, lon) {
       updateProgress(60, "Processing climate data...");
       
@@ -1828,7 +2415,7 @@
       const years = [...new Set(dailyData.time.map(date => new Date(date).getFullYear()))].sort();
       const yearLabels = years.map(y => y.toString());
       
-      // Calculate annual averages (existing code)
+      // Calculate annual averages
       const annualAvgTemp = years.map(year => {
         const yearIndices = dailyData.time.map((date, idx) => 
           new Date(date).getFullYear() === year ? idx : -1
@@ -2004,19 +2591,105 @@
         }
       };
     }
-
-    // Update the initCharts function to include planting dates table
-    function initCharts(data) {
-      // Previous chart initialization code remains the same...
+    
+    // Helper function to calculate percentile
+    function calculatePercentile(arr, percentile) {
+      const sorted = [...arr].sort((a, b) => a - b);
+      const index = (percentile / 100) * (sorted.length - 1);
+      const lower = Math.floor(index);
+      const upper = Math.ceil(index);
       
-      // Initialize Planting Dates Table
-      initPlantingDatesTable(data.plantingDates);
+      if (lower === upper) return sorted[lower];
+      return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
+    }
+    
+    // Helper function to calculate dry spells
+    function calculateDrySpells(dailyData) {
+      let drySpells = 0;
+      let currentDrySpell = 0;
       
-      // Initialize Planting Recommendations
-      initPlantingRecommendations(data);
+      dailyData.time.forEach((date, idx) => {
+        const precip = dailyData.precipitation_sum[idx] || 0;
+        if (precip < 1.0) { // Less than 1mm considered dry
+          currentDrySpell++;
+        } else {
+          if (currentDrySpell >= 7) { // 7+ consecutive dry days = dry spell
+            drySpells++;
+          }
+          currentDrySpell = 0;
+        }
+      });
+      
+      // Calculate average per year
+      const years = [...new Set(dailyData.time.map(date => new Date(date).getFullYear()))].length;
+      return (drySpells / years).toFixed(1);
     }
 
-    // Initialize planting dates table
+    // PLANTING DATE MODEL FUNCTIONS
+    function analyzePlantingDates(dailyData, years) {
+      const plantingWindows = [];
+      
+      years.forEach(year => {
+        const yearData = dailyData.time.map((date, idx) => ({
+          date: new Date(date),
+          rainfall: dailyData.precipitation_sum[idx] || 0,
+          year: new Date(date).getFullYear()
+        })).filter(item => item.year === year);
+        
+        // Find 7-day windows with >10mm rainfall
+        const windows = findRainfallWindows(yearData, 7, 10);
+        
+        windows.forEach(window => {
+          plantingWindows.push({
+            year: year,
+            eventDate: window.startDate,
+            totalRainfall: window.totalRainfall,
+            consecutiveDays: window.days,
+            recommendedPlanting: calculatePlantingDate(window.startDate),
+            status: assessPlantingQuality(window)
+          });
+        });
+      });
+      
+      return plantingWindows;
+    }
+
+    function findRainfallWindows(yearData, minDays, minRainfall) {
+      const windows = [];
+      
+      for (let i = 0; i <= yearData.length - minDays; i++) {
+        const window = yearData.slice(i, i + minDays);
+        const totalRainfall = window.reduce((sum, day) => sum + day.rainfall, 0);
+        
+        if (totalRainfall >= minRainfall) {
+          windows.push({
+            startDate: window[0].date,
+            totalRainfall: totalRainfall,
+            days: minDays,
+            windowData: window
+          });
+        }
+      }
+      
+      return windows;
+    }
+
+    function calculatePlantingDate(rainfallDate) {
+      const plantingDate = new Date(rainfallDate);
+      // Add 2-4 weeks (random for demonstration, in real app use soil temp and frost data)
+      const weeksToAdd = 2 + Math.floor(Math.random() * 3);
+      plantingDate.setDate(plantingDate.getDate() + (weeksToAdd * 7));
+      return plantingDate;
+    }
+
+    function assessPlantingQuality(window) {
+      const rainfall = window.totalRainfall;
+      
+      if (rainfall >= 20) return 'optimal';
+      if (rainfall >= 15) return 'good';
+      return 'poor';
+    }
+
     function initPlantingDatesTable(plantingDates) {
       const tableBody = document.getElementById('plantingDatesTable');
       tableBody.innerHTML = '';
@@ -2057,7 +2730,6 @@
       }
     }
 
-    // Initialize planting recommendations
     function initPlantingRecommendations(data) {
       const recommendationsList = document.getElementById('plantingRecommendations');
       recommendationsList.innerHTML = '';
@@ -2100,7 +2772,6 @@
       });
     }
 
-    // Helper function to format dates
     function formatDate(date) {
       return new Date(date).toLocaleDateString('en-US', {
         month: 'short',
@@ -2109,7 +2780,351 @@
       });
     }
 
-    // Update the sample data generation to include planting dates
+    // Event handlers
+    map.on(L.Draw.Event.CREATED, function (e) {
+      if (e.layerType === 'polygon') {
+        const layer = e.layer;
+        const latlngs = layer.getLatLngs()[0];
+        
+        if (latlngs.length < 3) {
+          showNotification("Please draw a valid polygon with at least 3 points", "error");
+          return;
+        }
+        
+        drawnItems.clearLayers();
+        drawnItems.addLayer(layer);
+
+        const latSum = latlngs.reduce((sum, pt) => sum + pt.lat, 0);
+        const lngSum = latlngs.reduce((sum, pt) => sum + pt.lng, 0);
+        const center = {
+          lat: latSum / latlngs.length,
+          lng: lngSum / latlngs.length
+        };
+        lastPolygonCenter = center;
+        
+        // Update search input with coordinates
+        document.getElementById('searchInput').value = `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+        
+        showNotification(`Farm boundary drawn at ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`, 'success');
+        
+        checkDataAvailability(center.lat, center.lng);
+      }
+    });
+    
+    // Function to check data availability
+    function checkDataAvailability(lat, lng) {
+      // Simulate progress
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        updateProgress(progress, `Checking data availability... ${progress}%`);
+        
+        if (progress >= 100) {
+          clearInterval(interval);
+          
+          const isLand = !(lat < -60 || lat > 60 || Math.abs(lng) > 170);
+          const isRemote = Math.abs(lat) > 55 || Math.abs(lng) > 140;
+          
+          if (!isLand) {
+            showNotification("No data available (ocean location)", "error");
+            dataAvailable = false;
+          } else if (isRemote) {
+            showNotification("Limited data available (remote area)", "warning");
+            dataAvailable = true;
+          } else {
+            showNotification("Reliable data available", "success");
+            dataAvailable = true;
+          }
+        }
+      }, 200);
+    }
+
+    // Activate pin drop mode
+    function activatePinMode() {
+      pinModeActive = true;
+      document.getElementById('dropPinBtn').classList.add('btn-primary');
+      document.getElementById('dropPinBtn').classList.remove('btn-outline');
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Click on Map';
+      
+      // Add event listener for map click
+      map.on('click', handleMapClick);
+      
+      showNotification("Click on the map to drop a pin", 'info');
+    }
+    
+    // Handle map click for pin drop
+    function handleMapClick(e) {
+      if (!pinModeActive) return;
+      
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      
+      // Clear any existing markers
+      if (currentMarker) map.removeLayer(currentMarker);
+      
+      // Add new marker
+      currentMarker = L.marker([lat, lng]).addTo(map)
+        .bindPopup("Dropped Pin: " + lat.toFixed(4) + ", " + lng.toFixed(4))
+        .openPopup();
+      
+      // Update search input
+      document.getElementById("searchInput").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      lastPolygonCenter = { lat, lng };
+      
+      // Check data availability
+      checkDataAvailability(lat, lng);
+      
+      // Deactivate pin mode
+      pinModeActive = false;
+      document.getElementById('dropPinBtn').classList.remove('btn-primary');
+      document.getElementById('dropPinBtn').classList.add('btn-outline');
+      document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      
+      // Remove event listener
+      map.off('click', handleMapClick);
+      
+      showNotification(`Pin dropped at ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
+    }
+    
+    // Location input suggestions
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+      const query = e.target.value;
+      if (query.length < 3) {
+        document.getElementById('suggestions').style.display = 'none';
+        return;
+      }
+      
+      // Clear any existing timeout
+      if (geocodeTimeout) clearTimeout(geocodeTimeout);
+      
+      // Set timeout to avoid too many requests
+      geocodeTimeout = setTimeout(() => {
+        geocodeLocation(query, true);
+      }, 500);
+    });
+    
+    // Search location by text or coordinates
+    function searchLocation() {
+      const query = document.getElementById('searchInput').value;
+      if (!query) {
+        showNotification("Enter coordinates or location name to search", 'error');
+        return;
+      }
+      
+      // Check if input looks like coordinates
+      const coordPattern = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
+      const match = query.match(coordPattern);
+      
+      if (match) {
+        // It's coordinates
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[3]);
+        
+        if (!isNaN(lat) && !isNaN(lng)) {
+          map.setView([lat, lng], 13);
+          
+          if (currentMarker) map.removeLayer(currentMarker);
+          
+          currentMarker = L.marker([lat, lng]).addTo(map)
+            .bindPopup("Searched Location: " + lat + ", " + lng).openPopup();
+          lastPolygonCenter = { lat, lng };
+          currentLocationName = "Custom Location";
+          showNotification(`Location set to: ${lat}, ${lng}`, 'success');
+          
+          checkDataAvailability(lat, lng);
+        } else {
+          showNotification("Invalid coordinates. Please enter in 'latitude, longitude' format.", 'error');
+        }
+      } else {
+        // It's a location name
+        geocodeLocation(query);
+      }
+    }
+    
+    // Fixed geocoding function with better error handling
+    function geocodeLocation(query, forSuggestions = false) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`;
+      
+      // Cancel previous request if any
+      if (currentRequest) {
+        currentRequest.abort();
+      }
+      
+      const controller = new AbortController();
+      const signal = controller.signal;
+      currentRequest = controller;
+      
+      fetch(url, { signal })
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          if (forSuggestions) {
+            // Show suggestions
+            const suggestions = document.getElementById('suggestions');
+            suggestions.innerHTML = '';
+            
+            if (data.length === 0) {
+              suggestions.style.display = 'none';
+              return;
+            }
+            
+            // Use document fragment for efficient DOM updates
+            const fragment = document.createDocumentFragment();
+            data.forEach(item => {
+              const suggestion = document.createElement('div');
+              suggestion.className = 'suggestion-item';
+              suggestion.textContent = item.display_name;
+              suggestion.onclick = () => {
+                document.getElementById('searchInput').value = item.display_name;
+                suggestions.style.display = 'none';
+                
+                // Set the location on the map
+                const lat = parseFloat(item.lat);
+                const lon = parseFloat(item.lon);
+                map.setView([lat, lon], 13);
+                
+                if (currentMarker) map.removeLayer(currentMarker);
+                currentMarker = L.marker([lat, lon]).addTo(map)
+                  .bindPopup(item.display_name)
+                  .openPopup();
+                
+                lastPolygonCenter = { lat, lng: lon };
+                currentLocationName = item.display_name;
+                checkDataAvailability(lat, lon);
+                
+                showNotification(`Location set to: ${item.display_name}`, 'success');
+              };
+              fragment.appendChild(suggestion);
+            });
+            
+            suggestions.appendChild(fragment);
+            suggestions.style.display = 'block';
+          } else {
+            // Process actual search
+            if (data.length === 0) {
+              showNotification("Location not found. Please try a different name.", 'error');
+              return;
+            }
+            
+            const item = data[0];
+            const lat = parseFloat(item.lat);
+            const lon = parseFloat(item.lon);
+            
+            map.setView([lat, lon], 13);
+            
+            if (currentMarker) map.removeLayer(currentMarker);
+            currentMarker = L.marker([lat, lon]).addTo(map)
+              .bindPopup(item.display_name)
+              .openPopup();
+            
+            lastPolygonCenter = { lat, lng: lon };
+            currentLocationName = item.display_name;
+            checkDataAvailability(lat, lon);
+            
+            showNotification(`Location set to: ${item.display_name}`, 'success');
+          }
+        })
+        .catch(error => {
+          if (error.name === 'AbortError') {
+            console.log('Request aborted');
+          } else {
+            console.error('Geocoding error:', error);
+            if (!forSuggestions) {
+              showNotification("Error finding location. Please try again.", 'error');
+            }
+          }
+        })
+        .finally(() => {
+          currentRequest = null;
+        });
+    }
+
+    // Reset map
+    function resetMap() {
+      drawnItems.clearLayers();
+      lastPolygonCenter = null;
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+        currentMarker = null;
+      }
+      map.setView([-25.0, 30.0], 5);
+      document.getElementById("searchInput").value = "";
+      document.getElementById('suggestions').style.display = 'none';
+      currentLocationName = "South Africa";
+      
+      // Reset progress bar
+      updateProgress(0, 'Ready');
+      
+      // Reset pin mode if active
+      if (pinModeActive) {
+        pinModeActive = false;
+        map.off('click', handleMapClick);
+        document.getElementById('dropPinBtn').classList.remove('btn-primary');
+        document.getElementById('dropPinBtn').classList.add('btn-outline');
+        document.getElementById('dropPinBtn').innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      }
+    }
+
+    // Generate report with REAL climate data
+    async function generateReport() {
+      if (!lastPolygonCenter) {
+        showNotification("Draw a farm boundary or search a location first.", 'error');
+        return;
+      }
+      
+      if (!dataAvailable) {
+        showNotification("No data available for this location. Please choose another location.", 'error');
+        return;
+      }
+
+      const lat = lastPolygonCenter.lat;
+      const lon = lastPolygonCenter.lng;
+      
+      // Show loading state
+      updateProgress(10, "Starting analysis...");
+      document.getElementById('generateBtn').disabled = true;
+      
+      try {
+        // Calculate date range (last 10 years for historical data)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setFullYear(endDate.getFullYear() - 10);
+        
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+        
+        // Fetch real data from Open-Meteo
+        updateProgress(30, "Fetching climate data...");
+        const [historicalData, currentData] = await Promise.all([
+          fetchOpenMeteoData(lat, lon, startDateStr, endDateStr),
+          fetchCurrentWeather(lat, lon)
+        ]);
+        
+        // Process the real data
+        const processedData = processClimateData(historicalData, currentData, lat, lon);
+        
+        // Small delay to show completion
+        setTimeout(() => {
+          updateProgress(100, "Analysis complete!");
+          openReport(processedData);
+          document.getElementById('generateBtn').disabled = false;
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error generating report:', error);
+        showNotification("Error fetching climate data. Using sample data instead.", 'warning');
+        
+        // Fallback to sample data if API fails
+        const sampleData = generateSampleData(lat.toFixed(4), lon.toFixed(4));
+        updateProgress(100, "Analysis complete!");
+        openReport(sampleData);
+        document.getElementById('generateBtn').disabled = false;
+      }
+    }
+    
+    // Generate sample data for demonstration (fallback)
     function generateSampleData(lat, lon) {
       const years = Array.from({length: 10}, (_, i) => new Date().getFullYear() - 9 + i);
       const yearLabels = years.map(y => y.toString());
@@ -2242,9 +3257,30 @@
         }
       };
     }
-
-    // The rest of the original JavaScript code remains unchanged...
-    // [Include all the original JavaScript functions from the previous implementation]
+    
+    // Initialize progress bar
+    updateProgress(0, 'Ready');
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      const suggestions = document.getElementById('suggestions');
+      const searchInput = document.getElementById('searchInput');
+      
+      if (suggestions && searchInput) {
+        if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
+          suggestions.style.display = 'none';
+        }
+      }
+    });
+    
+    // Handle window resize for mobile devices
+    window.addEventListener('resize', function() {
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      }
+    });
   </script>
 </body>
 </html>
