@@ -1534,48 +1534,391 @@
           </div>
         </div>
 
-        <!-- NEW PLANTING DATE MODEL SECTION -->
-        <div class="planting-section">
-          <h3><i class="fas fa-seedling"></i> Planting Date Model</h3>
-          
-          <div class="model-criteria">
-            <h4><i class="fas fa-list-check"></i> Model Criteria</h4>
-            <ul class="criteria-list">
-              <li><i class="fas fa-check criteria-icon"></i> Minimum 10mm rainfall within 7 consecutive days</li>
-              <li><i class="fas fa-check criteria-icon"></i> Soil temperature above 10°C for warm-season crops</li>
-              <li><i class="fas fa-check criteria-icon"></i> No frost expected in following 14 days</li>
-              <li><i class="fas fa-check criteria-icon"></i> Optimal planting window: 2-4 weeks after criteria met</li>
-            </ul>
-          </div>
-          
-          <div class="planting-table-container">
-            <table class="planting-table">
-              <thead>
-                <tr>
-                  <th>Year</th>
-                  <th>Rainfall Event Date</th>
-                  <th>Total Rainfall (mm)</th>
-                  <th>Consecutive Days</th>
-                  <th>Recommended Planting</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="plantingDatesTable">
-                <!-- Planting dates will be populated here -->
-              </tbody>
-            </table>
-          </div>
-          
-          <div class="planting-recommendation">
-            <div class="recommendation-header">
-              <i class="fas fa-lightbulb"></i>
-              <h4>Planting Recommendations</h4>
-            </div>
-            <ul class="recommendation-list" id="plantingRecommendations">
-              <!-- Recommendations will be populated here -->
-            </ul>
-          </div>
-        </div>
+       <script>
+// REFINED PLANTING DATE MODEL - RAINY SEASON COMMENCEMENT
+
+// Function to analyze planting dates based on rainy season commencement
+function analyzePlantingDates(dailyData, years) {
+  const plantingWindows = [];
+  
+  years.forEach(year => {
+    const yearData = dailyData.time.map((date, idx) => ({
+      date: new Date(date),
+      rainfall: dailyData.precipitation_sum[idx] || 0,
+      maxTemp: dailyData.temperature_2m_max[idx],
+      minTemp: dailyData.temperature_2m_min[idx],
+      year: new Date(date).getFullYear()
+    })).filter(item => item.year === year);
+    
+    // Find rainy season commencement
+    const rainySeason = findRainySeasonCommencement(yearData);
+    
+    if (rainySeason.found) {
+      plantingWindows.push({
+        year: year,
+        eventDate: rainySeason.startDate,
+        totalRainfall: rainySeason.totalRainfall,
+        consecutiveDays: rainySeason.consecutiveDays,
+        recommendedPlanting: calculateOptimalPlantingDate(rainySeason, yearData),
+        soilTemp: calculateSoilTemperature(rainySeason.startDate, yearData),
+        frostRisk: assessFrostRisk(rainySeason.startDate, yearData),
+        status: assessPlantingQuality(rainySeason),
+        seasonType: rainySeason.seasonType
+      });
+    }
+  });
+  
+  return plantingWindows;
+}
+
+// Find rainy season commencement using improved criteria
+function findRainySeasonCommencement(yearData) {
+  const WINDOW_SIZE = 7; // 7-day window for analysis
+  const MIN_RAINFALL = 25; // Minimum 25mm in 7 days
+  const MIN_DAILY_RAINFALL = 5; // At least one day with 5mm+
+  
+  let bestWindow = null;
+  let maxRainfall = 0;
+  
+  // Analyze different start months based on hemisphere
+  const startMonths = [8, 9, 10, 11, 0, 1, 2, 3]; // Aug to Mar for Southern Hemisphere
+  
+  for (const startMonth of startMonths) {
+    const monthData = yearData.filter(item => 
+      item.date.getMonth() === startMonth
+    );
+    
+    for (let i = 0; i <= monthData.length - WINDOW_SIZE; i++) {
+      const window = monthData.slice(i, i + WINDOW_SIZE);
+      const totalRainfall = window.reduce((sum, day) => sum + day.rainfall, 0);
+      const hasSignificantRain = window.some(day => day.rainfall >= MIN_DAILY_RAINFALL);
+      
+      // Check if this window meets criteria and has more rainfall than current best
+      if (totalRainfall >= MIN_RAINFALL && hasSignificantRain && totalRainfall > maxRainfall) {
+        maxRainfall = totalRainfall;
+        bestWindow = {
+          startDate: window[0].date,
+          totalRainfall: totalRainfall,
+          consecutiveDays: WINDOW_SIZE,
+          windowData: window,
+          seasonType: getSeasonType(startMonth)
+        };
+      }
+    }
+  }
+  
+  if (bestWindow) {
+    // Extend analysis to check sustainability
+    const extendedAnalysis = analyzeRainSustainability(bestWindow.startDate, yearData);
+    return {
+      found: true,
+      ...bestWindow,
+      sustainability: extendedAnalysis.sustainability,
+      drySpellRisk: extendedAnalysis.drySpellRisk
+    };
+  }
+  
+  return { found: false };
+}
+
+// Analyze rain sustainability after commencement
+function analyzeRainSustainability(startDate, yearData) {
+  const FOLLOWING_DAYS = 21; // Analyze next 21 days
+  const startIndex = yearData.findIndex(item => 
+    item.date.getTime() === startDate.getTime()
+  );
+  
+  if (startIndex === -1) return { sustainability: 'low', drySpellRisk: 'high' };
+  
+  const followingPeriod = yearData.slice(startIndex, startIndex + FOLLOWING_DAYS);
+  const totalRain = followingPeriod.reduce((sum, day) => sum + day.rainfall, 0);
+  const dryDays = followingPeriod.filter(day => day.rainfall < 1).length;
+  
+  let sustainability = 'medium';
+  let drySpellRisk = 'medium';
+  
+  if (totalRain >= 50 && dryDays <= 7) {
+    sustainability = 'high';
+    drySpellRisk = 'low';
+  } else if (totalRain >= 30 && dryDays <= 10) {
+    sustainability = 'medium';
+    drySpellRisk = 'medium';
+  } else {
+    sustainability = 'low';
+    drySpellRisk = 'high';
+  }
+  
+  return { sustainability, drySpellRisk };
+}
+
+// Get season type based on month
+function getSeasonType(month) {
+  const seasons = {
+    0: 'Late Summer', 1: 'Late Summer', 2: 'Early Autumn',
+    3: 'Mid Autumn', 4: 'Late Autumn', 5: 'Early Winter',
+    6: 'Mid Winter', 7: 'Late Winter', 8: 'Early Spring',
+    9: 'Mid Spring', 10: 'Late Spring', 11: 'Early Summer'
+  };
+  return seasons[month] || 'Unknown';
+}
+
+// Calculate optimal planting date considering multiple factors
+function calculateOptimalPlantingDate(rainySeason, yearData) {
+  const plantingDate = new Date(rainySeason.startDate);
+  
+  // Base planting delay based on rainfall amount
+  let baseDelay = 14; // Default 2 weeks
+  
+  if (rainySeason.totalRainfall >= 40) {
+    baseDelay = 7; // Heavy rain - plant in 1 week
+  } else if (rainySeason.totalRainfall >= 25) {
+    baseDelay = 14; // Moderate rain - plant in 2 weeks
+  }
+  
+  // Adjust based on soil temperature
+  const soilTemp = calculateSoilTemperature(rainySeason.startDate, yearData);
+  if (soilTemp < 12) {
+    baseDelay += 7; // Delay if soil is cold
+  } else if (soilTemp > 18) {
+    baseDelay -= 3; // Earlier planting if soil is warm
+  }
+  
+  // Adjust based on frost risk
+  const frostRisk = assessFrostRisk(rainySeason.startDate, yearData);
+  if (frostRisk === 'high') {
+    baseDelay += 14; // Significant delay for high frost risk
+  } else if (frostRisk === 'medium') {
+    baseDelay += 7; // Moderate delay for medium frost risk
+  }
+  
+  plantingDate.setDate(plantingDate.getDate() + baseDelay);
+  return plantingDate;
+}
+
+// Calculate soil temperature (simplified model)
+function calculateSoilTemperature(startDate, yearData) {
+  const startIndex = yearData.findIndex(item => 
+    item.date.getTime() === startDate.getTime()
+  );
+  
+  if (startIndex === -1) return 15; // Default fallback
+  
+  // Look at previous 7 days for temperature trend
+  const previousWeek = yearData.slice(Math.max(0, startIndex - 7), startIndex);
+  const avgMaxTemp = previousWeek.reduce((sum, day) => sum + day.maxTemp, 0) / previousWeek.length;
+  const avgMinTemp = previousWeek.reduce((sum, day) => sum + day.minTemp, 0) / previousWeek.length;
+  
+  // Soil temperature is typically 2-3°C below air temperature during day
+  // and 1-2°C above during night. Use average.
+  const soilTemp = ((avgMaxTemp - 2.5) + (avgMinTemp + 1.5)) / 2;
+  
+  return Math.max(5, Math.min(30, soilTemp)); // Clamp between 5-30°C
+}
+
+// Assess frost risk for planting period
+function assessFrostRisk(startDate, yearData) {
+  const plantingDate = new Date(startDate);
+  plantingDate.setDate(plantingDate.getDate() + 14); // Look 2 weeks ahead
+  
+  const startIndex = yearData.findIndex(item => 
+    item.date.getTime() >= plantingDate.getTime()
+  );
+  
+  if (startIndex === -1) return 'low';
+  
+  // Check next 14 days for frost risk
+  const forecastPeriod = yearData.slice(startIndex, startIndex + 14);
+  const frostDays = forecastPeriod.filter(day => day.minTemp <= 2).length;
+  
+  if (frostDays >= 3) return 'high';
+  if (frostDays >= 1) return 'medium';
+  return 'low';
+}
+
+// Assess planting quality based on multiple factors
+function assessPlantingQuality(rainySeason) {
+  const rainfall = rainySeason.totalRainfall;
+  const sustainability = rainySeason.sustainability;
+  const drySpellRisk = rainySeason.drySpellRisk;
+  
+  let score = 0;
+  
+  // Rainfall score (0-40 points)
+  if (rainfall >= 40) score += 40;
+  else if (rainfall >= 30) score += 30;
+  else if (rainfall >= 25) score += 20;
+  else score += 10;
+  
+  // Sustainability score (0-30 points)
+  if (sustainability === 'high') score += 30;
+  else if (sustainability === 'medium') score += 20;
+  else score += 10;
+  
+  // Dry spell risk score (0-30 points)
+  if (drySpellRisk === 'low') score += 30;
+  else if (drySpellRisk === 'medium') score += 20;
+  else score += 10;
+  
+  if (score >= 80) return 'optimal';
+  if (score >= 60) return 'good';
+  return 'poor';
+}
+
+// Update the planting dates table initialization
+function initPlantingDatesTable(plantingDates) {
+  const tableBody = document.getElementById('plantingDatesTable');
+  tableBody.innerHTML = '';
+  
+  // Sort by year and date
+  plantingDates.sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return new Date(a.eventDate) - new Date(b.eventDate);
+  });
+  
+  // Show only last 3 years for clarity
+  const recentYears = [...new Set(plantingDates.map(p => p.year))].sort((a, b) => b - a).slice(0, 3);
+  const filteredDates = plantingDates.filter(p => recentYears.includes(p.year));
+  
+  filteredDates.forEach(planting => {
+    const row = document.createElement('tr');
+    
+    const statusClass = `status-${planting.status}`;
+    const statusText = planting.status.charAt(0).toUpperCase() + planting.status.slice(1);
+    const soilTempColor = planting.soilTemp >= 15 ? '#4caf50' : planting.soilTemp >= 12 ? '#ff9800' : '#f44336';
+    const frostRiskText = planting.frostRisk === 'high' ? 'High' : planting.frostRisk === 'medium' ? 'Medium' : 'Low';
+    
+    row.innerHTML = `
+      <td>${planting.year}</td>
+      <td>${formatDate(planting.eventDate)}<br><small style="color: #666;">${planting.seasonType}</small></td>
+      <td><span class="rainfall-amount">${planting.totalRainfall.toFixed(1)} mm</span><br><small>in ${planting.consecutiveDays} days</small></td>
+      <td style="color: ${soilTempColor}; font-weight: 600;">${planting.soilTemp.toFixed(1)}°C</td>
+      <td>${formatDate(planting.recommendedPlanting)}</td>
+      <td>${frostRiskText}</td>
+      <td><span class="planting-status ${statusClass}">${statusText}</span></td>
+    `;
+    
+    tableBody.appendChild(row);
+  });
+  
+  // If no planting dates found, show message
+  if (filteredDates.length === 0) {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td colspan="7" style="text-align: center; color: #666; padding: 30px;">No clear rainy season commencement found in recent years. Consider irrigation-based planting.</td>`;
+    tableBody.appendChild(row);
+  }
+}
+
+// Update planting recommendations
+function initPlantingRecommendations(data) {
+  const recommendationsList = document.getElementById('plantingRecommendations');
+  recommendationsList.innerHTML = '';
+  
+  const plantingDates = data.plantingDates;
+  const recentYear = Math.max(...plantingDates.map(p => p.year));
+  const recentPlantings = plantingDates.filter(p => p.year === recentYear);
+  
+  const recommendations = [];
+  
+  if (recentPlantings.length > 0) {
+    const optimalPlantings = recentPlantings.filter(p => p.status === 'optimal');
+    const currentMonth = new Date().getMonth();
+    
+    if (optimalPlantings.length > 0) {
+      const bestPlanting = optimalPlantings[0];
+      recommendations.push(`<strong>Optimal planting window:</strong> ${formatDate(bestPlanting.recommendedPlantting)} based on ${bestPlanting.seasonType} rains`);
+      
+      // Soil temperature advice
+      if (bestPlanting.soilTemp < 12) {
+        recommendations.push("Soil temperature is low - consider delaying planting or using soil warming techniques");
+      } else if (bestPlanting.soilTemp >= 15) {
+        recommendations.push("Soil temperature is optimal for most crops");
+      }
+      
+      // Frost risk advice
+      if (bestPlanting.frostRisk === 'high') {
+        recommendations.push("High frost risk expected - protect sensitive crops or delay planting");
+      } else if (bestPlanting.frostRisk === 'medium') {
+        recommendations.push("Moderate frost risk - monitor weather forecasts closely");
+      }
+    }
+    
+    // Seasonal crop recommendations
+    const avgTemp = parseFloat(data.stats.avgTemp);
+    if (currentMonth >= 8 && currentMonth <= 10) { // Spring planting
+      recommendations.push("Spring planting: Ideal for maize, soybeans, sunflowers");
+      if (avgTemp > 18) {
+        recommendations.push("Warm soil conditions favor quick germination");
+      }
+    } else if (currentMonth >= 11 || currentMonth <= 1) { // Summer planting
+      recommendations.push("Summer planting: Suitable for sorghum, millet, cowpeas");
+    } else if (currentMonth >= 2 && currentMonth <= 4) { // Autumn planting
+      recommendations.push("Autumn planting: Consider wheat, barley, oats, canola");
+    }
+    
+    // Rainfall pattern advice
+    const annualPrecip = parseFloat(data.stats.annualPrecip);
+    if (annualPrecip < 400) {
+      recommendations.push("Low rainfall area: Focus on drought-tolerant varieties and water conservation");
+    } else if (annualPrecip > 800) {
+      recommendations.push("High rainfall area: Ensure good drainage and disease management");
+    }
+    
+  } else {
+    recommendations.push(
+      "No clear rainy season pattern detected",
+      "Consider soil moisture monitoring for planting decisions",
+      "Explore irrigation options for reliable planting dates",
+      "Consult local agricultural extension services for regional advice"
+    );
+  }
+  
+  // Add general recommendations
+  recommendations.push(
+    "Test soil moisture before planting - aim for adequate moisture in root zone",
+    "Consider cover crops to improve soil water retention",
+    "Monitor 14-day weather forecast before finalizing planting date"
+  );
+  
+  recommendations.forEach(rec => {
+    const li = document.createElement('li');
+    li.innerHTML = `<i class="fas fa-leaf recommendation-icon"></i> ${rec}`;
+    recommendationsList.appendChild(li);
+  });
+}
+
+// Update the model criteria display
+function updateModelCriteria() {
+  const criteriaList = document.querySelector('.criteria-list');
+  criteriaList.innerHTML = `
+    <li><i class="fas fa-check criteria-icon"></i> Rainy season commencement: 25mm+ rainfall within 7 days</li>
+    <li><i class="fas fa-check criteria-icon"></i> At least one significant rain day: 5mm+ in 24 hours</li>
+    <li><i class="fas fa-check criteria-icon"></i> Soil temperature consideration: Optimal range 12-30°C</li>
+    <li><i class="fas fa-check criteria-icon"></i> Frost risk assessment for following 14 days</li>
+    <li><i class="fas fa-check criteria-icon"></i> Rain sustainability analysis for 21 days post-commencement</li>
+    <li><i class="fas fa-check criteria-icon"></i> Seasonal timing: Focus on spring and summer commencement</li>
+  `;
+}
+
+// Update table headers for new columns
+function updateTableHeaders() {
+  const tableHeaders = document.querySelector('.planting-table thead tr');
+  tableHeaders.innerHTML = `
+    <th>Year</th>
+    <th>Rainy Season Start</th>
+    <th>Initial Rainfall</th>
+    <th>Soil Temp</th>
+    <th>Planting Date</th>
+    <th>Frost Risk</th>
+    <th>Status</th>
+  `;
+}
+
+// Call these update functions when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+  updateModelCriteria();
+  updateTableHeaders();
+});
+</script>
         
         <!-- Prediction Section -->
         <div class="prediction-section">
