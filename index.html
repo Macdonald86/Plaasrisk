@@ -461,8 +461,84 @@
       background: var(--primary-dark);
     }
 
-    /* Rest of your existing CSS remains unchanged */
-    /* ... (all other CSS styles from the original code) ... */
+    /* Logo Styles */
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .plaasrisk-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .logo-icon {
+      color: white;
+      font-size: 1.2rem;
+    }
+    
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
+
+    /* PDF Loading Overlay */
+    .pdf-loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      color: white;
+    }
+    
+    .pdf-spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top: 5px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    /* Report Modal */
+    .report-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      z-index: 2000;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .report-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -1148,8 +1224,219 @@
       }
     }
 
-    // Your existing UI functions remain the same
-    // (searchLocation, activatePinMode, resetMap, etc.)
+    // LOCATION SEARCH FUNCTIONS
+
+    /**
+     * Search for a location using OpenStreetMap Nominatim
+     */
+    async function searchLocation() {
+      const searchInput = document.getElementById('searchInput');
+      const query = searchInput.value.trim();
+      
+      if (!query) {
+        showNotification("Please enter a location or coordinates.", 'warning');
+        return;
+      }
+      
+      // Check if input is coordinates
+      const coordMatch = query.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lon = parseFloat(coordMatch[2]);
+        
+        if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+          showNotification("Invalid coordinates. Please use format: lat, lon", 'error');
+          return;
+        }
+        
+        // Center map on coordinates
+        centerMapOnLocation(lat, lon, "Custom Location");
+        return;
+      }
+      
+      // Otherwise, perform geocoding search
+      try {
+        updateProgress(20, "Searching for location...");
+        
+        // Use OpenStreetMap Nominatim API for geocoding
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
+        );
+        
+        if (!response.ok) {
+          throw new Error('Geocoding service unavailable');
+        }
+        
+        const results = await response.json();
+        
+        if (results.length === 0) {
+          showNotification("Location not found. Please try a different search term.", 'error');
+          updateProgress(0, "Ready");
+          return;
+        }
+        
+        // Use the first result
+        const result = results[0];
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        const name = result.display_name;
+        
+        // Center map on the found location
+        centerMapOnLocation(lat, lon, name);
+        
+      } catch (error) {
+        console.error('Error searching location:', error);
+        showNotification("Location search failed. Please try again.", 'error');
+        updateProgress(0, "Ready");
+      }
+    }
+
+    /**
+     * Center map on a specific location and add a marker
+     */
+    function centerMapOnLocation(lat, lon, name) {
+      // Remove existing marker
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+      
+      // Create and add new marker
+      currentMarker = L.marker([lat, lon])
+        .addTo(map)
+        .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`)
+        .openPopup();
+      
+      // Center map on location
+      map.setView([lat, lon], 12);
+      
+      // Update location name
+      currentLocationName = name;
+      
+      // Set last polygon center for analysis
+      lastPolygonCenter = { lat, lng: lon };
+      
+      // Show success message
+      showNotification(`Location found: ${name}`, 'success');
+      updateProgress(100, "Location found");
+      
+      // Reset progress after a delay
+      setTimeout(() => updateProgress(0, "Ready"), 2000);
+    }
+
+    /**
+     * Activate pin drop mode
+     */
+    function activatePinMode() {
+      pinModeActive = !pinModeActive;
+      const dropPinBtn = document.getElementById('dropPinBtn');
+      
+      if (pinModeActive) {
+        dropPinBtn.classList.remove('btn-outline');
+        dropPinBtn.classList.add('btn-primary');
+        dropPinBtn.innerHTML = '<i class="fas fa-times"></i> Cancel Pin';
+        
+        // Change cursor to indicate pin mode
+        map.getContainer().style.cursor = 'crosshair';
+        
+        // Add click listener for pin placement
+        map.once('click', function(e) {
+          placePin(e.latlng);
+          deactivatePinMode();
+        });
+        
+        showNotification("Click on the map to place a pin", 'info');
+      } else {
+        deactivatePinMode();
+      }
+    }
+
+    /**
+     * Deactivate pin drop mode
+     */
+    function deactivatePinMode() {
+      pinModeActive = false;
+      const dropPinBtn = document.getElementById('dropPinBtn');
+      
+      dropPinBtn.classList.remove('btn-primary');
+      dropPinBtn.classList.add('btn-outline');
+      dropPinBtn.innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      
+      // Reset cursor
+      map.getContainer().style.cursor = '';
+      
+      // Remove any pending click listeners
+      map.off('click');
+    }
+
+    /**
+     * Place a pin at the specified location
+     */
+    function placePin(latlng) {
+      // Remove existing marker
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+      
+      // Create and add new marker
+      currentMarker = L.marker(latlng)
+        .addTo(map)
+        .bindPopup(`<b>Custom Pin</b><br>Lat: ${latlng.lat.toFixed(4)}, Lon: ${latlng.lng.toFixed(4)}`)
+        .openPopup();
+      
+      // Update location name
+      currentLocationName = "Custom Pin Location";
+      
+      // Set last polygon center for analysis
+      lastPolygonCenter = latlng;
+      
+      showNotification("Pin placed successfully", 'success');
+    }
+
+    /**
+     * Reset the map to initial state
+     */
+    function resetMap() {
+      // Clear drawn items
+      drawnItems.clearLayers();
+      
+      // Remove marker
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+        currentMarker = null;
+      }
+      
+      // Reset view
+      map.setView([-25.0, 30.0], 5);
+      
+      // Reset variables
+      lastPolygonCenter = null;
+      dataAvailable = false;
+      
+      // Clear search input
+      document.getElementById('searchInput').value = '';
+      
+      // Reset progress
+      updateProgress(0, "Ready");
+      
+      showNotification("Map has been reset", 'info');
+    }
+
+    /**
+     * Show data unavailable message
+     */
+    function showDataUnavailableMessage() {
+      // This would typically show a modal or message in the UI
+      showNotification("Climate data is not available for this location", 'warning');
+    }
+
+    /**
+     * Open report modal (placeholder function)
+     */
+    function openReport(data) {
+      // This would typically populate and show the report modal
+      console.log("Report data:", data);
+      showNotification("Climate analysis complete! Report data logged to console.", 'success');
+    }
 
     // Initialize the application
     document.addEventListener('DOMContentLoaded', function() {
@@ -1159,11 +1446,55 @@
       // Initialize progress bar
       updateProgress(0, 'Ready');
       
+      // Add event listener for Enter key in search input
+      document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          searchLocation();
+        }
+      });
+      
       showNotification("PlaasRisk initialized successfully", 'success');
     });
 
-    // Rest of your existing UI code remains the same...
-    // (All the map event handlers, geocoding functions, etc.)
+    // Map event handlers for drawing
+    map.on(L.Draw.Event.CREATED, function(event) {
+      const layer = event.layer;
+      drawnItems.addLayer(layer);
+      
+      // Calculate center of polygon
+      const bounds = layer.getBounds();
+      lastPolygonCenter = bounds.getCenter();
+      
+      // Update location name
+      currentLocationName = "Drawn Farm Boundary";
+      
+      showNotification("Farm boundary drawn successfully", 'success');
+    });
+
+    map.on(L.Draw.Event.EDITED, function(event) {
+      const layers = event.layers;
+      let editedCount = 0;
+      
+      layers.eachLayer(function(layer) {
+        editedCount++;
+      });
+      
+      showNotification(`${editedCount} boundary${editedCount > 1 ? 'ies' : ''} updated`, 'info');
+    });
+
+    map.on(L.Draw.Event.DELETED, function(event) {
+      const layers = event.layers;
+      let deletedCount = 0;
+      
+      layers.eachLayer(function(layer) {
+        deletedCount++;
+      });
+      
+      lastPolygonCenter = null;
+      dataAvailable = false;
+      
+      showNotification(`${deletedCount} boundary${deletedCount > 1 ? 'ies' : ''} removed`, 'info');
+    });
   </script>
 </body>
 </html>
