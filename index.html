@@ -1,583 +1,1754 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PlaasRisk Climate Intelligence</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlaasRisk - Advanced Climate Analysis</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary: #2e7d32;
+      --primary-light: #4caf50;
+      --primary-dark: #1b5e20;
+      --secondary: #388e3c;
+      --accent: #f57c00;
+      --accent-light: #ffb74d;
+      --accent-dark: #e65100;
+      --light: #f5f9f5;
+      --light-gray: #f8f9fa;
+      --dark: #2d3748;
+      --text: #333333;
+      --border: #e0e0e0;
+      --success: #4caf50;
+      --warning: #ff9800;
+      --danger: #f44336;
+      --frost-blue: #1e88e5;
+      --frost-light: #bbdefb;
+      --drought-brown: #8d6e63;
+      --drought-light: #efebe9;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 15px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .map-section {
+      flex: 1;
+      background: white;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      margin: 15px 0;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #map {
+      flex: 1;
+      z-index: 1;
+      background: #e8f5e9;
+    }
+    
+    /* HORIZONTAL CONTROL BAR */
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 12px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      position: relative;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    @media (max-width: 1200px) {
+      .control-bar {
+        gap: 10px;
+        padding: 10px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .control-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    @media (max-width: 768px) {
+      .control-group {
+        min-width: 100%;
+      }
+    }
+    
+    .input-with-icon {
+      position: relative;
+      flex: 1;
+    }
+    
+    .input-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary);
+      font-size: 0.9rem;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 9px 12px 9px 35px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+      background: var(--light-gray);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+      background: white;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      gap: 6px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+      white-space: nowrap;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 12px rgba(46, 125, 50, 0.25);
+    }
+    
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      font-weight: 500;
+    }
+    
+    .btn-outline:hover {
+      background: rgba(46, 125, 50, 0.08);
+    }
+    
+    .btn-sm {
+      padding: 7px 10px;
+      font-size: 0.85rem;
+    }
+    
+    .btn-block {
+      width: 100%;
+    }
+    
+    .map-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .map-actions .btn {
+      flex: 1;
+      min-width: 110px;
+    }
+    
+    @media (max-width: 768px) {
+      .map-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .map-actions .btn {
+        min-width: auto;
+        flex: none;
+      }
+    }
+    
+    .progress-container {
+      width: 200px;
+      margin-left: 15px;
+    }
+    
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 0.85rem;
+      color: var(--dark);
+    }
+    
+    .progress-bar {
+      height: 10px;
+      background: #e0e0e0;
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    
+    .progress-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 500;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    }
+    
+    .suggestions-box {
+      position: absolute;
+      width: 100%;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 1001;
+      margin-top: 4px;
+      display: none;
+      border: 1px solid var(--border);
+    }
+    
+    .suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+      font-size: 0.85rem;
+    }
+    
+    .suggestion-item:hover {
+      background: var(--light);
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    
+    .notification {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateX(200%);
+      transition: transform 0.4s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      .notification {
+        top: auto;
+        bottom: 15px;
+        left: 15px;
+        right: 15px;
+        width: calc(100% - 30px);
+      }
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+    
+    .notification.success {
+      background: var(--success);
+    }
+    
+    .notification.error {
+      background: var(--danger);
+    }
+    
+    .notification.info {
+      background: var(--primary);
+    }
+    
+    .notification.warning {
+      background: var(--warning);
+    }
+    
+    footer {
+      text-align: center;
+      padding: 8px;
+      color: #666;
+      font-size: 0.8rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-top: 12px;
+    }
+    
+    /* API Status Indicator */
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--light);
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .status-online {
+      background: var(--success);
+    }
+    
+    .status-offline {
+      background: var(--danger);
+    }
+    
+    .status-warning {
+      background: var(--warning);
+    }
+    
+    /* Data Unavailable Message */
+    .data-unavailable {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+      grid-column: 1 / -1;
+    }
+    
+    .data-unavailable-icon {
+      font-size: 4rem;
+      color: var(--warning);
+      margin-bottom: 20px;
+    }
+    
+    .data-unavailable h3 {
+      font-size: 1.8rem;
+      color: var(--dark);
+      margin-bottom: 15px;
+    }
+    
+    .data-unavailable p {
+      font-size: 1.1rem;
+      color: #666;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    
+    /* Loading States */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      border-radius: 16px;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Retry Button */
+    .retry-btn {
+      margin-top: 15px;
+      padding: 8px 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    .retry-btn:hover {
+      background: var(--primary-dark);
+    }
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+    /* Logo Styles */
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .plaasrisk-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .logo-icon {
+      color: white;
+      font-size: 1.2rem;
+    }
+    
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    /* PDF Loading Overlay */
+    .pdf-loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      color: white;
+    }
+    
+    .pdf-spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top: 5px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    /* Report Modal */
+    .report-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      z-index: 2000;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .report-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
 
-<style>
-
-/* ======================================================
-LOOK & FEEL SECTION
-====================================================== */
-
-:root{
---primary:#2e7d32;
---secondary:#4caf50;
---light:#f5f9f5;
---border:#e0e0e0;
---text:#333;
---danger:#f44336;
---warning:#ff9800;
---success:#4caf50;
---shadow:0 4px 20px rgba(0,0,0,0.08);
-}
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:'Poppins',sans-serif;
-}
-
-body{
-background:linear-gradient(135deg,#f5f9f5,#e8f5e9);
-color:var(--text);
-}
-
-.container{
-max-width:1600px;
-margin:auto;
-padding:10px;
-}
-
-.map-section{
-background:white;
-border-radius:16px;
-box-shadow:var(--shadow);
-overflow:hidden;
-}
-
-#map{
-height:75vh;
-}
-
-.control-bar{
-display:flex;
-flex-wrap:wrap;
-gap:10px;
-padding:12px;
-border-bottom:1px solid var(--border);
-align-items:center;
-}
-
-.logo{
-font-weight:700;
-color:var(--primary);
-font-size:1.3rem;
-}
-
-.form-control{
-padding:8px;
-border-radius:8px;
-border:1px solid var(--border);
-}
-
-.btn{
-padding:8px 14px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-font-weight:500;
-}
-
-.btn-primary{
-background:var(--primary);
-color:white;
-}
-
-.btn-outline{
-border:1px solid var(--primary);
-background:white;
-color:var(--primary);
-}
-
-.analysis-panel{
-position:absolute;
-top:90px;
-right:20px;
-width:320px;
-background:white;
-padding:20px;
-border-radius:12px;
-box-shadow:var(--shadow);
-display:none;
-}
-
-.metric{
-margin-bottom:12px;
-}
-
-.metric-title{
-font-size:0.85rem;
-color:#777;
-}
-
-.metric-value{
-font-size:1.3rem;
-font-weight:600;
-color:var(--primary);
-}
-
-.notification{
-position:fixed;
-top:20px;
-right:20px;
-background:var(--success);
-color:white;
-padding:10px 16px;
-border-radius:8px;
-display:none;
-}
-
-footer{
-margin-top:10px;
-font-size:0.8rem;
-text-align:center;
-}
-
-</style>
+    /* Analysis Results Panel */
+    .analysis-panel {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      width: 350px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      z-index: 1000;
+      max-height: 80vh;
+      overflow-y: auto;
+      display: none;
+    }
+    
+    .analysis-header {
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .analysis-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    .close-analysis {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: var(--dark);
+    }
+    
+    .metric-card {
+      background: var(--light);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 12px;
+    }
+    
+    .metric-title {
+      font-size: 0.9rem;
+      color: var(--dark);
+      margin-bottom: 5px;
+    }
+    
+    .metric-value {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    .metric-trend {
+      font-size: 0.8rem;
+      color: var(--success);
+    }
+    
+    .metric-trend.negative {
+      color: var(--danger);
+    }
+  </style>
 </head>
-
 <body>
-
-<div class="container">
-
-<div class="map-section">
-
-<div class="control-bar">
-
-<div class="logo">
-<i class="fas fa-seedling"></i> PlaasRisk
-</div>
-
-<input id="searchInput" class="form-control" placeholder="Search location or lat,long"/>
-
-<button class="btn btn-primary" onclick="searchLocation()">Search</button>
-
-<button class="btn btn-outline" onclick="activatePinMode()">Drop Pin</button>
-
-<button class="btn btn-primary" onclick="generateReport()">Analyze</button>
-
-<button class="btn btn-outline" onclick="resetMap()">Clear</button>
-
-</div>
-
-<div id="map"></div>
-
-</div>
-
-<div id="analysisPanel" class="analysis-panel"></div>
-
-<footer>
-Farm Climate Intelligence • Powered by Open-Meteo
-</footer>
-
-</div>
-
-<div id="notification" class="notification"></div>
-
-<!-- Libraries -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-
-<script>
-
-/* ======================================================
-MAP + INTERFACE SECTION
-====================================================== */
-
-let map
-let currentMarker=null
-let lastLocation=null
-let pinMode=false
-let pinHandler=null
-let drawnItems
-
-function initMap(){
-
-map=L.map("map").setView([-25,30],5)
-
-L.tileLayer(
-"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{maxZoom:19}
-).addTo(map)
-
-drawnItems=new L.FeatureGroup()
-map.addLayer(drawnItems)
-
-const drawControl=new L.Control.Draw({
-draw:{
-polygon:true,
-rectangle:false,
-circle:false,
-polyline:false,
-marker:false,
-circlemarker:false
-},
-edit:{featureGroup:drawnItems}
-})
-
-map.addControl(drawControl)
-
-map.on(L.Draw.Event.CREATED,function(e){
-
-drawnItems.addLayer(e.layer)
-
-const center=e.layer.getBounds().getCenter()
-
-lastLocation=center
-
-notify("Farm boundary added")
-
-})
-
-}
-
-function activatePinMode(){
-
-pinMode=!pinMode
-
-if(pinMode){
-
-notify("Click map to drop pin")
-
-pinHandler=function(e){
-
-placePin(e.latlng)
-
-map.off("click",pinHandler)
-
-pinMode=false
-
-}
-
-map.on("click",pinHandler)
-
-}else{
-
-map.off("click",pinHandler)
-
-}
-
-}
-
-function placePin(latlng){
-
-if(currentMarker) map.removeLayer(currentMarker)
-
-currentMarker=L.marker(latlng).addTo(map)
-
-lastLocation=latlng
-
-notify("Pin placed")
-
-}
-
-function resetMap(){
-
-drawnItems.clearLayers()
-
-if(currentMarker) map.removeLayer(currentMarker)
-
-lastLocation=null
-
-document.getElementById("analysisPanel").style.display="none"
-
-notify("Map cleared")
-
-}
-
-/* ======================================================
-LOCATION SEARCH
-====================================================== */
-
-async function searchLocation(){
-
-const q=document.getElementById("searchInput").value.trim()
-
-if(!q) return notify("Enter location")
-
-const coord=q.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
-
-if(coord){
-
-const lat=parseFloat(coord[1])
-const lon=parseFloat(coord[2])
-
-map.setView([lat,lon],12)
-
-placePin({lat:lat,lng:lon})
-
-return
-
-}
-
-const url=`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`
-
-const res=await fetch(url)
-
-const data=await res.json()
-
-if(!data.length) return notify("Location not found")
-
-const lat=parseFloat(data[0].lat)
-const lon=parseFloat(data[0].lon)
-
-map.setView([lat,lon],12)
-
-placePin({lat:lat,lng:lon})
-
-}
-
-/* ======================================================
-CLIMATE API
-Fetch REAL Open-Meteo Historical Data
-====================================================== */
-
-async function fetchClimate(lat, lon) {
-
-try{
-
-const url =
-`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-01-01&end_date=2024-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
-
-const response = await fetch(url)
-
-if(!response.ok){
-throw new Error("Climate API request failed")
-}
-
-const data = await response.json()
-
-if(!data || !data.daily || !data.daily.time){
-throw new Error("Climate data unavailable")
-}
-
-return data
-
-}catch(error){
-
-console.error("Climate API Error:",error)
-
-throw error
-
-}
-
-}
-
-/* ======================================================
-CLIMATE ANALYSIS
-Annual Averages (Scientifically Correct)
-====================================================== */
-
-function analyzeClimate(data){
-
-const daily = data.daily
-
-const years = {}
-
-for(let i=0;i<daily.time.length;i++){
-
-const date = new Date(daily.time[i])
-const year = date.getFullYear()
-
-if(!years[year]){
-
-years[year] = {
-tempSum:0,
-tempDays:0,
-rain:0,
-frost:0
-}
-
-}
-
-const tmax = daily.temperature_2m_max[i]
-const tmin = daily.temperature_2m_min[i]
-const rain = daily.precipitation_sum[i]
-
-/* ---------- Temperature ---------- */
-
-if(tmax !== null && tmin !== null){
-
-const meanTemp = (tmax + tmin) / 2
-
-years[year].tempSum += meanTemp
-years[year].tempDays++
-
-}
-
-/* ---------- Rainfall ---------- */
-
-if(rain !== null){
-
-years[year].rain += rain
-
-}
-
-/* ---------- Frost ---------- */
-
-if(tmin !== null && tmin <= 0){
-
-years[year].frost++
-
-}
-
-}
-
-/* ======================================================
-CALCULATE ANNUAL AVERAGES
-====================================================== */
-
-const annualTemps = []
-const annualRain = []
-const annualFrost = []
-
-for(const year in years){
-
-const y = years[year]
-
-if(y.tempDays > 0){
-
-annualTemps.push(y.tempSum / y.tempDays)
-
-}
-
-annualRain.push(y.rain)
-annualFrost.push(y.frost)
-
-}
-
-/* ======================================================
-FINAL METRICS
-====================================================== */
-
-const avgTemp =
-(annualTemps.reduce((a,b)=>a+b,0) / annualTemps.length).toFixed(1)
-
-const avgRain =
-(annualRain.reduce((a,b)=>a+b,0) / annualRain.length).toFixed(0)
-
-const avgFrost =
-(annualFrost.reduce((a,b)=>a+b,0) / annualFrost.length).toFixed(0)
-
-return{
-
-avgTemp,
-avgRain,
-avgFrost,
-years:annualTemps.length
-
-}
-
-}
-
-/* ======================================================
-REPORT GENERATION
-====================================================== */
-
-async function generateReport(){
-
-if(!lastLocation){
-return notify("Select location first")
-}
-
-notify("Fetching climate data...")
-
-const lat = lastLocation.lat
-const lon = lastLocation.lng
-
-try{
-
-const data = await fetchClimate(lat, lon)
-
-const result = analyzeClimate(data)
-
-showAnalysis(result)
-
-notify("Climate analysis complete")
-
-}catch(error){
-
-notify("Climate data unavailable")
-
-console.error(error)
-
-}
-
-}
-
-/* ======================================================
-DISPLAY RESULTS
-====================================================== */
-
-function showAnalysis(r){
-
-const panel = document.getElementById("analysisPanel")
-
-panel.innerHTML = `
-
-<div class="metric">
-<div class="metric-title">Average Annual Temperature</div>
-<div class="metric-value">${r.avgTemp} °C</div>
-</div>
-
-<div class="metric">
-<div class="metric-title">Average Annual Rainfall</div>
-<div class="metric-value">${r.avgRain} mm</div>
-</div>
-
-<div class="metric">
-<div class="metric-title">Average Frost Days / Year</div>
-<div class="metric-value">${r.avgFrost}</div>
-</div>
-
-<div class="metric">
-<div class="metric-title">Years Analyzed</div>
-<div class="metric-value">${r.years}</div>
-</div>
-
-`
-
-panel.style.display = "block"
-
-}
-
-/* ======================================================
-UTILITY
-====================================================== */
-
-function notify(msg){
-
-const n = document.getElementById("notification")
-
-n.innerText = msg
-
-n.style.display = "block"
-
-setTimeout(()=>{
-
-n.style.display = "none"
-
-},3000)
-
-}
-
-/* ======================================================
-APP START
-====================================================== */
-
-document.addEventListener("DOMContentLoaded",()=>{
-
-initMap()
-
-notify("PlaasRisk ready")
-
-})
+  <div class="container">
+    <div class="map-section">
+      <div class="control-bar">
+        <div class="logo-container">
+          <div class="plaasrisk-logo">
+            <i class="fas fa-seedling logo-icon"></i>
+          </div>
+          <div class="logo-text">PlaasRisk</div>
+        </div>
+        
+        <div class="control-group">
+          <div class="input-with-icon">
+            <i class="fas fa-search input-icon"></i>
+            <input type="text" id="searchInput" class="form-control" placeholder="Enter coordinates or location (e.g. -25.0, 30.0 or Johannesburg)" />
+            <div id="suggestions" class="suggestions-box"></div>
+          </div>
+          
+          <button class="btn btn-primary" onclick="searchLocation()">
+            <i class="fas fa-search-location"></i> Search
+          </button>
+          
+          <div class="progress-container">
+            <div class="progress-header">
+              <span>Data Retrieval</span>
+              <span id="progress-percentage">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+              <div class="progress-label" id="progress-label">Ready</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="map-actions">
+          <button class="btn btn-outline" onclick="resetMap()">
+            <i class="fas fa-trash-alt"></i> Clear
+          </button>
+          <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
+            <i class="fas fa-chart-line"></i> Analyze
+          </button>
+          <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
+            <i class="fas fa-map-pin"></i> Drop Pin
+          </button>
+          <div class="api-status" id="apiStatus">
+            <span class="status-dot status-online"></span>
+            <span>API Online</span>
+          </div>
+        </div>
+      </div>
+      
+      <div id="map"></div>
+    </div>
+    
+    <!-- Analysis Results Panel -->
+    <div class="analysis-panel" id="analysisPanel">
+      <div class="analysis-header">
+        <div class="analysis-title">Climate Analysis</div>
+        <button class="close-analysis" onclick="closeAnalysisPanel()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div id="analysisContent">
+        <!-- Analysis content will be populated here -->
+      </div>
+    </div>
+    
+    <footer>
+      <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
+      <p style="margin-top: 5px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
+    </footer>
+  </div>
+  
+  <div id="notification" class="notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="notification-text">Notification message</span>
+  </div>
+  
+  <!-- PDF Loading Overlay -->
+  <div class="pdf-loading-overlay" id="pdfLoading">
+    <div class="pdf-spinner"></div>
+    <h3>Generating PDF Report</h3>
+    <p>Please wait while we prepare your full report...</p>
+  </div>
+  
+  <!-- Report Modal -->
+  <div class="report-modal" id="reportModal">
+    <div class="report-content">
+      <!-- Report content will be dynamically populated -->
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script>
+    // Global variables
+    let map;
+    let currentMarker = null;
+    let lastPolygonCenter = null;
+    let currentLocationName = "Unknown Location";
+    let pinModeActive = false;
+    let dataAvailable = false;
+    let apiStatus = 'online';
+    let drawnItems;
+
+    // Enhanced API Configuration
+    const CONFIG = {
+      OPEN_METEO: {
+        BASE_URL: 'https://archive-api.open-meteo.com/v1/archive',
+        CURRENT_URL: 'https://api.open-meteo.com/v1/forecast',
+        START_DATE: '2020-01-01',
+        END_DATE: new Date().toISOString().split('T')[0],
+        DAILY_VARIABLES: [
+          'temperature_2m_max',
+          'temperature_2m_min', 
+          'precipitation_sum',
+          'rain_sum',
+          'windspeed_10m_max',
+          'et0_fao_evapotranspiration'
+        ].join(','),
+        TIMEZONE: 'auto',
+        TIMEOUT: 30000
+      },
+      NOMINATIM: {
+        BASE_URL: 'https://nominatim.openstreetmap.org/search',
+        FORMAT: 'json',
+        LIMIT: 5,
+        DELAY: 1000
+      },
+      CACHE: {
+        ENABLED: true,
+        DURATION: 24 * 60 * 60 * 1000,
+        MAX_ITEMS: 50
+      },
+      RETRY: {
+        MAX_ATTEMPTS: 3,
+        DELAY: 1000,
+        BACKOFF_MULTIPLIER: 2
+      }
+    };
+
+    // Cache implementation
+    const dataCache = new Map();
+
+    // Initialize the map
+    function initMap() {
+      map = L.map('map', {
+        center: [-25.0, 30.0],
+        zoom: 5,
+        zoomControl: true,
+        attributionControl: true
+      });
+
+      // Add base tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18
+      }).addTo(map);
+
+      // Initialize feature group for drawn items
+      drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
+
+      // Initialize draw control
+      const drawControl = new L.Control.Draw({
+        draw: {
+          polygon: { 
+            allowIntersection: false, 
+            showArea: true, 
+            shapeOptions: { color: '#2e7d32' } 
+          },
+          polyline: false, 
+          rectangle: false, 
+          circle: false, 
+          marker: false, 
+          circlemarker: false
+        },
+        edit: { 
+          featureGroup: drawnItems,
+          edit: false
+        }
+      });
+      map.addControl(drawControl);
+
+      // Fix for mobile devices
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+
+      // Map event handlers
+      map.on(L.Draw.Event.CREATED, function(event) {
+        const layer = event.layer;
+        drawnItems.addLayer(layer);
+        
+        const bounds = layer.getBounds();
+        lastPolygonCenter = bounds.getCenter();
+        currentLocationName = "Drawn Farm Boundary";
+        
+        showNotification("Farm boundary drawn successfully", 'success');
+      });
+
+      map.on(L.Draw.Event.DELETED, function(event) {
+        const layers = event.layers;
+        let deletedCount = 0;
+        
+        layers.eachLayer(function(layer) {
+          deletedCount++;
+        });
+        
+        lastPolygonCenter = null;
+        dataAvailable = false;
+        
+        showNotification(`${deletedCount} boundary${deletedCount > 1 ? 'ies' : ''} removed`, 'info');
+      });
+    }
+
+    /**
+     * Enhanced fetchWithRetry with proper error handling
+     */
+    async function fetchWithRetry(url, options = {}, retries = CONFIG.RETRY.MAX_ATTEMPTS) {
+      let lastError;
+      
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        const abortController = new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), CONFIG.OPEN_METEO.TIMEOUT);
+        
+        try {
+          updateProgress(20 * attempt, `Fetching data... Attempt ${attempt}/${retries}`);
+          
+          const response = await fetch(url, {
+            ...options,
+            signal: abortController.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            if (response.status === 429) {
+              throw new Error('Rate limit exceeded. Please try again later.');
+            } else if (response.status >= 500) {
+              throw new Error('Server error. Please try again later.');
+            } else {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+          }
+          
+          const data = await response.json();
+          
+          if (!data || typeof data !== 'object') {
+            throw new Error('Invalid response format from API');
+          }
+          
+          if (data.error) {
+            throw new Error(data.reason || `API Error: ${data.error}`);
+          }
+          
+          return data;
+          
+        } catch (error) {
+          clearTimeout(timeoutId);
+          console.warn(`Attempt ${attempt} failed:`, error);
+          lastError = error;
+          
+          if (error.name === 'AbortError' || error.message.includes('Rate limit')) {
+            break;
+          }
+          
+          if (attempt === retries) {
+            break;
+          }
+          
+          const delay = CONFIG.RETRY.DELAY * Math.pow(CONFIG.RETRY.BACKOFF_MULTIPLIER, attempt - 1);
+          const jitter = delay * 0.1 * Math.random();
+          await new Promise(resolve => setTimeout(resolve, delay + jitter));
+        }
+      }
+      
+      throw lastError || new Error('All retry attempts failed');
+    }
+
+    /**
+     * Enhanced Open-Meteo data fetching
+     */
+    async function fetchOpenMeteoData(lat, lon, startDate = CONFIG.OPEN_METEO.START_DATE, endDate = CONFIG.OPEN_METEO.END_DATE) {
+      if (!isValidCoordinates(lat, lon)) {
+        throw new Error(`Invalid coordinates: ${lat}, ${lon}`);
+      }
+      
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        throw new Error('Start date cannot be after end date');
+      }
+      
+      const maxYears = 10;
+      const maxEndDate = new Date();
+      const minStartDate = new Date(maxEndDate.getFullYear() - maxYears, maxEndDate.getMonth(), maxEndDate.getDate());
+      
+      if (start < minStartDate) {
+        console.warn(`Date range limited to ${maxYears} years for performance`);
+        startDate = minStartDate.toISOString().split('T')[0];
+      }
+      
+      const cacheKey = generateCacheKey(lat, lon, startDate, endDate);
+      
+      if (CONFIG.CACHE.ENABLED && isCacheValid(cacheKey)) {
+        updateProgress(40, "Loading cached data...");
+        return dataCache.get(cacheKey).data;
+      }
+      
+      try {
+        updateProgress(20, "Fetching historical climate data...");
+        
+        const params = new URLSearchParams({
+          latitude: lat,
+          longitude: lon,
+          start_date: startDate,
+          end_date: endDate,
+          daily: CONFIG.OPEN_METEO.DAILY_VARIABLES,
+          timezone: CONFIG.OPEN_METEO.TIMEZONE
+        });
+        
+        const url = `${CONFIG.OPEN_METEO.BASE_URL}?${params}`;
+        
+        const data = await fetchWithRetry(url);
+        
+        if (!data.daily || !data.daily.time || data.daily.time.length === 0) {
+          throw new Error('No daily data available for the specified location and date range');
+        }
+        
+        const hasValidData = validateClimateData(data.daily);
+        if (!hasValidData) {
+          throw new Error('Insufficient or poor quality data available for this location');
+        }
+        
+        if (CONFIG.CACHE.ENABLED) {
+          if (dataCache.size >= CONFIG.CACHE.MAX_ITEMS) {
+            const firstKey = dataCache.keys().next().value;
+            dataCache.delete(firstKey);
+          }
+          
+          dataCache.set(cacheKey, {
+            data: data,
+            timestamp: Date.now(),
+            location: { lat, lon }
+          });
+        }
+        
+        console.log("Historical data fetched successfully");
+        return data;
+        
+      } catch (error) {
+        console.error('Error fetching Open-Meteo data:', error);
+        updateApiStatus('error');
+        
+        let userMessage = error.message;
+        if (error.name === 'AbortError') {
+          userMessage = 'Request timeout. Please check your connection and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          userMessage = 'Network error. Please check your internet connection.';
+        }
+        
+        throw new Error(`Failed to fetch historical data: ${userMessage}`);
+      }
+    }
+
+    /**
+     * Enhanced current weather data fetching
+     */
+    async function fetchCurrentWeather(lat, lon) {
+      if (!isValidCoordinates(lat, lon)) {
+        return createIntelligentFallbackData(lat, lon);
+      }
+      
+      try {
+        updateProgress(60, "Fetching current weather conditions...");
+        
+        const params = new URLSearchParams({
+          latitude: lat,
+          longitude: lon,
+          daily: CONFIG.OPEN_METEO.DAILY_VARIABLES,
+          timezone: CONFIG.OPEN_METEO.TIMEZONE,
+          forecast_days: 7
+        });
+        
+        const url = `${CONFIG.OPEN_METEO.CURRENT_URL}?${params}`;
+        const data = await fetchWithRetry(url);
+        
+        if (!data.daily || !data.daily.time) {
+          return createIntelligentFallbackData(lat, lon);
+        }
+        
+        return data;
+        
+      } catch (error) {
+        console.error('Error fetching current weather:', error);
+        updateApiStatus('warning');
+        return createIntelligentFallbackData(lat, lon);
+      }
+    }
+
+    /**
+     * Create intelligent fallback data based on location
+     */
+    function createIntelligentFallbackData(lat, lon) {
+      const now = new Date();
+      const time = [];
+      const month = now.getMonth();
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(now);
+        date.setDate(now.getDate() + i);
+        time.push(date.toISOString().split('T')[0]);
+      }
+      
+      let baseTemp = 20;
+      
+      if (lat < -30) {
+        baseTemp = month >= 4 && month <= 9 ? 12 : 18;
+      } else if (lat > -30 && lat < -25) {
+        baseTemp = month >= 4 && month <= 9 ? 15 : 22;
+      } else {
+        baseTemp = month >= 4 && month <= 9 ? 18 : 25;
+      }
+      
+      const temps = time.map((_, i) => {
+        const dailyVariation = Math.sin(i * 0.5) * 3;
+        return baseTemp + dailyVariation;
+      });
+      
+      return {
+        daily: {
+          time: time,
+          temperature_2m_max: temps.map(t => t + 5),
+          temperature_2m_min: temps.map(t => t - 5),
+          temperature_2m_mean: temps,
+          precipitation_sum: Array(7).fill(0),
+          rain_sum: Array(7).fill(0),
+          snowfall_sum: Array(7).fill(0),
+          precipitation_hours: Array(7).fill(0),
+          windspeed_10m_max: Array(7).fill(8),
+          windgusts_10m_max: Array(7).fill(12),
+          et0_fao_evapotranspiration: Array(7).fill(3)
+        },
+        _fallback: true
+      };
+    }
+
+    /**
+     * Enhanced location search with rate limiting
+     */
+    async function searchLocation() {
+      const searchInput = document.getElementById('searchInput');
+      const query = searchInput.value.trim();
+      
+      if (!query) {
+        showNotification("Please enter a location or coordinates.", 'warning');
+        return;
+      }
+      
+      const coordMatch = query.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+      if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lon = parseFloat(coordMatch[2]);
+        
+        if (!isValidCoordinates(lat, lon)) {
+          showNotification("Invalid coordinates. Please use format: lat, lon", 'error');
+          return;
+        }
+        
+        centerMapOnLocation(lat, lon, `Custom Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+        return;
+      }
+      
+      try {
+        updateProgress(20, "Searching for location...");
+        
+        await new Promise(resolve => setTimeout(resolve, CONFIG.NOMINATIM.DELAY));
+        
+        const params = new URLSearchParams({
+          format: CONFIG.NOMINATIM.FORMAT,
+          q: query,
+          limit: CONFIG.NOMINATIM.LIMIT.toString(),
+          addressdetails: '1'
+        });
+        
+        const url = `${CONFIG.NOMINATIM.BASE_URL}?${params}`;
+        
+        const response = await fetchWithRetry(url, {
+          headers: {
+            'User-Agent': 'PlaasRisk Climate Tool'
+          }
+        });
+        
+        if (!response || response.length === 0) {
+          showNotification("Location not found. Please try a different search term.", 'error');
+          updateProgress(0, "Ready");
+          return;
+        }
+        
+        const result = response[0];
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        const name = result.display_name;
+        
+        centerMapOnLocation(lat, lon, name);
+        
+      } catch (error) {
+        console.error('Error searching location:', error);
+        
+        let errorMessage = "Location search failed. Please try again.";
+        if (error.message.includes('Rate limit')) {
+          errorMessage = "Search rate limit exceeded. Please wait a moment and try again.";
+        }
+        
+        showNotification(errorMessage, 'error');
+        updateProgress(0, "Ready");
+      }
+    }
+
+    /**
+     * Enhanced data processing
+     */
+    function processClimateData(historicalData, currentData, lat, lon) {
+      try {
+        updateProgress(70, "Processing climate data...");
+        
+        if (!historicalData.daily || !historicalData.daily.time) {
+          throw new Error('Invalid historical data structure');
+        }
+        
+        const dailyData = historicalData.daily;
+        const years = extractAvailableYears(dailyData.time);
+        
+        if (years.length === 0) {
+          throw new Error('No valid historical data available for analysis');
+        }
+        
+        const annualMetrics = calculateAnnualMetrics(dailyData, years);
+        const monthlyMetrics = calculateMonthlyMetrics(dailyData);
+        const frostAnalysis = analyzeFrostData(dailyData, years);
+        const droughtAnalysis = analyzeDroughtData(dailyData, years);
+        
+        updateProgress(90, "Finalizing analysis...");
+        
+        return {
+          location: {
+            coords: `${parseFloat(lat).toFixed(4)}, ${parseFloat(lon).toFixed(4)}`,
+            name: currentLocationName
+          },
+          years: {
+            available: years,
+            count: years.length,
+            range: `${years[0]}-${years[years.length - 1]}`
+          },
+          temperature: annualMetrics.temperature,
+          precipitation: annualMetrics.precipitation,
+          monthly: monthlyMetrics,
+          frost: frostAnalysis,
+          drought: droughtAnalysis,
+          stats: calculateSummaryStats(annualMetrics, frostAnalysis, droughtAnalysis),
+          prediction: generatePredictions(annualMetrics, frostAnalysis, droughtAnalysis),
+          metadata: {
+            totalDays: dailyData.time.length,
+            dataQuality: assessDataQuality(dailyData, years)
+          }
+        };
+        
+      } catch (error) {
+        console.error('Error processing climate data:', error);
+        throw new Error(`Data processing failed: ${error.message}`);
+      }
+    }
+
+    // Data processing helper functions
+    function calculateAnnualMetrics(dailyData, years) {
+      const temperature = { annualAvg: [], annualMax: [], annualMin: [], warmingTrend: 0 };
+      const precipitation = { annualTotal: [], annualDays: [], trend: 0 };
+      
+      years.forEach(year => {
+        const yearIndices = dailyData.time
+          .map((date, idx) => new Date(date).getFullYear() === year ? idx : -1)
+          .filter(idx => idx !== -1);
+        
+        if (yearIndices.length === 0) return;
+        
+        const validTemps = yearIndices
+          .map(idx => {
+            const max = dailyData.temperature_2m_max[idx];
+            const min = dailyData.temperature_2m_min[idx];
+            return (max != null && min != null) ? (max + min) / 2 : null;
+          })
+          .filter(temp => temp != null);
+        
+        if (validTemps.length > 0) {
+          temperature.annualAvg.push(validTemps.reduce((sum, temp) => sum + temp, 0) / validTemps.length);
+          
+          const maxTemps = yearIndices.map(idx => dailyData.temperature_2m_max[idx]).filter(temp => temp != null);
+          const minTemps = yearIndices.map(idx => dailyData.temperature_2m_min[idx]).filter(temp => temp != null);
+          
+          temperature.annualMax.push(maxTemps.length > 0 ? Math.max(...maxTemps) : 0);
+          temperature.annualMin.push(minTemps.length > 0 ? Math.min(...minTemps) : 0);
+        }
+        
+        const annualPrecip = yearIndices.reduce((sum, idx) => sum + (dailyData.precipitation_sum[idx] || 0), 0);
+        precipitation.annualTotal.push(annualPrecip);
+        
+        const precipDays = yearIndices.filter(idx => (dailyData.precipitation_sum[idx] || 0) > 1).length;
+        precipitation.annualDays.push(precipDays);
+      });
+      
+      if (temperature.annualAvg.length > 1) {
+        temperature.warmingTrend = calculateLinearTrend(temperature.annualAvg);
+      }
+      
+      if (precipitation.annualTotal.length > 1) {
+        precipitation.trend = calculateLinearTrend(precipitation.annualTotal);
+      }
+      
+      return { temperature, precipitation };
+    }
+
+    function calculateMonthlyMetrics(dailyData) {
+      const monthlyPrecip = Array(12).fill(0);
+      const monthlyTemps = Array(12).fill(0);
+      const monthCounts = Array(12).fill(0);
+      
+      dailyData.time.forEach((date, idx) => {
+        const month = new Date(date).getMonth();
+        const temp = (dailyData.temperature_2m_max[idx] + dailyData.temperature_2m_min[idx]) / 2;
+        
+        monthlyPrecip[month] += dailyData.precipitation_sum[idx] || 0;
+        monthlyTemps[month] += temp;
+        monthCounts[month]++;
+      });
+      
+      monthlyTemps.forEach((temp, month) => {
+        monthlyTemps[month] = monthCounts[month] > 0 ? temp / monthCounts[month] : 0;
+      });
+      
+      return {
+        precipitation: monthlyPrecip,
+        temperature: monthlyTemps,
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      };
+    }
+
+    function analyzeFrostData(dailyData, years) {
+      const annualFrostDays = years.map(year => {
+        const yearIndices = dailyData.time.map((date, idx) => 
+          new Date(date).getFullYear() === year ? idx : -1
+        ).filter(idx => idx !== -1);
+        
+        return yearIndices.filter(idx => dailyData.temperature_2m_min[idx] <= 0).length;
+      });
+      
+      const frostThreshold = calculatePercentile(annualFrostDays, 75);
+      const highFrostYears = years.filter((_, i) => annualFrostDays[i] > frostThreshold);
+      
+      return {
+        annualDays: annualFrostDays,
+        highYears: highFrostYears,
+        threshold: frostThreshold
+      };
+    }
+
+    function analyzeDroughtData(dailyData, years) {
+      const annualPrecip = years.map(year => {
+        const yearIndices = dailyData.time.map((date, idx) => 
+          new Date(date).getFullYear() === year ? idx : -1
+        ).filter(idx => idx !== -1);
+        
+        return yearIndices.reduce((sum, idx) => sum + (dailyData.precipitation_sum[idx] || 0), 0);
+      });
+      
+      const avgPrecip = annualPrecip.reduce((a, b) => a + b, 0) / annualPrecip.length;
+      const departures = annualPrecip.map(p => parseFloat(((p - avgPrecip) / avgPrecip * 100).toFixed(1)));
+      
+      const moderateDroughtYears = years.filter((_, i) => departures[i] < -25);
+      const severeDroughtYears = years.filter((_, i) => departures[i] < -50);
+      
+      return {
+        departures: departures,
+        moderateYears: moderateDroughtYears,
+        severeYears: severeDroughtYears,
+        average: avgPrecip
+      };
+    }
+
+    function generatePredictions(annualMetrics, frostAnalysis, droughtAnalysis) {
+      const tempTrend = annualMetrics.temperature.warmingTrend;
+      const precipTrend = annualMetrics.precipitation.trend;
+      const avgFrost = frostAnalysis.annualDays.reduce((a, b) => a + b, 0) / frostAnalysis.annualDays.length;
+      
+      const nextYearTemp = annualMetrics.temperature.annualAvg[annualMetrics.temperature.annualAvg.length - 1] + 
+                          (tempTrend / annualMetrics.temperature.annualAvg.length);
+      
+      const nextYearPrecip = annualMetrics.precipitation.annualTotal[annualMetrics.precipitation.annualTotal.length - 1] * 
+                            (1 + precipTrend / 100 / annualMetrics.precipitation.annualTotal.length);
+      
+      const nextYearFrost = avgFrost + (tempTrend > 0 ? -1 : 1);
+      
+      return {
+        temperature: parseFloat(nextYearTemp.toFixed(1)),
+        precipitation: Math.max(0, Math.round(nextYearPrecip)),
+        frostDays: Math.max(0, Math.round(nextYearFrost)),
+        confidence: 'moderate'
+      };
+    }
+
+    function calculateSummaryStats(annualMetrics, frostAnalysis, droughtAnalysis) {
+      return {
+        avgTemp: (annualMetrics.temperature.annualAvg.reduce((a, b) => a + b, 0) / 
+                 annualMetrics.temperature.annualAvg.length).toFixed(1),
+        maxTemp: Math.max(...annualMetrics.temperature.annualMax).toFixed(1),
+        minTemp: Math.min(...annualMetrics.temperature.annualMin).toFixed(1),
+        warming: annualMetrics.temperature.warmingTrend,
+        annualPrecip: droughtAnalysis.average.toFixed(1),
+        maxMonthlyPrecip: Math.max(...annualMetrics.monthly.precipitation).toFixed(1),
+        drySpells: calculateDrySpells(annualMetrics.precipitation.annualTotal),
+        precipTrend: annualMetrics.precipitation.trend,
+        highFrostYears: frostAnalysis.highYears,
+        totalFrost: frostAnalysis.annualDays[frostAnalysis.annualDays.length - 1] || 0,
+        avgFrost: (frostAnalysis.annualDays.reduce((a, b) => a + b, 0) / 
+                  frostAnalysis.annualDays.length).toFixed(1),
+        moderateDroughtYears: droughtAnalysis.moderateYears,
+        severeDroughtYears: droughtAnalysis.severeYears
+      };
+    }
+
+    // Utility functions
+    function isValidCoordinates(lat, lon) {
+      return !isNaN(lat) && !isNaN(lon) && 
+             lat >= -90 && lat <= 90 && 
+             lon >= -180 && lon <= 180;
+    }
+
+    function extractAvailableYears(timeArray) {
+      const years = [];
+      const yearCounts = {};
+      
+      timeArray.forEach(dateStr => {
+        try {
+          const year = new Date(dateStr).getFullYear();
+          if (year >= 1940 && year <= new Date().getFullYear()) {
+            yearCounts[year] = (yearCounts[year] || 0) + 1;
+          }
+        } catch (e) {
+          console.warn('Invalid date in data:', dateStr);
+        }
+      });
+      
+      Object.keys(yearCounts).forEach(year => {
+        if (yearCounts[year] >= 300) {
+          years.push(parseInt(year));
+        }
+      });
+      
+      return years.sort((a, b) => a - b);
+    }
+
+    function validateClimateData(dailyData) {
+      if (dailyData.temperature_2m_max) {
+        const validTemps = dailyData.temperature_2m_max.filter(temp => temp != null && temp !== 0);
+        if (validTemps.length < dailyData.temperature_2m_max.length * 0.5) {
+          return false;
+        }
+      }
+      
+      if (dailyData.time && dailyData.time.length > 0) {
+        const startDate = new Date(dailyData.time[0]);
+        const endDate = new Date(dailyData.time[dailyData.time.length - 1]);
+        const dayDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
+        
+        if (dayDiff < 30) {
+          console.warn('Very limited data range:', dayDiff, 'days');
+        }
+      }
+      
+      return true;
+    }
+
+    function assessDataQuality(dailyData, years) {
+      const totalExpectedDays = years.length * 365;
+      const actualDays = dailyData.time.length;
+      const completeness = (actualDays / totalExpectedDays) * 100;
+      
+      let quality = 'good';
+      if (completeness < 50) quality = 'poor';
+      else if (completeness < 80) quality = 'fair';
+      
+      return {
+        completeness: Math.round(completeness),
+        quality: quality,
+        missingData: totalExpectedDays - actualDays
+      };
+    }
+
+    function calculateLinearTrend(data) {
+      const n = data.length;
+      const x = Array.from({length: n}, (_, i) => i);
+      const y = data;
+      
+      const sumX = x.reduce((a, b) => a + b, 0);
+      const sumY = y.reduce((a, b) => a + b, 0);
+      const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+      const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+      
+      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+      return parseFloat(slope.toFixed(3));
+    }
+
+    function calculatePercentile(arr, percentile) {
+      const sorted = [...arr].sort((a, b) => a - b);
+      const index = (percentile / 100) * (sorted.length - 1);
+      const lower = Math.floor(index);
+      const upper = Math.ceil(index);
+      
+      if (lower === upper) return sorted[lower];
+      return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
+    }
+    
+    function calculateDrySpells(annualPrecip) {
+      return (annualPrecip.filter(p => p < 300).length / annualPrecip.length).toFixed(1);
+    }
+
+    function generateCacheKey(lat, lon, startDate, endDate) {
+      return `${lat.toFixed(4)}_${lon.toFixed(4)}_${startDate}_${endDate}`;
+    }
+
+    function isCacheValid(cacheKey) {
+      if (!CONFIG.CACHE.ENABLED) return false;
+      
+      const cached = dataCache.get(cacheKey);
+      if (!cached) return false;
+      
+      return (Date.now() - cached.timestamp) < CONFIG.CACHE.DURATION;
+    }
+
+    /**
+     * Enhanced report generation
+     */
+    async function generateReport() {
+      if (!lastPolygonCenter) {
+        showNotification("Draw a farm boundary or search a location first.", 'error');
+        return;
+      }
+
+      const lat = lastPolygonCenter.lat;
+      const lon = lastPolygonCenter.lng;
+      
+      updateProgress(10, "Initializing analysis...");
+      document.getElementById('generateBtn').disabled = true;
+      
+      try {
+        const apiAvailable = await checkApiStatus();
+        if (!apiAvailable) {
+          showNotification("Climate API is currently unavailable. Using cached data if available.", 'warning');
+        }
+        
+        const endDate = CONFIG.OPEN_METEO.END_DATE;
+        const startDate = CONFIG.OPEN_METEO.START_DATE;
+        
+        updateProgress(30, "Fetching comprehensive climate data...");
+        
+        let historicalData, currentData;
+        
+        try {
+          historicalData = await fetchOpenMeteoData(lat, lon, startDate, endDate);
+        } catch (error) {
+          throw new Error(`Unable to retrieve historical climate data: ${error.message}`);
+        }
+        
+        try {
+          currentData = await fetchCurrentWeather(lat, lon);
+        } catch (error) {
+          currentData = createIntelligentFallbackData(lat, lon);
+        }
+        
+        const processedData = processClimateData(historicalData, currentData, lat, lon);
+        
+        updateProgress(100, "Analysis complete!");
+        
+        setTimeout(() => {
+          openAnalysisPanel(processedData);
+          document.getElementById('generateBtn').disabled = false;
+          setTimeout(() => updateProgress(0, "Ready"), 2000);
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Error generating report:', error);
+        showNotification(`Analysis failed: ${error.message}`, 'error');
+        document.getElementById('generateBtn').disabled = false;
+        updateProgress(0, "Analysis failed");
+      }
+    }
+
+    /**
+     * Open analysis panel with results
+     */
+    function openAnalysisPanel(data) {
+      const panel = document.getElementById('analysisPanel');
+      const content = document.getElementById('analysisContent');
+      
+      const html = `
+        <div class="metric-card">
+          <div class="metric-title">Average Temperature</div>
+          <div class="metric-value">${data.stats.avgTemp}°C</div>
+          <div class="metric-trend ${data.stats.warming < 0 ? 'negative' : ''}">
+            ${data.stats.warming > 0 ? '+' : ''}${data.stats.warming}°C/decade
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-title">Annual Precipitation</div>
+          <div class="metric-value">${data.stats.annualPrecip} mm</div>
+          <div class="metric-trend ${data.stats.precipTrend < 0 ? 'negative' : ''}">
+            ${data.stats.precipTrend > 0 ? '+' : ''}${data.stats.precipTrend}% trend
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-title">Frost Days (Annual)</div>
+          <div class="metric-value">${data.stats.avgFrost} days</div>
+          <div class="metric-trend">
+            ${data.stats.highFrostYears.length} high-risk years
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-title">Drought Risk</div>
+          <div class="metric-value">${data.stats.moderateDroughtYears.length}</div>
+          <div class="metric-trend">
+            Moderate drought years
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-title">Data Quality</div>
+          <div class="metric-value">${data.metadata.dataQuality.quality.toUpperCase()}</div>
+          <div class="metric-trend">
+            ${data.metadata.dataQuality.completeness}% complete
+          </div>
+        </div>
+        
+        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+          <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Next Year Prediction</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <div style="font-size: 0.8rem; color: #666;">Temperature</div>
+              <div style="font-weight: 600;">${data.prediction.temperature}°C</div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: #666;">Precipitation</div>
+              <div style="font-weight: 600;">${data.prediction.precipitation} mm</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      content.innerHTML = html;
+      panel.style.display = 'block';
+      
+      showNotification("Climate analysis complete!", 'success');
+    }
+
+    function closeAnalysisPanel() {
+      document.getElementById('analysisPanel').style.display = 'none';
+    }
+
+    // UI Helper functions
+    function centerMapOnLocation(lat, lon, name) {
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+      
+      currentMarker = L.marker([lat, lon])
+        .addTo(map)
+        .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`)
+        .openPopup();
+      
+      map.setView([lat, lon], 12);
+      currentLocationName = name;
+      lastPolygonCenter = { lat, lng: lon };
+      
+      showNotification(`Location found: ${name}`, 'success');
+      updateProgress(100, "Location found");
+      setTimeout(() => updateProgress(0, "Ready"), 2000);
+    }
+
+    function activatePinMode() {
+      pinModeActive = !pinModeActive;
+      const dropPinBtn = document.getElementById('dropPinBtn');
+      
+      if (pinModeActive) {
+        dropPinBtn.classList.remove('btn-outline');
+        dropPinBtn.classList.add('btn-primary');
+        dropPinBtn.innerHTML = '<i class="fas fa-times"></i> Cancel Pin';
+        
+        map.getContainer().style.cursor = 'crosshair';
+        
+        map.once('click', function(e) {
+          placePin(e.latlng);
+          deactivatePinMode();
+        });
+        
+        showNotification("Click on the map to place a pin", 'info');
+      } else {
+        deactivatePinMode();
+      }
+    }
+
+    function deactivatePinMode() {
+      pinModeActive = false;
+      const dropPinBtn = document.getElementById('dropPinBtn');
+      
+      dropPinBtn.classList.remove('btn-primary');
+      dropPinBtn.classList.add('btn-outline');
+      dropPinBtn.innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
+      
+      map.getContainer().style.cursor = '';
+      map.off('click');
+    }
+
+    function placePin(latlng) {
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+      
+      currentMarker = L.marker(latlng)
+        .addTo(map)
+        .bindPopup(`<b>Custom Pin</b><br>Lat: ${latlng.lat.toFixed(4)}, Lon: ${latlng.lng.toFixed(4)}`)
+        .openPopup();
+      
+      currentLocationName = "Custom Pin Location";
+      lastPolygonCenter = latlng;
+      
+      showNotification("Pin placed successfully", 'success');
+    }
+
+    function resetMap() {
+      drawnItems.clearLayers();
+      
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+        currentMarker = null;
+      }
+      
+      map.setView([-25.0, 30.0], 5);
+      lastPolygonCenter = null;
+      dataAvailable = false;
+      
+      document.getElementById('searchInput').value = '';
+      updateProgress(0, "Ready");
+      closeAnalysisPanel();
+      
+      showNotification("Map has been reset", 'info');
+    }
+
+    async function checkApiStatus() {
+      try {
+        const testUrl = `${CONFIG.OPEN_METEO.CURRENT_URL}?latitude=0&longitude=0&daily=temperature_2m_max&timezone=auto`;
+        const response = await fetch(testUrl, { signal: AbortSignal.timeout(5000) });
+        
+        if (response.ok) {
+          updateApiStatus('online');
+          return true;
+        } else {
+          updateApiStatus('error');
+          return false;
+        }
+      } catch (error) {
+        updateApiStatus('error');
+        return false;
+      }
+    }
+
+    function updateApiStatus(status) {
+      apiStatus = status;
+      const statusElement = document.getElementById('apiStatus');
+      const dot = statusElement.querySelector('.status-dot');
+      const text = statusElement.querySelector('span:last-child');
+      
+      statusElement.className = 'api-status';
+      dot.className = 'status-dot';
+      
+      switch (status) {
+        case 'online':
+          dot.classList.add('status-online');
+          text.textContent = 'API Online';
+          break;
+        case 'warning':
+          dot.classList.add('status-warning');
+          text.textContent = 'API Limited';
+          break;
+        case 'error':
+          dot.classList.add('status-offline');
+          text.textContent = 'API Offline';
+          break;
+      }
+    }
+
+    function updateProgress(percentage, text) {
+      const fill = document.getElementById('progress-fill');
+      const label = document.getElementById('progress-label');
+      const percentageDisplay = document.getElementById('progress-percentage');
+      
+      if (fill) fill.style.width = `${percentage}%`;
+      if (label) label.textContent = text;
+      if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
+    }
+    
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      const notificationText = document.getElementById('notification-text');
+      
+      notification.className = `notification ${type}`;
+      notificationText.textContent = message;
+      notification.classList.add('show');
+      
+      setTimeout(() => notification.classList.remove('show'), 3000);
+    }
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function() {
+      initMap();
+      checkApiStatus();
+      updateProgress(0, 'Ready');
+      
+      document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          searchLocation();
+        }
+      });
+      
+      showNotification("PlaasRisk initialized successfully", 'success');
+    });
+  </script>
+</body>
+</html>
