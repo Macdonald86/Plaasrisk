@@ -338,58 +338,143 @@ placePin({lat:lat,lng:lon})
 
 /* ======================================================
 CLIMATE API
+Fetch REAL Open-Meteo Historical Data
 ====================================================== */
 
-async function fetchClimate(lat,lon){
+async function fetchClimate(lat, lon) {
 
-const url=
-`https://archive-api.open-meteo.com/v1/archive?
-latitude=${lat}&longitude=${lon}
-&start_date=2020-01-01
-&end_date=2024-12-31
-&daily=temperature_2m_max,temperature_2m_min,precipitation_sum
-&timezone=auto`
+try{
 
-const res=await fetch(url)
+const url =
+`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-01-01&end_date=2024-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
 
-return await res.json()
+const response = await fetch(url)
+
+if(!response.ok){
+throw new Error("Climate API request failed")
+}
+
+const data = await response.json()
+
+if(!data || !data.daily || !data.daily.time){
+throw new Error("Climate data unavailable")
+}
+
+return data
+
+}catch(error){
+
+console.error("Climate API Error:",error)
+
+throw error
+
+}
 
 }
 
 /* ======================================================
 CLIMATE ANALYSIS
+Annual Averages (Scientifically Correct)
 ====================================================== */
 
 function analyzeClimate(data){
 
-const temps=[]
-const rain=[]
+const daily = data.daily
 
-for(let i=0;i<data.daily.time.length;i++){
+const years = {}
 
-const tmax=data.daily.temperature_2m_max[i]
-const tmin=data.daily.temperature_2m_min[i]
+for(let i=0;i<daily.time.length;i++){
 
-if(tmax!==null && tmin!==null){
+const date = new Date(daily.time[i])
+const year = date.getFullYear()
 
-temps.push((tmax+tmin)/2)
+if(!years[year]){
+
+years[year] = {
+tempSum:0,
+tempDays:0,
+rain:0,
+frost:0
+}
 
 }
 
-rain.push(data.daily.precipitation_sum[i]||0)
+const tmax = daily.temperature_2m_max[i]
+const tmin = daily.temperature_2m_min[i]
+const rain = daily.precipitation_sum[i]
+
+/* ---------- Temperature ---------- */
+
+if(tmax !== null && tmin !== null){
+
+const meanTemp = (tmax + tmin) / 2
+
+years[year].tempSum += meanTemp
+years[year].tempDays++
 
 }
 
-const avgTemp=(temps.reduce((a,b)=>a+b)/temps.length).toFixed(1)
+/* ---------- Rainfall ---------- */
 
-const totalRain=rain.reduce((a,b)=>a+b).toFixed(0)
+if(rain !== null){
 
-const frostDays=data.daily.temperature_2m_min.filter(t=>t<=0).length
+years[year].rain += rain
+
+}
+
+/* ---------- Frost ---------- */
+
+if(tmin !== null && tmin <= 0){
+
+years[year].frost++
+
+}
+
+}
+
+/* ======================================================
+CALCULATE ANNUAL AVERAGES
+====================================================== */
+
+const annualTemps = []
+const annualRain = []
+const annualFrost = []
+
+for(const year in years){
+
+const y = years[year]
+
+if(y.tempDays > 0){
+
+annualTemps.push(y.tempSum / y.tempDays)
+
+}
+
+annualRain.push(y.rain)
+annualFrost.push(y.frost)
+
+}
+
+/* ======================================================
+FINAL METRICS
+====================================================== */
+
+const avgTemp =
+(annualTemps.reduce((a,b)=>a+b,0) / annualTemps.length).toFixed(1)
+
+const avgRain =
+(annualRain.reduce((a,b)=>a+b,0) / annualRain.length).toFixed(0)
+
+const avgFrost =
+(annualFrost.reduce((a,b)=>a+b,0) / annualFrost.length).toFixed(0)
 
 return{
+
 avgTemp,
-totalRain,
-frostDays
+avgRain,
+avgFrost,
+years:annualTemps.length
+
 }
 
 }
@@ -400,55 +485,68 @@ REPORT GENERATION
 
 async function generateReport(){
 
-if(!lastLocation) return notify("Select location")
+if(!lastLocation){
+return notify("Select location first")
+}
 
-notify("Loading climate data...")
+notify("Fetching climate data...")
 
-const lat=lastLocation.lat
-const lon=lastLocation.lng
+const lat = lastLocation.lat
+const lon = lastLocation.lng
 
 try{
 
-const data=await fetchClimate(lat,lon)
+const data = await fetchClimate(lat, lon)
 
-const result=analyzeClimate(data)
+const result = analyzeClimate(data)
 
 showAnalysis(result)
 
-notify("Analysis complete")
+notify("Climate analysis complete")
 
-}catch(e){
+}catch(error){
 
-notify("Climate API error")
+notify("Climate data unavailable")
+
+console.error(error)
 
 }
 
 }
+
+/* ======================================================
+DISPLAY RESULTS
+====================================================== */
 
 function showAnalysis(r){
 
-const panel=document.getElementById("analysisPanel")
+const panel = document.getElementById("analysisPanel")
 
-panel.innerHTML=`
+panel.innerHTML = `
 
 <div class="metric">
-<div class="metric-title">Average Temperature</div>
+<div class="metric-title">Average Annual Temperature</div>
 <div class="metric-value">${r.avgTemp} °C</div>
 </div>
 
 <div class="metric">
-<div class="metric-title">Total Rainfall</div>
-<div class="metric-value">${r.totalRain} mm</div>
+<div class="metric-title">Average Annual Rainfall</div>
+<div class="metric-value">${r.avgRain} mm</div>
 </div>
 
 <div class="metric">
-<div class="metric-title">Frost Days</div>
-<div class="metric-value">${r.frostDays}</div>
+<div class="metric-title">Average Frost Days / Year</div>
+<div class="metric-value">${r.avgFrost}</div>
+</div>
+
+<div class="metric">
+<div class="metric-title">Years Analyzed</div>
+<div class="metric-value">${r.years}</div>
 </div>
 
 `
 
-panel.style.display="block"
+panel.style.display = "block"
 
 }
 
@@ -458,14 +556,15 @@ UTILITY
 
 function notify(msg){
 
-const n=document.getElementById("notification")
+const n = document.getElementById("notification")
 
-n.innerText=msg
-n.style.display="block"
+n.innerText = msg
+
+n.style.display = "block"
 
 setTimeout(()=>{
 
-n.style.display="none"
+n.style.display = "none"
 
 },3000)
 
@@ -482,8 +581,3 @@ initMap()
 notify("PlaasRisk ready")
 
 })
-
-</script>
-
-</body>
-</html>
