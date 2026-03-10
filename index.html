@@ -1,425 +1,487 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PlaasRisk Farm Intelligence</title>
+<title>PlaasRisk Climate Intelligence</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 
-body{
-margin:0;
-font-family:Arial, Helvetica, sans-serif;
-background:#f4f7f4;
+/* ======================================================
+LOOK & FEEL SECTION
+====================================================== */
+
+:root{
+--primary:#2e7d32;
+--secondary:#4caf50;
+--light:#f5f9f5;
+--border:#e0e0e0;
+--text:#333;
+--danger:#f44336;
+--warning:#ff9800;
+--success:#4caf50;
+--shadow:0 4px 20px rgba(0,0,0,0.08);
 }
 
-header{
-background:#2e7d32;
-color:white;
-padding:15px;
-font-size:22px;
-font-weight:bold;
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#f5f9f5,#e8f5e9);
+color:var(--text);
+}
+
+.container{
+max-width:1600px;
+margin:auto;
+padding:10px;
+}
+
+.map-section{
+background:white;
+border-radius:16px;
+box-shadow:var(--shadow);
+overflow:hidden;
 }
 
 #map{
-height:65vh;
+height:75vh;
 }
 
-.panel{
-padding:20px;
+.control-bar{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+padding:12px;
+border-bottom:1px solid var(--border);
+align-items:center;
+}
+
+.logo{
+font-weight:700;
+color:var(--primary);
+font-size:1.3rem;
+}
+
+.form-control{
+padding:8px;
+border-radius:8px;
+border:1px solid var(--border);
+}
+
+.btn{
+padding:8px 14px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:500;
+}
+
+.btn-primary{
+background:var(--primary);
+color:white;
+}
+
+.btn-outline{
+border:1px solid var(--primary);
 background:white;
+color:var(--primary);
+}
+
+.analysis-panel{
+position:absolute;
+top:90px;
+right:20px;
+width:320px;
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:var(--shadow);
+display:none;
 }
 
 .metric{
-padding:6px;
-border-bottom:1px solid #eee;
+margin-bottom:12px;
 }
 
-button{
-padding:10px 14px;
-margin:5px;
-background:#2e7d32;
+.metric-title{
+font-size:0.85rem;
+color:#777;
+}
+
+.metric-value{
+font-size:1.3rem;
+font-weight:600;
+color:var(--primary);
+}
+
+.notification{
+position:fixed;
+top:20px;
+right:20px;
+background:var(--success);
 color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
+padding:10px 16px;
+border-radius:8px;
+display:none;
 }
 
-button:hover{
-background:#1b5e20;
-}
-
-#farmList{
+footer{
 margin-top:10px;
+font-size:0.8rem;
+text-align:center;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<header>🌱 PlaasRisk Farm Intelligence Platform</header>
+<div class="container">
+
+<div class="map-section">
+
+<div class="control-bar">
+
+<div class="logo">
+<i class="fas fa-seedling"></i> PlaasRisk
+</div>
+
+<input id="searchInput" class="form-control" placeholder="Search location or lat,long"/>
+
+<button class="btn btn-primary" onclick="searchLocation()">Search</button>
+
+<button class="btn btn-outline" onclick="activatePinMode()">Drop Pin</button>
+
+<button class="btn btn-primary" onclick="generateReport()">Analyze</button>
+
+<button class="btn btn-outline" onclick="resetMap()">Clear</button>
+
+</div>
 
 <div id="map"></div>
 
-<div class="panel">
+</div>
 
-<button onclick="analyzeFarm()">Analyze Selected Farm</button> <button onclick="saveFarm()">Save Farm</button> <button onclick="exportPDF()">Export PDF Report</button>
+<div id="analysisPanel" class="analysis-panel"></div>
 
-<div id="results"></div>
-
-<h3>Crop Growth</h3>
-<canvas id="ndviChart"></canvas>
-
-<h3>Saved Farms</h3>
-<div id="farmList"></div>
+<footer>
+Farm Climate Intelligence • Powered by Open-Meteo
+</footer>
 
 </div>
+
+<div id="notification" class="notification"></div>
+
+<!-- Libraries -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
 
-/* ===============================
-MAP INITIALIZATION
-=============================== */
+/* ======================================================
+MAP + INTERFACE SECTION
+====================================================== */
 
-let map = L.map("map").setView([-25,30],6)
+let map
+let currentMarker=null
+let lastLocation=null
+let pinMode=false
+let pinHandler=null
+let drawnItems
+
+function initMap(){
+
+map=L.map("map").setView([-25,30],5)
 
 L.tileLayer(
 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{ attribution:"OpenStreetMap" }
+{maxZoom:19}
 ).addTo(map)
 
-/* Satellite vegetation layer */
+drawnItems=new L.FeatureGroup()
+map.addLayer(drawnItems)
 
-const vegetationLayer = L.tileLayer(
-"https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg",
-{opacity:0.6}
-)
+const drawControl=new L.Control.Draw({
+draw:{
+polygon:true,
+rectangle:false,
+circle:false,
+polyline:false,
+marker:false,
+circlemarker:false
+},
+edit:{featureGroup:drawnItems}
+})
 
-vegetationLayer.addTo(map)
+map.addControl(drawControl)
 
-let marker
+map.on(L.Draw.Event.CREATED,function(e){
 
-map.on("click",function(e){
+drawnItems.addLayer(e.layer)
 
-if(marker) map.removeLayer(marker)
+const center=e.layer.getBounds().getCenter()
 
-marker = L.marker(e.latlng).addTo(map)
+lastLocation=center
+
+notify("Farm boundary added")
 
 })
 
-/* ===============================
-FARM STORAGE
-=============================== */
+}
 
-const farms=[]
+function activatePinMode(){
 
-function saveFarm(){
+pinMode=!pinMode
 
-if(!marker) return
+if(pinMode){
 
-const lat = marker.getLatLng().lat
-const lon = marker.getLatLng().lng
+notify("Click map to drop pin")
 
-farms.push({
-lat,
-lon,
-name:"Farm "+(farms.length+1)
-})
+pinHandler=function(e){
 
-renderFarmList()
+placePin(e.latlng)
+
+map.off("click",pinHandler)
+
+pinMode=false
 
 }
 
-function renderFarmList(){
+map.on("click",pinHandler)
 
-let html=""
+}else{
 
-farms.forEach((f,i)=>{
-
-html+=`
-<div>
-${f.name}
-<button onclick="analyzeSavedFarm(${i})">Analyze</button>
-</div>
-`
-
-})
-
-document.getElementById("farmList").innerHTML=html
+map.off("click",pinHandler)
 
 }
 
-function analyzeSavedFarm(i){
+}
 
-const farm=farms[i]
+function placePin(latlng){
 
-marker=L.marker([farm.lat,farm.lon]).addTo(map)
+if(currentMarker) map.removeLayer(currentMarker)
 
-analyzeFarm()
+currentMarker=L.marker(latlng).addTo(map)
+
+lastLocation=latlng
+
+notify("Pin placed")
 
 }
 
-/* ===============================
-CLIMATE DATA
-=============================== */
+function resetMap(){
 
-async function getClimate(lat,lon){
+drawnItems.clearLayers()
 
-const url=
-`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=1995-01-01&end_date=2024-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`
+if(currentMarker) map.removeLayer(currentMarker)
+
+lastLocation=null
+
+document.getElementById("analysisPanel").style.display="none"
+
+notify("Map cleared")
+
+}
+
+/* ======================================================
+LOCATION SEARCH
+====================================================== */
+
+async function searchLocation(){
+
+const q=document.getElementById("searchInput").value.trim()
+
+if(!q) return notify("Enter location")
+
+const coord=q.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
+
+if(coord){
+
+const lat=parseFloat(coord[1])
+const lon=parseFloat(coord[2])
+
+map.setView([lat,lon],12)
+
+placePin({lat:lat,lng:lon})
+
+return
+
+}
+
+const url=`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`
 
 const res=await fetch(url)
+
 const data=await res.json()
 
-const temps=data.daily.temperature_2m_max
-const rain=data.daily.precipitation_sum
+if(!data.length) return notify("Location not found")
 
-const avgTemp=temps.reduce((a,b)=>a+b)/temps.length
-const totalRain=rain.reduce((a,b)=>a+b)
+const lat=parseFloat(data[0].lat)
+const lon=parseFloat(data[0].lon)
+
+map.setView([lat,lon],12)
+
+placePin({lat:lat,lng:lon})
+
+}
+
+/* ======================================================
+CLIMATE API
+====================================================== */
+
+async function fetchClimate(lat,lon){
+
+const url=
+`https://archive-api.open-meteo.com/v1/archive?
+latitude=${lat}&longitude=${lon}
+&start_date=2020-01-01
+&end_date=2024-12-31
+&daily=temperature_2m_max,temperature_2m_min,precipitation_sum
+&timezone=auto`
+
+const res=await fetch(url)
+
+return await res.json()
+
+}
+
+/* ======================================================
+CLIMATE ANALYSIS
+====================================================== */
+
+function analyzeClimate(data){
+
+const temps=[]
+const rain=[]
+
+for(let i=0;i<data.daily.time.length;i++){
+
+const tmax=data.daily.temperature_2m_max[i]
+const tmin=data.daily.temperature_2m_min[i]
+
+if(tmax!==null && tmin!==null){
+
+temps.push((tmax+tmin)/2)
+
+}
+
+rain.push(data.daily.precipitation_sum[i]||0)
+
+}
+
+const avgTemp=(temps.reduce((a,b)=>a+b)/temps.length).toFixed(1)
+
+const totalRain=rain.reduce((a,b)=>a+b).toFixed(0)
+
+const frostDays=data.daily.temperature_2m_min.filter(t=>t<=0).length
 
 return{
 avgTemp,
 totalRain,
-daily:data.daily
+frostDays
 }
 
 }
 
-/* ===============================
-NDVI ESTIMATION
-=============================== */
+/* ======================================================
+REPORT GENERATION
+====================================================== */
 
-async function getNDVI(lat,lon){
+async function generateReport(){
 
-const url=
-`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=shortwave_radiation`
+if(!lastLocation) return notify("Select location")
 
-const res=await fetch(url)
-const data=await res.json()
+notify("Loading climate data...")
 
-const values=data.hourly.shortwave_radiation.slice(-24)
+const lat=lastLocation.lat
+const lon=lastLocation.lng
 
-const avg=values.reduce((a,b)=>a+b)/values.length
+try{
 
-let ndvi=avg/800
-if(ndvi>1) ndvi=1
+const data=await fetchClimate(lat,lon)
 
-return ndvi.toFixed(2)
+const result=analyzeClimate(data)
 
-}
+showAnalysis(result)
 
-/* ===============================
-SOIL MOISTURE
-=============================== */
+notify("Analysis complete")
 
-async function getSoil(lat,lon){
+}catch(e){
 
-const url=
-`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=soil_moisture_0_to_7cm`
-
-const res=await fetch(url)
-const data=await res.json()
-
-const values=data.hourly.soil_moisture_0_to_7cm.slice(-24)
-
-const avg=values.reduce((a,b)=>a+b)/values.length
-
-return avg.toFixed(2)
+notify("Climate API error")
 
 }
 
-/* ===============================
-DROUGHT PROBABILITY
-=============================== */
-
-function droughtProbability(daily){
-
-const years={}
-
-daily.time.forEach((d,i)=>{
-
-const y=new Date(d).getFullYear()
-
-if(!years[y]) years[y]=0
-
-years[y]+=daily.precipitation_sum[i]||0
-
-})
-
-const totals=Object.values(years)
-
-const drought=totals.filter(v=>v<450)
-
-return ((drought.length/totals.length)*100).toFixed(1)
-
 }
 
-/* ===============================
-AI MODELS
-=============================== */
+function showAnalysis(r){
 
-function farmRisk(data){
+const panel=document.getElementById("analysisPanel")
 
-let score=0
+panel.innerHTML=`
 
-if(data.temp>32) score+=25
-if(data.rain<450) score+=30
-if(data.ndvi<0.35) score+=25
-if(data.soil<0.2) score+=20
+<div class="metric">
+<div class="metric-title">Average Temperature</div>
+<div class="metric-value">${r.avgTemp} °C</div>
+</div>
 
-let level="Low"
+<div class="metric">
+<div class="metric-title">Total Rainfall</div>
+<div class="metric-value">${r.totalRain} mm</div>
+</div>
 
-if(score>40) level="Moderate"
-if(score>70) level="High"
-
-return {score,level}
-
-}
-
-function yieldPrediction(data){
-
-let score=0
-
-if(data.ndvi>0.6) score+=40
-else if(data.ndvi>0.4) score+=25
-
-if(data.rain>500) score+=30
-else if(data.rain>350) score+=20
-
-if(score>80) return "Good"
-if(score>50) return "Moderate"
-
-return "Poor"
-
-}
-
-function recommendCrops(data){
-
-const crops=[]
-
-if(data.rain>500) crops.push("Maize")
-if(data.rain>450) crops.push("Soybeans")
-if(data.rain>350) crops.push("Sunflower")
-
-return crops.join(", ")
-
-}
-
-/* ===============================
-NDVI CHART
-=============================== */
-
-function drawNDVIChart(ndvi){
-
-const values=[
-ndvi*0.6,
-ndvi*0.7,
-ndvi*0.8,
-ndvi*0.9,
-ndvi
-]
-
-const ctx=document.getElementById("ndviChart")
-
-new Chart(ctx,{
-type:"line",
-data:{
-labels:["Early","Growth","Mid","Late","Current"],
-datasets:[{
-label:"NDVI Crop Growth",
-data:values,
-borderColor:"#2e7d32"
-}]
-}
-})
-
-}
-
-/* ===============================
-MAIN ANALYSIS
-=============================== */
-
-async function analyzeFarm(){
-
-if(!marker){
-alert("Click on the map to select farm")
-return
-}
-
-const lat=marker.getLatLng().lat
-const lon=marker.getLatLng().lng
-
-const climate=await getClimate(lat,lon)
-const ndvi=await getNDVI(lat,lon)
-const soil=await getSoil(lat,lon)
-
-const drought=droughtProbability(climate.daily)
-
-const risk=farmRisk({
-temp:climate.avgTemp,
-rain:climate.totalRain,
-ndvi:ndvi,
-soil:soil
-})
-
-const yieldPred=yieldPrediction({
-ndvi:ndvi,
-rain:climate.totalRain
-})
-
-const crops=recommendCrops({
-rain:climate.totalRain
-})
-
-document.getElementById("results").innerHTML=
+<div class="metric">
+<div class="metric-title">Frost Days</div>
+<div class="metric-value">${r.frostDays}</div>
+</div>
 
 `
-<div class="metric">Average Temperature: ${climate.avgTemp.toFixed(1)} °C</div>
-<div class="metric">Annual Rainfall: ${climate.totalRain.toFixed(0)} mm</div>
-<div class="metric">NDVI Crop Health: ${ndvi}</div>
-<div class="metric">Soil Moisture: ${soil}</div>
-<div class="metric">Drought Probability: ${drought}%</div>
-<div class="metric">Yield Prediction: ${yieldPred}</div>
-<div class="metric">Recommended Crops: ${crops}</div>
-<div class="metric">Farm Risk Score: ${risk.score} (${risk.level})</div>
-`
 
-drawNDVIChart(ndvi)
+panel.style.display="block"
 
 }
 
-/* ===============================
-PDF EXPORT
-=============================== */
+/* ======================================================
+UTILITY
+====================================================== */
 
-async function exportPDF(){
+function notify(msg){
 
-const { jsPDF } = window.jspdf
+const n=document.getElementById("notification")
 
-const canvas=await html2canvas(document.querySelector(".panel"))
+n.innerText=msg
+n.style.display="block"
 
-const img=canvas.toDataURL("image/png")
+setTimeout(()=>{
 
-const pdf=new jsPDF()
+n.style.display="none"
 
-pdf.addImage(img,"PNG",10,10,180,120)
-
-pdf.save("PlaasRisk_Report.pdf")
+},3000)
 
 }
+
+/* ======================================================
+APP START
+====================================================== */
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+initMap()
+
+notify("PlaasRisk ready")
+
+})
 
 </script>
 
