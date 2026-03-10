@@ -1750,5 +1750,370 @@
       showNotification("PlaasRisk initialized successfully", 'success');
     });
   </script>
+  <script>
+
+// ------------------------------
+// GLOBAL VARIABLES
+// ------------------------------
+
+let map
+let currentMarker = null
+let lastPolygonCenter = null
+let currentLocationName = "Unknown Location"
+
+let drawnItems
+
+const CONFIG = {
+
+OPEN_METEO:{
+BASE_URL:'https://archive-api.open-meteo.com/v1/archive',
+START_DATE:'2000-01-01',
+END_DATE:new Date().toISOString().split('T')[0],
+DAILY_VARIABLES:[
+'temperature_2m_max',
+'temperature_2m_min',
+'precipitation_sum'
+].join(',')
+}
+
+}
+
+// ------------------------------
+// MAP INITIALIZATION
+// ------------------------------
+
+function initMap(){
+
+map = L.map('map').setView([-25,30],5)
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{ maxZoom:18 }
+).addTo(map)
+
+drawnItems = new L.FeatureGroup()
+map.addLayer(drawnItems)
+
+const drawControl = new L.Control.Draw({
+
+draw:{
+polygon:{
+allowIntersection:false,
+shapeOptions:{color:'#2e7d32'}
+},
+polyline:false,
+rectangle:false,
+circle:false,
+marker:false,
+circlemarker:false
+},
+
+edit:{featureGroup:drawnItems}
+
+})
+
+map.addControl(drawControl)
+
+map.on(L.Draw.Event.CREATED,function(e){
+
+const layer = e.layer
+drawnItems.addLayer(layer)
+
+const bounds = layer.getBounds()
+lastPolygonCenter = bounds.getCenter()
+
+currentLocationName = "Farm Boundary"
+
+showNotification("Farm boundary created","success")
+
+})
+
+}
+
+// ------------------------------
+// FETCH CLIMATE DATA
+// ------------------------------
+
+async function fetchClimate(lat,lon){
+
+const params = new URLSearchParams({
+
+latitude:lat,
+longitude:lon,
+start_date:CONFIG.OPEN_METEO.START_DATE,
+end_date:CONFIG.OPEN_METEO.END_DATE,
+daily:CONFIG.OPEN_METEO.DAILY_VARIABLES,
+timezone:'auto'
+
+})
+
+const url = CONFIG.OPEN_METEO.BASE_URL + "?" + params
+
+const response = await fetch(url)
+
+if(!response.ok) throw new Error("Climate API error")
+
+const data = await response.json()
+
+if(!data.daily) throw new Error("No climate data")
+
+return data
+
+}
+
+// ------------------------------
+// PROCESS CLIMATE DATA
+// ------------------------------
+
+function processClimate(data){
+
+const daily = data.daily
+
+const years = [...new Set(
+daily.time.map(d=>new Date(d).getFullYear())
+)]
+
+let annualTemps = []
+let annualRain = []
+
+years.forEach(year=>{
+
+let temps=[]
+let rain=0
+
+daily.time.forEach((date,i)=>{
+
+if(new Date(date).getFullYear()===year){
+
+const max = daily.temperature_2m_max[i]
+const min = daily.temperature_2m_min[i]
+
+if(max!=null && min!=null){
+
+temps.push((max+min)/2)
+
+}
+
+rain += daily.precipitation_sum[i] || 0
+
+}
+
+})
+
+if(temps.length>0){
+
+annualTemps.push(
+temps.reduce((a,b)=>a+b)/temps.length
+)
+
+}
+
+annualRain.push(rain)
+
+})
+
+const avgTemp =
+annualTemps.reduce((a,b)=>a+b)/annualTemps.length
+
+const avgRain =
+annualRain.reduce((a,b)=>a+b)/annualRain.length
+
+const trendTemp = linearTrend(annualTemps)
+const trendRain = linearTrend(annualRain)
+
+return{
+
+avgTemp:avgTemp.toFixed(1),
+
+avgRain:avgRain.toFixed(0),
+
+trendTemp:trendTemp.toFixed(3),
+
+trendRain:trendRain.toFixed(3),
+
+years:years.length
+
+}
+
+}
+
+// ------------------------------
+// TREND CALCULATION
+// ------------------------------
+
+function linearTrend(arr){
+
+const n = arr.length
+
+let xSum=0
+let ySum=0
+let xySum=0
+let xxSum=0
+
+for(let i=0;i<n;i++){
+
+xSum+=i
+ySum+=arr[i]
+xySum+=i*arr[i]
+xxSum+=i*i
+
+}
+
+return (n*xySum - xSum*ySum) / (n*xxSum - xSum*xSum)
+
+}
+
+// ------------------------------
+// ANALYSIS
+// ------------------------------
+
+async function generateReport(){
+
+if(!lastPolygonCenter){
+
+showNotification("Select farm location first","error")
+return
+
+}
+
+try{
+
+showNotification("Fetching climate data","info")
+
+const data = await fetchClimate(
+lastPolygonCenter.lat,
+lastPolygonCenter.lng
+)
+
+const result = processClimate(data)
+
+openAnalysisPanel(result)
+
+}
+catch(err){
+
+showNotification("Climate analysis failed","error")
+
+}
+
+}
+
+// ------------------------------
+// SHOW RESULTS
+// ------------------------------
+
+function openAnalysisPanel(data){
+
+const panel = document.getElementById("analysisPanel")
+const content = document.getElementById("analysisContent")
+
+content.innerHTML = `
+
+<div class="metric-card">
+<div class="metric-title">Annual Avg Temperature</div>
+<div class="metric-value">${data.avgTemp} °C</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Annual Avg Rainfall</div>
+<div class="metric-value">${data.avgRain} mm</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Temperature Trend</div>
+<div class="metric-value">${data.trendTemp} °C/year</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Rainfall Trend</div>
+<div class="metric-value">${data.trendRain} mm/year</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Years Analyzed</div>
+<div class="metric-value">${data.years}</div>
+</div>
+
+`
+
+panel.style.display="block"
+
+}
+
+// ------------------------------
+// SEARCH LOCATION
+// ------------------------------
+
+async function searchLocation(){
+
+const input = document.getElementById("searchInput").value
+
+if(!input) return
+
+const url = `https://nominatim.openstreetmap.org/search?format=json&q=${input}`
+
+const res = await fetch(url)
+
+const data = await res.json()
+
+if(data.length===0){
+
+showNotification("Location not found","error")
+return
+
+}
+
+const lat = parseFloat(data[0].lat)
+const lon = parseFloat(data[0].lon)
+
+centerMap(lat,lon,data[0].display_name)
+
+}
+
+// ------------------------------
+
+function centerMap(lat,lon,name){
+
+if(currentMarker){
+
+map.removeLayer(currentMarker)
+
+}
+
+currentMarker = L.marker([lat,lon]).addTo(map)
+
+map.setView([lat,lon],12)
+
+lastPolygonCenter = {lat:lat,lng:lon}
+
+currentLocationName = name
+
+}
+
+// ------------------------------
+
+function showNotification(text,type){
+
+const n = document.getElementById("notification")
+
+n.innerText=text
+n.className="notification "+type
+n.classList.add("show")
+
+setTimeout(()=>{
+n.classList.remove("show")
+},3000)
+
+}
+
+// ------------------------------
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+initMap()
+
+})
+
+</script>
 </body>
 </html>
