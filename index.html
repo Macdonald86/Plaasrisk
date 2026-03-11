@@ -928,6 +928,11 @@ throw new Error("Insufficient climate data")
 function processClimateData(data){
 
 const daily=data.daily
+  const gdd = calculateGDD(daily)
+const heatStress = calculateHeatStress(daily)
+const drySpells = calculateDrySpells(daily)
+const seasonalRain = seasonalRainfall(daily)
+const maizeRisk = maizeRiskScore(daily)
 
 const years=[...new Set(
 daily.time.map(d=>new Date(d).getFullYear())
@@ -976,8 +981,15 @@ trendTemp:linearTrend(annualTemp).toFixed(3),
 
 trendRain:linearTrend(annualRain).toFixed(3),
 
-frostDays:frostDays
+frostDays:frostDays,
 
+gdd:gdd,
+heatStress:heatStress,
+drySpells:drySpells,
+seasonalRain:seasonalRain,
+maizeRisk:maizeRisk
+
+}
 }
 
 }
@@ -991,7 +1003,98 @@ return arr.reduce((a,b)=>a+b,0)/arr.length
 }
 
 function linearTrend(arr){
+// ----------------------------------------------------
+// AGRICULTURAL CLIMATE METRICS
+// ----------------------------------------------------
 
+// Growing Degree Days (Base 10°C)
+function calculateGDD(daily){
+
+let gdd = 0
+
+daily.temperature_2m_mean.forEach(t => {
+
+if(t!=null){
+gdd += Math.max(0, t - 10)
+}
+
+})
+
+return Math.round(gdd)
+
+}
+
+// Heat Stress Days (>35°C)
+
+function calculateHeatStress(daily){
+
+return daily.temperature_2m_max.filter(t => t>35).length
+
+}
+
+// Consecutive Dry Days
+
+function calculateDrySpells(daily){
+
+let maxDry = 0
+let current = 0
+
+daily.precipitation_sum.forEach(p => {
+
+if(p<1){
+
+current++
+maxDry=Math.max(maxDry,current)
+
+}else{
+
+current=0
+
+}
+
+})
+
+return maxDry
+
+}
+
+// Seasonal Rainfall (Oct–Mar)
+
+function seasonalRainfall(daily){
+
+let rain=0
+
+daily.time.forEach((date,i)=>{
+
+const m = new Date(date).getMonth()+1
+
+if(m>=10 || m<=3){
+
+rain+=daily.precipitation_sum[i]||0
+
+}
+
+})
+
+return Math.round(rain)
+
+}
+
+// Maize Climate Risk Score
+
+function maizeRiskScore(daily){
+
+const heat = calculateHeatStress(daily)
+const dry = calculateDrySpells(daily)
+
+let score = 100
+
+score -= heat*0.5
+score -= dry*0.8
+
+return Math.max(0,Math.round(score))
+
+}
 const n=arr.length
 
 let xSum=0
@@ -1082,6 +1185,31 @@ content.innerHTML=`
 <div class="metric-card">
 <div class="metric-title">Frost Days</div>
 <div class="metric-value">${data.frostDays}</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Growing Degree Days</div>
+<div class="metric-value">${data.gdd}</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Heat Stress Days (>35°C)</div>
+<div class="metric-value">${data.heatStress}</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Longest Dry Spell</div>
+<div class="metric-value">${data.drySpells} days</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Seasonal Rainfall (Oct–Mar)</div>
+<div class="metric-value">${data.seasonalRain} mm</div>
+</div>
+
+<div class="metric-card">
+<div class="metric-title">Maize Climate Score</div>
+<div class="metric-value">${data.maizeRisk}/100</div>
 </div>
 
 <div class="metric-card">
