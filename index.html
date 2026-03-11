@@ -1,905 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PlaasRisk - Advanced Climate Analysis</title>
-  
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-  
-  <!-- Fonts & Icons -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <style>
-    :root {
-      --primary: #2e7d32;
-      --primary-light: #4caf50;
-      --primary-dark: #1b5e20;
-      --secondary: #388e3c;
-      --accent: #f57c00;
-      --accent-light: #ffb74d;
-      --accent-dark: #e65100;
-      --light: #f5f9f5;
-      --light-gray: #f8f9fa;
-      --dark: #2d3748;
-      --text: #333333;
-      --border: #e0e0e0;
-      --success: #4caf50;
-      --warning: #ff9800;
-      --danger: #f44336;
-      --frost-blue: #1e88e5;
-      --frost-light: #bbdefb;
-      --drought-brown: #8d6e63;
-      --drought-light: #efebe9;
-      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Poppins', sans-serif;
-    }
-    
-    body {
-      background: linear-gradient(135deg, #f5f9f5 0%, #e8f5e9 100%);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.6;
-      overflow-x: hidden;
-      touch-action: manipulation;
-    }
-    
-    .container {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 15px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .map-section {
-      flex: 1;
-      background: white;
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      margin: 15px 0;
-      overflow: hidden;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    #map {
-      flex: 1;
-      z-index: 1;
-      background: #e8f5e9;
-    }
-    
-    /* HORIZONTAL CONTROL BAR */
-    .control-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      padding: 12px;
-      background: white;
-      border-bottom: 1px solid var(--border);
-      z-index: 1000;
-      position: relative;
-      align-items: center;
-      justify-content: space-between;
-    }
-    
-    @media (max-width: 1200px) {
-      .control-bar {
-        gap: 10px;
-        padding: 10px;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .control-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-    }
-    
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1;
-      min-width: 300px;
-    }
-    
-    @media (max-width: 768px) {
-      .control-group {
-        min-width: 100%;
-      }
-    }
-    
-    .input-with-icon {
-      position: relative;
-      flex: 1;
-    }
-    
-    .input-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--primary);
-      font-size: 0.9rem;
-    }
-    
-    .form-control {
-      width: 100%;
-      padding: 9px 12px 9px 35px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.9rem;
-      transition: all 0.3s;
-      background: var(--light-gray);
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
-    }
-    
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
-      background: white;
-    }
-    
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 9px 14px;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s;
-      gap: 6px;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-      white-space: nowrap;
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 12px rgba(46, 125, 50, 0.25);
-    }
-    
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--primary);
-      color: var(--primary);
-      font-weight: 500;
-    }
-    
-    .btn-outline:hover {
-      background: rgba(46, 125, 50, 0.08);
-    }
-    
-    .btn-sm {
-      padding: 7px 10px;
-      font-size: 0.85rem;
-    }
-    
-    .btn-block {
-      width: 100%;
-    }
-    
-    .map-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    
-    .map-actions .btn {
-      flex: 1;
-      min-width: 110px;
-    }
-    
-    @media (max-width: 768px) {
-      .map-actions {
-        width: 100%;
-        justify-content: space-between;
-      }
-      
-      .map-actions .btn {
-        min-width: auto;
-        flex: none;
-      }
-    }
-    
-    .progress-container {
-      width: 200px;
-      margin-left: 15px;
-    }
-    
-    .progress-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-      font-size: 0.85rem;
-      color: var(--dark);
-    }
-    
-    .progress-bar {
-      height: 10px;
-      background: #e0e0e0;
-      border-radius: 5px;
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .progress-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 5px;
-      width: 0%;
-      transition: width 0.5s ease;
-    }
-    
-    .progress-label {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 0.7rem;
-      font-weight: 500;
-      text-shadow: 0 1px 1px rgba(0,0,0,0.3);
-    }
-    
-    .suggestions-box {
-      position: absolute;
-      width: 100%;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      max-height: 180px;
-      overflow-y: auto;
-      z-index: 1001;
-      margin-top: 4px;
-      display: none;
-      border: 1px solid var(--border);
-    }
-    
-    .suggestion-item {
-      padding: 8px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.2s;
-      font-size: 0.85rem;
-    }
-    
-    .suggestion-item:hover {
-      background: var(--light);
-    }
-    
-    .suggestion-item:last-child {
-      border-bottom: none;
-    }
-    
-    .notification {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      padding: 10px 16px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      z-index: 2000;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transform: translateX(200%);
-      transition: transform 0.4s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
-    }
-    
-    @media (max-width: 768px) {
-      .notification {
-        top: auto;
-        bottom: 15px;
-        left: 15px;
-        right: 15px;
-        width: calc(100% - 30px);
-      }
-    }
-    
-    .notification.show {
-      transform: translateX(0);
-    }
-    
-    .notification.success {
-      background: var(--success);
-    }
-    
-    .notification.error {
-      background: var(--danger);
-    }
-    
-    .notification.info {
-      background: var(--primary);
-    }
-    
-    .notification.warning {
-      background: var(--warning);
-    }
-    
-    footer {
-      text-align: center;
-      padding: 8px;
-      color: #666;
-      font-size: 0.8rem;
-      background: white;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      margin-top: 12px;
-    }
-    
-    /* API Status Indicator */
-    .api-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-      padding: 4px 8px;
-      border-radius: 4px;
-      background: var(--light);
-    }
-    
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-    
-    .status-online {
-      background: var(--success);
-    }
-    
-    .status-offline {
-      background: var(--danger);
-    }
-    
-    .status-warning {
-      background: var(--warning);
-    }
-    
-    /* Data Unavailable Message */
-    .data-unavailable {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      text-align: center;
-      grid-column: 1 / -1;
-    }
-    
-    .data-unavailable-icon {
-      font-size: 4rem;
-      color: var(--warning);
-      margin-bottom: 20px;
-    }
-    
-    .data-unavailable h3 {
-      font-size: 1.8rem;
-      color: var(--dark);
-      margin-bottom: 15px;
-    }
-    
-    .data-unavailable p {
-      font-size: 1.1rem;
-      color: #666;
-      max-width: 600px;
-      line-height: 1.6;
-    }
-    
-    /* Loading States */
-    .loading-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255, 255, 255, 0.9);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      border-radius: 16px;
-    }
-    
-    .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 15px;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    /* Retry Button */
-    .retry-btn {
-      margin-top: 15px;
-      padding: 8px 16px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    
-    .retry-btn:hover {
-      background: var(--primary-dark);
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlaasRisk Climate Intelligence</title>
 
-    /* Logo Styles */
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .plaasrisk-logo {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    .logo-icon {
-      color: white;
-      font-size: 1.2rem;
-    }
-    
-    .logo-text {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--primary);
-      letter-spacing: -0.5px;
-    }
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
-    /* PDF Loading Overlay */
-    .pdf-loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 3000;
-      color: white;
-    }
-    
-    .pdf-spinner {
-      width: 60px;
-      height: 60px;
-      border: 5px solid rgba(255, 255, 255, 0.3);
-      border-top: 5px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    
-    /* Report Modal */
-    .report-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      display: none;
-      z-index: 2000;
-      padding: 20px;
-      overflow-y: auto;
-    }
-    
-    .report-content {
-      background: white;
-      border-radius: 16px;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 30px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    }
+<style>
+body{margin:0;font-family:Arial;background:#f4f6f4}
+#map{height:90vh}
 
-    /* Analysis Results Panel */
-    .analysis-panel {
-      position: absolute;
-      top: 80px;
-      right: 20px;
-      width: 350px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      padding: 20px;
-      z-index: 1000;
-      max-height: 80vh;
-      overflow-y: auto;
-      display: none;
-    }
-    
-    .analysis-header {
-      display: flex;
-      justify-content: between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .analysis-title {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--primary);
-    }
-    
-    .close-analysis {
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-      color: var(--dark);
-    }
-    
-    .metric-card {
-      background: var(--light);
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 12px;
-    }
-    
-    .metric-title {
-      font-size: 0.9rem;
-      color: var(--dark);
-      margin-bottom: 5px;
-    }
-    
-    .metric-value {
-      font-size: 1.4rem;
-      font-weight: 600;
-      color: var(--primary);
-    }
-    
-    .metric-trend {
-      font-size: 0.8rem;
-      color: var(--success);
-    }
-    
-    .metric-trend.negative {
-      color: var(--danger);
-    }
-  </style>
+.control-bar{
+display:flex;
+gap:10px;
+padding:10px;
+background:white;
+border-bottom:1px solid #ddd;
+}
+
+button{
+padding:8px 12px;
+border:none;
+background:#2e7d32;
+color:white;
+cursor:pointer;
+border-radius:6px;
+}
+
+button:hover{background:#1b5e20}
+
+input{
+padding:8px;
+border:1px solid #ccc;
+border-radius:6px;
+}
+
+.analysis-panel{
+position:absolute;
+top:80px;
+right:20px;
+width:320px;
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 4px 15px rgba(0,0,0,0.2);
+display:none;
+z-index:1000;
+}
+
+.metric{
+margin-bottom:10px;
+}
+
+.metric-title{
+font-size:14px;
+color:#444
+}
+
+.metric-value{
+font-size:20px;
+font-weight:bold;
+color:#2e7d32
+}
+
+.progress{
+width:200px;
+height:8px;
+background:#ddd;
+border-radius:4px;
+overflow:hidden;
+}
+
+.progress-fill{
+height:8px;
+background:#2e7d32;
+width:0%;
+}
+
+</style>
 </head>
+
 <body>
-  <div class="container">
-    <div class="map-section">
-      <div class="control-bar">
-        <div class="logo-container">
-          <div class="plaasrisk-logo">
-            <i class="fas fa-seedling logo-icon"></i>
-          </div>
-          <div class="logo-text">PlaasRisk</div>
-        </div>
-        
-        <div class="control-group">
-          <div class="input-with-icon">
-            <i class="fas fa-search input-icon"></i>
-            <input type="text" id="searchInput" class="form-control" placeholder="Enter coordinates or location (e.g. -25.0, 30.0 or Johannesburg)" />
-            <div id="suggestions" class="suggestions-box"></div>
-          </div>
-          
-          <button class="btn btn-primary" onclick="searchLocation()">
-            <i class="fas fa-search-location"></i> Search
-          </button>
-          
-          <div class="progress-container">
-            <div class="progress-header">
-              <span>Data Retrieval</span>
-              <span id="progress-percentage">0%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progress-fill"></div>
-              <div class="progress-label" id="progress-label">Ready</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="map-actions">
-          <button class="btn btn-outline" onclick="resetMap()">
-            <i class="fas fa-trash-alt"></i> Clear
-          </button>
-          <button class="btn btn-primary" onclick="generateReport()" id="generateBtn">
-            <i class="fas fa-chart-line"></i> Analyze
-          </button>
-          <button class="btn btn-outline" id="dropPinBtn" onclick="activatePinMode()">
-            <i class="fas fa-map-pin"></i> Drop Pin
-          </button>
-          <div class="api-status" id="apiStatus">
-            <span class="status-dot status-online"></span>
-            <span>API Online</span>
-          </div>
-        </div>
-      </div>
-      
-      <div id="map"></div>
-    </div>
-    
-    <!-- Analysis Results Panel -->
-    <div class="analysis-panel" id="analysisPanel">
-      <div class="analysis-header">
-        <div class="analysis-title">Climate Analysis</div>
-        <button class="close-analysis" onclick="closeAnalysisPanel()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div id="analysisContent">
-        <!-- Analysis content will be populated here -->
-      </div>
-    </div>
-    
-    <footer>
-      <p>Farm Climate Analysis Tool • Data provided by Open-Meteo Historical Weather API</p>
-      <p style="margin-top: 5px; font-size: 0.8rem; color: #777;">Platform developed by Macdonald Makoro: 076-623-2221</p>
-    </footer>
-  </div>
-  
-  <div id="notification" class="notification">
-    <i class="fas fa-check-circle"></i>
-    <span id="notification-text">Notification message</span>
-  </div>
-  
-  <!-- PDF Loading Overlay -->
-  <div class="pdf-loading-overlay" id="pdfLoading">
-    <div class="pdf-spinner"></div>
-    <h3>Generating PDF Report</h3>
-    <p>Please wait while we prepare your full report...</p>
-  </div>
-  
-  <!-- Report Modal -->
-  <div class="report-modal" id="reportModal">
-    <div class="report-content">
-      <!-- Report content will be dynamically populated -->
-    </div>
-  </div>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<div class="control-bar">
 
-  <script>
-  // ----------------------------------------------------
-// GLOBAL VARIABLES
-// ----------------------------------------------------
+<input id="searchInput" placeholder="Search location or lat,lon">
+
+<button onclick="searchLocation()">Search</button>
+
+<button onclick="activatePinMode()">Drop Pin</button>
+
+<button onclick="resetMap()">Clear</button>
+
+<button onclick="generateReport()">Analyze</button>
+
+<div class="progress">
+<div class="progress-fill" id="progressFill"></div>
+</div>
+
+</div>
+
+<div id="map"></div>
+
+<div class="analysis-panel" id="analysisPanel">
+<h3>Climate Analysis</h3>
+<div id="analysisContent"></div>
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script>
+
+/* ---------------- MAP ---------------- */
 
 let map
-let currentMarker = null
-let lastPolygonCenter = null
-let currentLocationName = "Unknown Location"
-let pinModeActive = false
-let dataAvailable = false
-let apiStatus = "online"
 let drawnItems
+let currentMarker=null
+let lastPolygonCenter=null
+let pinMode=false
 
-const dataCache = new Map()
+function initMap(){
 
-// ----------------------------------------------------
-// OPEN METEO CONFIGURATION
-// ----------------------------------------------------
+map=L.map("map").setView([-25.7,28.2],6)
 
-const CONFIG = {
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+maxZoom:19
+}).addTo(map)
 
-OPEN_METEO:{
+drawnItems=new L.FeatureGroup()
+map.addLayer(drawnItems)
 
-BASE_URL:"https://archive-api.open-meteo.com/v1/archive",
-
-START_DATE:"2000-01-01",
-END_DATE:new Date().toISOString().split("T")[0],
-
-DAILY_VARIABLES:[
-"temperature_2m_max",
-"temperature_2m_min",
-"temperature_2m_mean",
-"precipitation_sum",
-"wind_speed_10m_max",
-"et0_fao_evapotranspiration"
-].join(","),
-
-TIMEZONE:"auto",
-TIMEOUT:30000
-
+const drawControl=new L.Control.Draw({
+draw:{
+polygon:true,
+rectangle:true,
+circle:false,
+polyline:false,
+marker:false
 },
+edit:{featureGroup:drawnItems}
+})
 
-CACHE:{
-ENABLED:true,
-DURATION:24*60*60*1000
-},
+map.addControl(drawControl)
 
-RETRY:{
-MAX_ATTEMPTS:3,
-DELAY:1000
+map.on(L.Draw.Event.CREATED,function(e){
+
+drawnItems.clearLayers()
+
+const layer=e.layer
+drawnItems.addLayer(layer)
+
+const center=layer.getBounds().getCenter()
+
+lastPolygonCenter=center
+
+})
+
 }
 
+window.onload=initMap
+
+
+/* ---------------- SEARCH ---------------- */
+
+async function searchLocation(){
+
+const input=document.getElementById("searchInput").value
+
+if(input.includes(",")){
+
+const parts=input.split(",")
+
+const lat=parseFloat(parts[0])
+const lon=parseFloat(parts[1])
+
+setMarker(lat,lon)
+map.setView([lat,lon],10)
+return
+
 }
 
-// ----------------------------------------------------
-// FETCH WITH RETRY
-// ----------------------------------------------------
+const url=`https://nominatim.openstreetmap.org/search?format=json&q=${input}`
 
-async function fetchWithRetry(url,retries=CONFIG.RETRY.MAX_ATTEMPTS){
+const res=await fetch(url)
+const data=await res.json()
 
-let lastError
+if(data.length==0) return
 
-for(let i=1;i<=retries;i++){
+const place=data[0]
 
-try{
+setMarker(place.lat,place.lon)
 
-const controller=new AbortController()
-const timeout=setTimeout(()=>controller.abort(),CONFIG.OPEN_METEO.TIMEOUT)
+map.setView([place.lat,place.lon],10)
 
-const res=await fetch(url,{signal:controller.signal})
+}
 
-clearTimeout(timeout)
 
-if(!res.ok) throw new Error("API error "+res.status)
+/* ---------------- PIN ---------------- */
+
+function activatePinMode(){
+
+pinMode=true
+
+map.once("click",function(e){
+
+setMarker(e.latlng.lat,e.latlng.lng)
+
+pinMode=false
+
+})
+
+}
+
+function setMarker(lat,lon){
+
+if(currentMarker) map.removeLayer(currentMarker)
+
+currentMarker=L.marker([lat,lon]).addTo(map)
+
+lastPolygonCenter={lat:lat,lng:lon}
+
+}
+
+
+/* ---------------- RESET ---------------- */
+
+function resetMap(){
+
+drawnItems.clearLayers()
+
+if(currentMarker) map.removeLayer(currentMarker)
+
+lastPolygonCenter=null
+
+document.getElementById("analysisPanel").style.display="none"
+
+}
+
+
+/* ---------------- CLIMATE API ---------------- */
+
+const BASE_URL="https://archive-api.open-meteo.com/v1/archive"
+
+
+async function fetchClimate(lat,lon){
+
+const url=BASE_URL+
+`?latitude=${lat}&longitude=${lon}`+
+`&start_date=2000-01-01`+
+`&end_date=2024-12-31`+
+`&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max`+
+`&timezone=auto`
+
+const res=await fetch(url)
 
 return await res.json()
 
 }
-catch(err){
 
-lastError=err
 
-if(i===retries) break
-
-await new Promise(r=>setTimeout(r,CONFIG.RETRY.DELAY*i))
-
-}
-
-}
-
-throw lastError
-
-}
-
-// ----------------------------------------------------
-// FETCH CLIMATE DATA
-// ----------------------------------------------------
-
-async function fetchClimate(lat,lon){
-
-lat=Number(lat)
-lon=Number(lon)
-
-if(isNaN(lat)||isNaN(lon))
-throw new Error("Invalid coordinates")
-
-const params=new URLSearchParams({
-
-latitude:lat,
-longitude:lon,
-start_date:CONFIG.OPEN_METEO.START_DATE,
-end_date:CONFIG.OPEN_METEO.END_DATE,
-daily:CONFIG.OPEN_METEO.DAILY_VARIABLES,
-timezone:"auto"
-
-})
-
-const url=CONFIG.OPEN_METEO.BASE_URL+"?"+params
-
-const data=await fetchWithRetry(url)
-
-if(!data.daily || !data.daily.time)
-throw new Error("Climate data unavailable")
-
-return data
-
-}
-
-// ----------------------------------------------------
-// BASIC STATISTICS
-// ----------------------------------------------------
+/* ---------------- METRICS ---------------- */
 
 function avg(arr){
-if(!arr || arr.length===0) return 0
+
 return arr.reduce((a,b)=>a+b,0)/arr.length
-}
-
-function linearTrend(arr){
-
-if(!arr || arr.length===0) return 0
-
-const n=arr.length
-
-let xSum=0
-let ySum=0
-let xySum=0
-let xxSum=0
-
-for(let i=0;i<n;i++){
-
-xSum+=i
-ySum+=arr[i]
-xySum+=i*arr[i]
-xxSum+=i*i
 
 }
 
-return (n*xySum-xSum*ySum)/(n*xxSum-xSum*xSum)
+function heatStress(daily){
+
+return daily.temperature_2m_max.filter(t=>t>35).length
 
 }
 
-// ----------------------------------------------------
-// AGRICULTURAL CLIMATE METRICS
-// ----------------------------------------------------
-
-function calculateGDD(daily){
-
-let gdd=0
-
-(daily.temperature_2m_mean || []).forEach(t=>{
-if(t!=null) gdd+=Math.max(0,t-10)
-})
-
-return Math.round(gdd)
-
-}
-
-function calculateHeatStress(daily){
-return (daily.temperature_2m_max || []).filter(t=>t>35).length
-}
-
-function calculateDrySpells(daily){
+function drySpells(daily){
 
 let maxDry=0
 let current=0
 
-(daily.precipitation_sum || []).forEach(p=>{
+daily.precipitation_sum.forEach(p=>{
 
 if(p<1){
+
 current++
 maxDry=Math.max(maxDry,current)
+
 }else{
+
 current=0
+
 }
 
 })
@@ -908,187 +301,115 @@ return maxDry
 
 }
 
-function seasonalRainfall(daily){
-
-let rain=0
-
-(daily.time || []).forEach((date,i)=>{
-
-const m=new Date(date).getMonth()+1
-
-if(m>=10 || m<=3)
-rain+=daily.precipitation_sum[i]||0
-
-})
-
-return Math.round(rain)
-
-}
-
-// ----------------------------------------------------
-// RISK METRICS
-// ----------------------------------------------------
-
-function maizeRiskScore(daily){
-
-const heat=calculateHeatStress(daily)
-const dry=calculateDrySpells(daily)
-
-let score=100
-
-score-=heat*0.5
-score-=dry*0.8
-
-return Math.max(0,Math.round(score))
-
-}
-
 function hailProbability(daily){
 
-let riskDays=0
+let risk=0
 
-(daily.temperature_2m_max || []).forEach((t,i)=>{
+daily.temperature_2m_max.forEach((t,i)=>{
 
-const rain=daily.precipitation_sum[i]||0
-const wind=daily.wind_speed_10m_max ? daily.wind_speed_10m_max[i] : 0
+const rain=daily.precipitation_sum[i]
+const wind=daily.wind_speed_10m_max[i]
 
-if(t>28 && rain>5 && wind>10)
-riskDays++
-
-})
-
-return daily.time.length
-? Math.round((riskDays/daily.time.length)*100)
-: 0
-
-}
-
-function seasonalRainfallProbability(daily){
-
-let yearlyTotals={}
-
-(daily.time || []).forEach((date,i)=>{
-
-const d=new Date(date)
-const year=d.getFullYear()
-const month=d.getMonth()+1
-
-if(month>=10 || month<=3){
-
-if(!yearlyTotals[year]) yearlyTotals[year]=0
-
-yearlyTotals[year]+=daily.precipitation_sum[i]||0
-
-}
+if(t>28 && rain>5 && wind>10) risk++
 
 })
 
-const totals=Object.values(yearlyTotals)
-
-if(totals.length===0) return 0
-
-const avgRain=totals.reduce((a,b)=>a+b)/totals.length
-
-const wetYears=totals.filter(t=>t>avgRain).length
-
-return Math.round((wetYears/totals.length)*100)
+return Math.round((risk/daily.time.length)*100)
 
 }
 
-function farmClimateRiskScore(metrics){
 
-let score=100
+/* ---------------- ANALYSIS ---------------- */
 
-score-=metrics.heatStress*0.4
-score-=metrics.drySpells*0.6
-score-=metrics.frostDays*0.2
+async function generateReport(){
 
-if(metrics.seasonalRain<400) score-=15
+if(!lastPolygonCenter){
 
-return Math.max(0,Math.round(score))
+alert("Select a field or drop pin first")
+
+return
 
 }
 
-// ----------------------------------------------------
-// PROCESS CLIMATE DATA
-// ----------------------------------------------------
+updateProgress(20)
 
-function processClimateData(data){
+const data=await fetchClimate(lastPolygonCenter.lat,lastPolygonCenter.lng)
+
+updateProgress(60)
 
 const daily=data.daily
 
-const gdd=calculateGDD(daily)
-const heatStress=calculateHeatStress(daily)
-const drySpells=calculateDrySpells(daily)
-const seasonalRain=seasonalRainfall(daily)
-const maizeRisk=maizeRiskScore(daily)
+const metrics={
 
-const hailRisk=hailProbability(daily)
-const seasonalRainProb=seasonalRainfallProbability(daily)
+avgTemp:avg(daily.temperature_2m_mean).toFixed(1),
+avgRain:avg(daily.precipitation_sum).toFixed(1),
 
-const years=[...new Set(
-(daily.time || []).map(d=>new Date(d).getFullYear())
-)]
+heatStress:heatStress(daily),
 
-let annualTemp=[]
-let annualRain=[]
+drySpells:drySpells(daily),
 
-years.forEach(year=>{
-
-let temps=[]
-let rain=0
-
-daily.time.forEach((date,i)=>{
-
-if(new Date(date).getFullYear()===year){
-
-if(daily.temperature_2m_mean[i]!=null)
-temps.push(daily.temperature_2m_mean[i])
-
-rain+=daily.precipitation_sum[i]||0
+hail:hailProbability(daily)
 
 }
 
-})
+updateProgress(90)
 
-if(temps.length>0)
-annualTemp.push(avg(temps))
+displayResults(metrics)
 
-annualRain.push(rain)
+updateProgress(100)
 
-})
+}
 
-const frostDays=(daily.temperature_2m_min || []).filter(t=>t<=0).length
 
-const farmRisk=farmClimateRiskScore({
-heatStress,
-drySpells,
-frostDays,
-seasonalRain
-})
+/* ---------------- RESULTS ---------------- */
 
-return{
+function displayResults(m){
 
-years:years.length,
+const panel=document.getElementById("analysisPanel")
 
-avgTemp:avg(annualTemp).toFixed(1),
-avgRain:avg(annualRain).toFixed(0),
+panel.style.display="block"
 
-trendTemp:linearTrend(annualTemp).toFixed(3),
-trendRain:linearTrend(annualRain).toFixed(3),
+document.getElementById("analysisContent").innerHTML=`
 
-frostDays,
+<div class="metric">
+<div class="metric-title">Average Temperature</div>
+<div class="metric-value">${m.avgTemp} °C</div>
+</div>
 
-gdd,
-heatStress,
-drySpells,
-seasonalRain,
-maizeRisk,
+<div class="metric">
+<div class="metric-title">Average Rainfall</div>
+<div class="metric-value">${m.avgRain} mm/day</div>
+</div>
 
-hailRisk,
-seasonalRainProb,
-farmRisk
+<div class="metric">
+<div class="metric-title">Heat Stress Days</div>
+<div class="metric-value">${m.heatStress}</div>
+</div>
 
-    })
+<div class="metric">
+<div class="metric-title">Max Dry Spell</div>
+<div class="metric-value">${m.drySpells} days</div>
+</div>
+
+<div class="metric">
+<div class="metric-title">Hail Probability</div>
+<div class="metric-value">${m.hail}%</div>
+</div>
+
+`
+
+}
+
+
+/* ---------------- PROGRESS ---------------- */
+
+function updateProgress(v){
+
+document.getElementById("progressFill").style.width=v+"%"
+
+}
 
 </script>
+
+</body>
+</html>
