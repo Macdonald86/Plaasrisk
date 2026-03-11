@@ -723,7 +723,8 @@ let drawnItems
 const dataCache = new Map()
 
 // ----------------------------------------------------
-// CONFIGURATION
+// ----------------------------------------------------
+// OPEN METEO CONFIGURATION
 // ----------------------------------------------------
 
 const CONFIG = {
@@ -762,58 +763,6 @@ DELAY:1000
 }
 
 // ----------------------------------------------------
-// MAP INITIALIZATION
-// ----------------------------------------------------
-
-function initMap(){
-
-map = L.map("map").setView([-25,30],5)
-
-L.tileLayer(
-"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{maxZoom:18}
-).addTo(map)
-
-drawnItems = new L.FeatureGroup()
-map.addLayer(drawnItems)
-
-const drawControl = new L.Control.Draw({
-
-draw:{
-polygon:{
-allowIntersection:false,
-shapeOptions:{color:"#2e7d32"}
-},
-polyline:false,
-rectangle:false,
-circle:false,
-marker:false,
-circlemarker:false
-},
-
-edit:{featureGroup:drawnItems}
-
-})
-
-map.addControl(drawControl)
-
-map.on(L.Draw.Event.CREATED,function(e){
-
-const layer = e.layer
-drawnItems.addLayer(layer)
-
-const bounds = layer.getBounds()
-lastPolygonCenter = bounds.getCenter()
-
-currentLocationName = "Farm Boundary"
-
-showNotification("Farm boundary created","success")
-
-})
-
-}
-
-// ----------------------------------------------------
 // FETCH WITH RETRY
 // ----------------------------------------------------
 
@@ -825,10 +774,10 @@ for(let i=1;i<=retries;i++){
 
 try{
 
-const controller = new AbortController()
+const controller=new AbortController()
 const timeout=setTimeout(()=>controller.abort(),CONFIG.OPEN_METEO.TIMEOUT)
 
-const res = await fetch(url,{signal:controller.signal})
+const res=await fetch(url,{signal:controller.signal})
 
 clearTimeout(timeout)
 
@@ -865,21 +814,7 @@ lon=Number(lon)
 if(isNaN(lat)||isNaN(lon))
 throw new Error("Invalid coordinates")
 
-const cacheKey = `${lat}_${lon}`
-
-if(CONFIG.CACHE.ENABLED){
-
-const cached=dataCache.get(cacheKey)
-
-if(cached && Date.now()-cached.timestamp<CONFIG.CACHE.DURATION){
-
-return cached.data
-
-}
-
-}
-
-const params = new URLSearchParams({
+const params=new URLSearchParams({
 
 latitude:lat,
 longitude:lon,
@@ -890,34 +825,181 @@ timezone:"auto"
 
 })
 
-const url = CONFIG.OPEN_METEO.BASE_URL+"?"+params
+const url=CONFIG.OPEN_METEO.BASE_URL+"?"+params
 
-const data = await fetchWithRetry(url)
+const data=await fetchWithRetry(url)
 
 if(!data.daily || !data.daily.time)
 throw new Error("Climate data unavailable")
-
-validateClimateData(data.daily)
-
-dataCache.set(cacheKey,{
-data:data,
-timestamp:Date.now()
-})
 
 return data
 
 }
 
 // ----------------------------------------------------
-// DATA VALIDATION
+// BASIC STATISTICS
 // ----------------------------------------------------
 
-function validateClimateData(d){
+function avg(arr){
+return arr.reduce((a,b)=>a+b,0)/arr.length
+}
 
-if(!Array.isArray(d.time)) throw new Error("Invalid dataset")
+function linearTrend(arr){
 
-if(d.time.length<30)
-throw new Error("Insufficient climate data")
+const n=arr.length
+
+let xSum=0
+let ySum=0
+let xySum=0
+let xxSum=0
+
+for(let i=0;i<n;i++){
+
+xSum+=i
+ySum+=arr[i]
+xySum+=i*arr[i]
+xxSum+=i*i
+
+}
+
+return (n*xySum-xSum*ySum)/(n*xxSum-xSum*xSum)
+
+}
+
+// ----------------------------------------------------
+// AGRICULTURAL CLIMATE METRICS
+// ----------------------------------------------------
+
+function calculateGDD(daily){
+
+let gdd=0
+
+daily.temperature_2m_mean.forEach(t=>{
+if(t!=null) gdd+=Math.max(0,t-10)
+})
+
+return Math.round(gdd)
+
+}
+
+function calculateHeatStress(daily){
+return daily.temperature_2m_max.filter(t=>t>35).length
+}
+
+function calculateDrySpells(daily){
+
+let maxDry=0
+let current=0
+
+daily.precipitation_sum.forEach(p=>{
+
+if(p<1){
+current++
+maxDry=Math.max(maxDry,current)
+}else{
+current=0
+}
+
+})
+
+return maxDry
+
+}
+
+function seasonalRainfall(daily){
+
+let rain=0
+
+daily.time.forEach((date,i)=>{
+
+const m=new Date(date).getMonth()+1
+
+if(m>=10 || m<=3)
+rain+=daily.precipitation_sum[i]||0
+
+})
+
+return Math.round(rain)
+
+}
+
+// ----------------------------------------------------
+// RISK METRICS
+// ----------------------------------------------------
+
+function maizeRiskScore(daily){
+
+const heat=calculateHeatStress(daily)
+const dry=calculateDrySpells(daily)
+
+let score=100
+
+score-=heat*0.5
+score-=dry*0.8
+
+return Math.max(0,Math.round(score))
+
+}
+
+function hailProbability(daily){
+
+let riskDays=0
+
+daily.temperature_2m_max.forEach((t,i)=>{
+
+const rain=daily.precipitation_sum[i]||0
+const wind=daily.wind_speed_10m_max[i]||0
+
+if(t>28 && rain>5 && wind>10)
+riskDays++
+
+})
+
+return Math.round((riskDays/daily.time.length)*100)
+
+}
+
+function seasonalRainfallProbability(daily){
+
+let yearlyTotals={}
+
+daily.time.forEach((date,i)=>{
+
+const d=new Date(date)
+const year=d.getFullYear()
+const month=d.getMonth()+1
+
+if(month>=10 || month<=3){
+
+if(!yearlyTotals[year]) yearlyTotals[year]=0
+
+yearlyTotals[year]+=daily.precipitation_sum[i]||0
+
+}
+
+})
+
+const totals=Object.values(yearlyTotals)
+
+const avgRain=totals.reduce((a,b)=>a+b)/totals.length
+
+const wetYears=totals.filter(t=>t>avgRain).length
+
+return Math.round((wetYears/totals.length)*100)
+
+}
+
+function farmClimateRiskScore(metrics){
+
+let score=100
+
+score-=metrics.heatStress*0.4
+score-=metrics.drySpells*0.6
+score-=metrics.frostDays*0.2
+
+if(metrics.seasonalRain<400) score-=15
+
+return Math.max(0,Math.round(score))
 
 }
 
@@ -928,11 +1010,15 @@ throw new Error("Insufficient climate data")
 function processClimateData(data){
 
 const daily=data.daily
-  const gdd = calculateGDD(daily)
-const heatStress = calculateHeatStress(daily)
-const drySpells = calculateDrySpells(daily)
-const seasonalRain = seasonalRainfall(daily)
-const maizeRisk = maizeRiskScore(daily)
+
+const gdd=calculateGDD(daily)
+const heatStress=calculateHeatStress(daily)
+const drySpells=calculateDrySpells(daily)
+const seasonalRain=seasonalRainfall(daily)
+const maizeRisk=maizeRiskScore(daily)
+
+const hailRisk=hailProbability(daily)
+const seasonalRainProb=seasonalRainfallProbability(daily)
 
 const years=[...new Set(
 daily.time.map(d=>new Date(d).getFullYear())
@@ -966,372 +1052,38 @@ annualRain.push(rain)
 
 })
 
-const frostDays = daily.temperature_2m_min
-.filter(t=>t<=0).length
+const frostDays=daily.temperature_2m_min.filter(t=>t<=0).length
+
+const farmRisk=farmClimateRiskScore({
+heatStress,
+drySpells,
+frostDays,
+seasonalRain
+})
 
 return{
 
 years:years.length,
 
 avgTemp:avg(annualTemp).toFixed(1),
-
 avgRain:avg(annualRain).toFixed(0),
 
 trendTemp:linearTrend(annualTemp).toFixed(3),
-
 trendRain:linearTrend(annualRain).toFixed(3),
 
-frostDays:frostDays,
-
-gdd:gdd,
-heatStress:heatStress,
-drySpells:drySpells,
-seasonalRain:seasonalRain,
-maizeRisk:maizeRisk
-
-}
-}
-
-}
-
-// ----------------------------------------------------
-// STATISTICS
-// ----------------------------------------------------
-
-function avg(arr){
-return arr.reduce((a,b)=>a+b,0)/arr.length
-}
-
-function linearTrend(arr){
-// ----------------------------------------------------
-// AGRICULTURAL CLIMATE METRICS
-// ----------------------------------------------------
-
-// Growing Degree Days (Base 10°C)
-function calculateGDD(daily){
-
-let gdd = 0
-
-daily.temperature_2m_mean.forEach(t => {
-
-if(t!=null){
-gdd += Math.max(0, t - 10)
-}
-
-})
-
-return Math.round(gdd)
-
-}
-
-// Heat Stress Days (>35°C)
-
-function calculateHeatStress(daily){
-
-return daily.temperature_2m_max.filter(t => t>35).length
-
-}
-
-// Consecutive Dry Days
-
-function calculateDrySpells(daily){
-
-let maxDry = 0
-let current = 0
-
-daily.precipitation_sum.forEach(p => {
-
-if(p<1){
-
-current++
-maxDry=Math.max(maxDry,current)
-
-}else{
-
-current=0
-
-}
-
-})
-
-return maxDry
-
-}
-
-// Seasonal Rainfall (Oct–Mar)
-
-function seasonalRainfall(daily){
-
-let rain=0
-
-daily.time.forEach((date,i)=>{
-
-const m = new Date(date).getMonth()+1
-
-if(m>=10 || m<=3){
-
-rain+=daily.precipitation_sum[i]||0
-
-}
-
-})
-
-return Math.round(rain)
-
-}
-
-// Maize Climate Risk Score
-
-function maizeRiskScore(daily){
-
-const heat = calculateHeatStress(daily)
-const dry = calculateDrySpells(daily)
-
-let score = 100
-
-score -= heat*0.5
-score -= dry*0.8
-
-return Math.max(0,Math.round(score))
-
-}
-const n=arr.length
-
-let xSum=0
-let ySum=0
-let xySum=0
-let xxSum=0
-
-for(let i=0;i<n;i++){
-
-xSum+=i
-ySum+=arr[i]
-xySum+=i*arr[i]
-xxSum+=i*i
-
-}
-
-return (n*xySum-xSum*ySum)/(n*xxSum-xSum*xSum)
-
-}
-
-// ----------------------------------------------------
-// GENERATE REPORT
-// ----------------------------------------------------
-
-async function generateReport(){
-
-if(!lastPolygonCenter){
-
-showNotification("Select farm location first","error")
-return
-
-}
-
-try{
-
-showNotification("Fetching climate data","info")
-
-const data = await fetchClimate(
-lastPolygonCenter.lat,
-lastPolygonCenter.lng
-)
-
-const result = processClimateData(data)
-
-openAnalysisPanel(result)
-
-}
-catch(err){
-
-console.error(err)
-showNotification("Climate analysis failed","error")
+frostDays,
+
+gdd,
+heatStress,
+drySpells,
+seasonalRain,
+maizeRisk,
+
+hailRisk,
+seasonalRainProb,
+farmRisk
 
 }
 
 }
 
-// ----------------------------------------------------
-// RESULTS PANEL
-// ----------------------------------------------------
-
-function openAnalysisPanel(data){
-
-const panel=document.getElementById("analysisPanel")
-const content=document.getElementById("analysisContent")
-
-content.innerHTML=`
-
-<div class="metric-card">
-<div class="metric-title">Average Temperature</div>
-<div class="metric-value">${data.avgTemp} °C</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Annual Rainfall</div>
-<div class="metric-value">${data.avgRain} mm</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Temperature Trend</div>
-<div class="metric-value">${data.trendTemp} °C/year</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Rainfall Trend</div>
-<div class="metric-value">${data.trendRain} mm/year</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Frost Days</div>
-<div class="metric-value">${data.frostDays}</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Growing Degree Days</div>
-<div class="metric-value">${data.gdd}</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Heat Stress Days (>35°C)</div>
-<div class="metric-value">${data.heatStress}</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Longest Dry Spell</div>
-<div class="metric-value">${data.drySpells} days</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Seasonal Rainfall (Oct–Mar)</div>
-<div class="metric-value">${data.seasonalRain} mm</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Maize Climate Score</div>
-<div class="metric-value">${data.maizeRisk}/100</div>
-</div>
-
-<div class="metric-card">
-<div class="metric-title">Years Analyzed</div>
-<div class="metric-value">${data.years}</div>
-</div>
-
-`
-
-panel.style.display="block"
-
-}
-
-// ----------------------------------------------------
-// UI FUNCTIONS
-// ----------------------------------------------------
-
-function closeAnalysisPanel(){
-document.getElementById("analysisPanel").style.display="none"
-}
-
-function resetMap(){
-
-drawnItems.clearLayers()
-
-if(currentMarker){
-map.removeLayer(currentMarker)
-currentMarker=null
-}
-
-lastPolygonCenter=null
-
-showNotification("Map cleared","info")
-
-}
-
-function activatePinMode(){
-
-map.once("click",function(e){
-
-centerMap(e.latlng.lat,e.latlng.lng,"Custom Pin")
-
-})
-
-showNotification("Click map to drop pin","info")
-
-}
-
-// ----------------------------------------------------
-// LOCATION SEARCH
-// ----------------------------------------------------
-
-async function searchLocation(){
-
-const query=document.getElementById("searchInput").value
-
-if(!query) return
-
-const url=`https://nominatim.openstreetmap.org/search?format=json&q=${query}`
-
-const res=await fetch(url)
-
-const data=await res.json()
-
-if(data.length===0){
-
-showNotification("Location not found","error")
-return
-
-}
-
-const lat=parseFloat(data[0].lat)
-const lon=parseFloat(data[0].lon)
-
-centerMap(lat,lon,data[0].display_name)
-
-}
-
-function centerMap(lat,lon,name){
-
-if(currentMarker){
-
-map.removeLayer(currentMarker)
-
-}
-
-currentMarker=L.marker([lat,lon]).addTo(map)
-
-map.setView([lat,lon],12)
-
-lastPolygonCenter={lat:lat,lng:lon}
-
-currentLocationName=name
-
-}
-
-// ----------------------------------------------------
-// NOTIFICATIONS
-// ----------------------------------------------------
-
-function showNotification(text,type){
-
-const n=document.getElementById("notification")
-
-n.querySelector("#notification-text").innerText=text
-n.className="notification "+type
-n.classList.add("show")
-
-setTimeout(()=>{
-
-n.classList.remove("show")
-
-},3000)
-
-}
-
-// ----------------------------------------------------
-
-document.addEventListener("DOMContentLoaded",()=>{
-
-initMap()
-
-})
-
-</script>
