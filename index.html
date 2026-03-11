@@ -723,7 +723,6 @@ let drawnItems
 const dataCache = new Map()
 
 // ----------------------------------------------------
-// ----------------------------------------------------
 // OPEN METEO CONFIGURATION
 // ----------------------------------------------------
 
@@ -841,10 +840,13 @@ return data
 // ----------------------------------------------------
 
 function avg(arr){
+if(!arr || arr.length===0) return 0
 return arr.reduce((a,b)=>a+b,0)/arr.length
 }
 
 function linearTrend(arr){
+
+if(!arr || arr.length===0) return 0
 
 const n=arr.length
 
@@ -874,7 +876,7 @@ function calculateGDD(daily){
 
 let gdd=0
 
-daily.temperature_2m_mean.forEach(t=>{
+(daily.temperature_2m_mean || []).forEach(t=>{
 if(t!=null) gdd+=Math.max(0,t-10)
 })
 
@@ -883,7 +885,7 @@ return Math.round(gdd)
 }
 
 function calculateHeatStress(daily){
-return daily.temperature_2m_max.filter(t=>t>35).length
+return (daily.temperature_2m_max || []).filter(t=>t>35).length
 }
 
 function calculateDrySpells(daily){
@@ -891,7 +893,7 @@ function calculateDrySpells(daily){
 let maxDry=0
 let current=0
 
-daily.precipitation_sum.forEach(p=>{
+(daily.precipitation_sum || []).forEach(p=>{
 
 if(p<1){
 current++
@@ -910,7 +912,7 @@ function seasonalRainfall(daily){
 
 let rain=0
 
-daily.time.forEach((date,i)=>{
+(daily.time || []).forEach((date,i)=>{
 
 const m=new Date(date).getMonth()+1
 
@@ -945,17 +947,19 @@ function hailProbability(daily){
 
 let riskDays=0
 
-daily.temperature_2m_max.forEach((t,i)=>{
+(daily.temperature_2m_max || []).forEach((t,i)=>{
 
 const rain=daily.precipitation_sum[i]||0
-const wind=daily.wind_speed_10m_max[i]||0
+const wind=daily.wind_speed_10m_max ? daily.wind_speed_10m_max[i] : 0
 
 if(t>28 && rain>5 && wind>10)
 riskDays++
 
 })
 
-return Math.round((riskDays/daily.time.length)*100)
+return daily.time.length
+? Math.round((riskDays/daily.time.length)*100)
+: 0
 
 }
 
@@ -963,7 +967,7 @@ function seasonalRainfallProbability(daily){
 
 let yearlyTotals={}
 
-daily.time.forEach((date,i)=>{
+(daily.time || []).forEach((date,i)=>{
 
 const d=new Date(date)
 const year=d.getFullYear()
@@ -980,6 +984,8 @@ yearlyTotals[year]+=daily.precipitation_sum[i]||0
 })
 
 const totals=Object.values(yearlyTotals)
+
+if(totals.length===0) return 0
 
 const avgRain=totals.reduce((a,b)=>a+b)/totals.length
 
@@ -1021,7 +1027,7 @@ const hailRisk=hailProbability(daily)
 const seasonalRainProb=seasonalRainfallProbability(daily)
 
 const years=[...new Set(
-daily.time.map(d=>new Date(d).getFullYear())
+(daily.time || []).map(d=>new Date(d).getFullYear())
 )]
 
 let annualTemp=[]
@@ -1052,7 +1058,7 @@ annualRain.push(rain)
 
 })
 
-const frostDays=daily.temperature_2m_min.filter(t=>t<=0).length
+const frostDays=(daily.temperature_2m_min || []).filter(t=>t<=0).length
 
 const farmRisk=farmClimateRiskScore({
 heatStress,
@@ -1086,4 +1092,3 @@ farmRisk
 }
 
 }
-
