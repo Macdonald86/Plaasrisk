@@ -718,1128 +718,73 @@
     let drawnItems;
 
     // Enhanced API Configuration
-    const CONFIG = {
-  OPEN_METEO: {
-    BASE_URL: 'https://archive-api.open-meteo.com/v1/archive',
-    CURRENT_URL: 'https://api.open-meteo.com/v1/forecast',
-    START_DATE: '2020-01-01',
-    END_DATE: new Date().toISOString().split('T')[0],
-    DAILY_VARIABLES: [
-      'temperature_2m_max',
-      'temperature_2m_min',
-      'precipitation_sum',
-      'rain_sum',
-      'wind_speed_10m_max',
-      'et0_fao_evapotranspiration'
-    ].join(','),
-    TIMEZONE: 'auto',
-    TIMEOUT: 30000
-  },
+    <script>
 
-  NOMINATIM: {
-    BASE_URL: 'https://nominatim.openstreetmap.org/search',
-    FORMAT: 'json',
-    LIMIT: 5,
-    COUNTRY: 'za',
-    DELAY: 1000
-  },
-
-  CACHE: {
-    ENABLED: true,
-    DURATION: 24 * 60 * 60 * 1000,
-    MAX_ITEMS: 50
-  },
-
-  RETRY: {
-    MAX_ATTEMPTS: 3,
-    DELAY: 1000,
-    BACKOFF_MULTIPLIER: 2
-  }
-};
-    // Cache implementation
-    const dataCache = new Map();
-
-    // Initialize the map
-    function initMap() {
-      map = L.map('map', {
-        center: [-25.0, 30.0],
-        zoom: 5,
-        zoomControl: true,
-        attributionControl: true
-      });
-
-      // Add base tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18
-      }).addTo(map);
-
-      // Initialize feature group for drawn items
-      drawnItems = new L.FeatureGroup();
-      map.addLayer(drawnItems);
-
-      // Initialize draw control
-      const drawControl = new L.Control.Draw({
-        draw: {
-          polygon: { 
-            allowIntersection: false, 
-            showArea: true, 
-            shapeOptions: { color: '#2e7d32' } 
-          },
-          polyline: false, 
-          rectangle: false, 
-          circle: false, 
-          marker: false, 
-          circlemarker: false
-        },
-        edit: { 
-          featureGroup: drawnItems,
-          edit: false
-        }
-      });
-      map.addControl(drawControl);
-
-      // Fix for mobile devices
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 100);
-
-      // Map event handlers
-      map.on(L.Draw.Event.CREATED, function(event) {
-        const layer = event.layer;
-        drawnItems.addLayer(layer);
-        
-        const bounds = layer.getBounds();
-        lastPolygonCenter = bounds.getCenter();
-        currentLocationName = "Drawn Farm Boundary";
-        
-        showNotification("Farm boundary drawn successfully", 'success');
-      });
-
-      map.on(L.Draw.Event.DELETED, function(event) {
-        const layers = event.layers;
-        let deletedCount = 0;
-        
-        layers.eachLayer(function(layer) {
-          deletedCount++;
-        });
-        
-        lastPolygonCenter = null;
-        dataAvailable = false;
-        
-        showNotification(`${deletedCount} boundary${deletedCount > 1 ? 'ies' : ''} removed`, 'info');
-      });
-    }
-
-    /**
-     * Enhanced fetchWithRetry with proper error handling
-     */
-    async function fetchWithRetry(url, options = {}, retries = CONFIG.RETRY.MAX_ATTEMPTS) {
-      let lastError;
-      
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        const abortController = new AbortController();
-        const timeoutId = setTimeout(() => abortController.abort(), CONFIG.OPEN_METEO.TIMEOUT);
-        
-        try {
-          updateProgress(20 * attempt, `Fetching data... Attempt ${attempt}/${retries}`);
-          
-          const response = await fetch(url, {
-            ...options,
-            signal: abortController.signal
-          });
-          
-          clearTimeout(timeoutId);
-          
-          if (!response.ok) {
-            if (response.status === 429) {
-              throw new Error('Rate limit exceeded. Please try again later.');
-            } else if (response.status >= 500) {
-              throw new Error('Server error. Please try again later.');
-            } else {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-          }
-          
-          const data = await response.json();
-          
-          if (!data || typeof data !== 'object') {
-            throw new Error('Invalid response format from API');
-          }
-          
-          if (data.error) {
-            throw new Error(data.reason || `API Error: ${data.error}`);
-          }
-          
-          return data;
-          
-        } catch (error) {
-          clearTimeout(timeoutId);
-          console.warn(`Attempt ${attempt} failed:`, error);
-          lastError = error;
-          
-          if (error.name === 'AbortError' || error.message.includes('Rate limit')) {
-            break;
-          }
-          
-          if (attempt === retries) {
-            break;
-          }
-          
-          const delay = CONFIG.RETRY.DELAY * Math.pow(CONFIG.RETRY.BACKOFF_MULTIPLIER, attempt - 1);
-          const jitter = delay * 0.1 * Math.random();
-          await new Promise(resolve => setTimeout(resolve, delay + jitter));
-        }
-      }
-      
-      throw lastError || new Error('All retry attempts failed');
-    }
-
-    /**
-     * Enhanced Open-Meteo data fetching
-     */
-   /**
- * Fetch historical climate data from Open-Meteo
- */
-async function fetchOpenMeteoData(
-  lat,
-  lon,
-  startDate = CONFIG.OPEN_METEO.START_DATE,
-  endDate = CONFIG.OPEN_METEO.END_DATE
-) {
-
-  lat = Number(lat);
-  lon = Number(lon);
-
-  if (!isValidCoordinates(lat, lon)) {
-    throw new Error(`Invalid coordinates: ${lat}, ${lon}`);
-  }
-
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const today = new Date();
-
-  // Prevent future end date
-  if (end > today) {
-    endDate = today.toISOString().split("T")[0];
-  }
-
-  if (start > end) {
-    throw new Error("Start date cannot be after end date");
-  }
-
-  // Limit to 10 years for performance
-  const maxYears = 10;
-  const minStartDate = new Date(
-    today.getFullYear() - maxYears,
-    today.getMonth(),
-    today.getDate()
-  );
-
-  if (start < minStartDate) {
-    console.warn(`Date range limited to ${maxYears} years for performance`);
-    startDate = minStartDate.toISOString().split("T")[0];
-  }
-
-  const cacheKey = generateCacheKey(lat, lon, startDate, endDate);
-
-  if (CONFIG.CACHE.ENABLED && isCacheValid(cacheKey)) {
-    updateProgress(40, "Loading cached climate data...");
-    return dataCache.get(cacheKey).data;
-  }
-
-  try {
-
-    updateProgress(20, "Fetching historical climate data...");
-
-    const params = new URLSearchParams({
-      latitude: lat,
-      longitude: lon,
-      start_date: startDate,
-      end_date: endDate,
-      daily: CONFIG.OPEN_METEO.DAILY_VARIABLES,
-      timezone: CONFIG.OPEN_METEO.TIMEZONE
-    });
-
-    const url = `${CONFIG.OPEN_METEO.BASE_URL}?${params.toString()}`;
-
-    const data = await fetchWithRetry(url);
-
-    if (!data || data.error) {
-      throw new Error(data?.reason || "Open-Meteo API returned an error");
-    }
-
-    if (!data.daily || !Array.isArray(data.daily.time) || data.daily.time.length === 0) {
-      throw new Error("No climate data available for this location");
-    }
-
-    const hasValidData = validateClimateData(data.daily);
-
-    if (!hasValidData) {
-      throw new Error("Climate dataset failed validation checks");
-    }
-
-    // Store in cache
-    if (CONFIG.CACHE.ENABLED) {
-
-      if (dataCache.size >= CONFIG.CACHE.MAX_ITEMS) {
-        const firstKey = dataCache.keys().next().value;
-        dataCache.delete(firstKey);
-      }
-
-      dataCache.set(cacheKey, {
-        data,
-        timestamp: Date.now(),
-        location: { lat, lon }
-      });
-    }
-
-    console.log("Historical data fetched successfully");
-
-    return data;
-
-  } catch (error) {
-
-    console.error("Open-Meteo historical fetch error:", error);
-
-    updateApiStatus("error");
-
-    let userMessage = error.message;
-
-    if (error.name === "AbortError") {
-      userMessage = "Request timed out. Please try again.";
-    }
-
-    if (error.message.includes("Failed to fetch")) {
-      userMessage = "Network error. Check internet connection.";
-    }
-
-    throw new Error(`Historical climate fetch failed: ${userMessage}`);
-  }
-}
-
-
-/**
- * Fetch current + forecast weather
- */
-async function fetchCurrentWeather(lat, lon) {
-
-  lat = Number(lat);
-  lon = Number(lon);
-
-  if (!isValidCoordinates(lat, lon)) {
-    return createIntelligentFallbackData(lat, lon);
-  }
-
-  try {
-
-    updateProgress(60, "Fetching current weather...");
-
-    const params = new URLSearchParams({
-      latitude: lat,
-      longitude: lon,
-      daily: CONFIG.OPEN_METEO.DAILY_VARIABLES,
-      forecast_days: 7,
-      timezone: CONFIG.OPEN_METEO.TIMEZONE
-    });
-
-    const url = `${CONFIG.OPEN_METEO.CURRENT_URL}?${params.toString()}`;
-
-    const data = await fetchWithRetry(url);
-
-    if (!data || !data.daily || !Array.isArray(data.daily.time)) {
-      console.warn("Current weather data missing, using fallback");
-      return createIntelligentFallbackData(lat, lon);
-    }
-
-    return data;
-
-  } catch (error) {
-
-    console.error("Current weather fetch error:", error);
-
-    updateApiStatus("warning");
-
-    return createIntelligentFallbackData(lat, lon);
-  }
-}
-
-    /**
-     * Create intelligent fallback data based on location
-     */
-    function createIntelligentFallbackData(lat, lon) {
-      const now = new Date();
-      const time = [];
-      const month = now.getMonth();
-      
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(now);
-        date.setDate(now.getDate() + i);
-        time.push(date.toISOString().split('T')[0]);
-      }
-      
-      let baseTemp = 20;
-      
-      if (lat < -30) {
-        baseTemp = month >= 4 && month <= 9 ? 12 : 18;
-      } else if (lat > -30 && lat < -25) {
-        baseTemp = month >= 4 && month <= 9 ? 15 : 22;
-      } else {
-        baseTemp = month >= 4 && month <= 9 ? 18 : 25;
-      }
-      
-      const temps = time.map((_, i) => {
-        const dailyVariation = Math.sin(i * 0.5) * 3;
-        return baseTemp + dailyVariation;
-      });
-      
-      return {
-        daily: {
-          time: time,
-          temperature_2m_max: temps.map(t => t + 5),
-          temperature_2m_min: temps.map(t => t - 5),
-          temperature_2m_mean: temps,
-          precipitation_sum: Array(7).fill(0),
-          rain_sum: Array(7).fill(0),
-          snowfall_sum: Array(7).fill(0),
-          precipitation_hours: Array(7).fill(0),
-          windspeed_10m_max: Array(7).fill(8),
-          windgusts_10m_max: Array(7).fill(12),
-          et0_fao_evapotranspiration: Array(7).fill(3)
-        },
-        _fallback: true
-      };
-    }
-
-    /**
-     * Enhanced location search with rate limiting
-     */
-    async function searchLocation() {
-      const searchInput = document.getElementById('searchInput');
-      const query = searchInput.value.trim();
-      
-      if (!query) {
-        showNotification("Please enter a location or coordinates.", 'warning');
-        return;
-      }
-      
-      const coordMatch = query.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
-      if (coordMatch) {
-        const lat = parseFloat(coordMatch[1]);
-        const lon = parseFloat(coordMatch[2]);
-        
-        if (!isValidCoordinates(lat, lon)) {
-          showNotification("Invalid coordinates. Please use format: lat, lon", 'error');
-          return;
-        }
-        
-        centerMapOnLocation(lat, lon, `Custom Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
-        return;
-      }
-      
-      try {
-        updateProgress(20, "Searching for location...");
-        
-        await new Promise(resolve => setTimeout(resolve, CONFIG.NOMINATIM.DELAY));
-        
-        const params = new URLSearchParams({
-          format: CONFIG.NOMINATIM.FORMAT,
-          q: query,
-          limit: CONFIG.NOMINATIM.LIMIT.toString(),
-          addressdetails: '1'
-        });
-        
-        const url = `${CONFIG.NOMINATIM.BASE_URL}?${params}`;
-        
-        const response = await fetchWithRetry(url, {
-          headers: {
-            'User-Agent': 'PlaasRisk Climate Tool'
-          }
-        });
-        
-        if (!response || response.length === 0) {
-          showNotification("Location not found. Please try a different search term.", 'error');
-          updateProgress(0, "Ready");
-          return;
-        }
-        
-        const result = response[0];
-        const lat = parseFloat(result.lat);
-        const lon = parseFloat(result.lon);
-        const name = result.display_name;
-        
-        centerMapOnLocation(lat, lon, name);
-        
-      } catch (error) {
-        console.error('Error searching location:', error);
-        
-        let errorMessage = "Location search failed. Please try again.";
-        if (error.message.includes('Rate limit')) {
-          errorMessage = "Search rate limit exceeded. Please wait a moment and try again.";
-        }
-        
-        showNotification(errorMessage, 'error');
-        updateProgress(0, "Ready");
-      }
-    }
-
-    /**
-     * Enhanced data processing
-     */
-    function processClimateData(historicalData, currentData, lat, lon) {
-      try {
-        updateProgress(70, "Processing climate data...");
-        
-        if (!historicalData.daily || !historicalData.daily.time) {
-          throw new Error('Invalid historical data structure');
-        }
-        
-        const dailyData = historicalData.daily;
-        const years = extractAvailableYears(dailyData.time);
-        
-        if (years.length === 0) {
-          throw new Error('No valid historical data available for analysis');
-        }
-        
-        const annualMetrics = calculateAnnualMetrics(dailyData, years);
-        const monthlyMetrics = calculateMonthlyMetrics(dailyData);
-        const frostAnalysis = analyzeFrostData(dailyData, years);
-        const droughtAnalysis = analyzeDroughtData(dailyData, years);
-        
-        updateProgress(90, "Finalizing analysis...");
-        
-        return {
-          location: {
-            coords: `${parseFloat(lat).toFixed(4)}, ${parseFloat(lon).toFixed(4)}`,
-            name: currentLocationName
-          },
-          years: {
-            available: years,
-            count: years.length,
-            range: `${years[0]}-${years[years.length - 1]}`
-          },
-          temperature: annualMetrics.temperature,
-          precipitation: annualMetrics.precipitation,
-          monthly: monthlyMetrics,
-          frost: frostAnalysis,
-          drought: droughtAnalysis,
-          stats: calculateSummaryStats(annualMetrics, frostAnalysis, droughtAnalysis),
-          prediction: generatePredictions(annualMetrics, frostAnalysis, droughtAnalysis),
-          metadata: {
-            totalDays: dailyData.time.length,
-            dataQuality: assessDataQuality(dailyData, years)
-          }
-        };
-        
-      } catch (error) {
-        console.error('Error processing climate data:', error);
-        throw new Error(`Data processing failed: ${error.message}`);
-      }
-    }
-
-    // Data processing helper functions
-    function calculateAnnualMetrics(dailyData, years) {
-      const temperature = { annualAvg: [], annualMax: [], annualMin: [], warmingTrend: 0 };
-      const precipitation = { annualTotal: [], annualDays: [], trend: 0 };
-      
-      years.forEach(year => {
-        const yearIndices = dailyData.time
-          .map((date, idx) => new Date(date).getFullYear() === year ? idx : -1)
-          .filter(idx => idx !== -1);
-        
-        if (yearIndices.length === 0) return;
-        
-        const validTemps = yearIndices
-          .map(idx => {
-            const max = dailyData.temperature_2m_max[idx];
-            const min = dailyData.temperature_2m_min[idx];
-            return (max != null && min != null) ? (max + min) / 2 : null;
-          })
-          .filter(temp => temp != null);
-        
-        if (validTemps.length > 0) {
-          temperature.annualAvg.push(validTemps.reduce((sum, temp) => sum + temp, 0) / validTemps.length);
-          
-          const maxTemps = yearIndices.map(idx => dailyData.temperature_2m_max[idx]).filter(temp => temp != null);
-          const minTemps = yearIndices.map(idx => dailyData.temperature_2m_min[idx]).filter(temp => temp != null);
-          
-          temperature.annualMax.push(maxTemps.length > 0 ? Math.max(...maxTemps) : 0);
-          temperature.annualMin.push(minTemps.length > 0 ? Math.min(...minTemps) : 0);
-        }
-        
-        const annualPrecip = yearIndices.reduce((sum, idx) => sum + (dailyData.precipitation_sum[idx] || 0), 0);
-        precipitation.annualTotal.push(annualPrecip);
-        
-        const precipDays = yearIndices.filter(idx => (dailyData.precipitation_sum[idx] || 0) > 1).length;
-        precipitation.annualDays.push(precipDays);
-      });
-      
-      if (temperature.annualAvg.length > 1) {
-        temperature.warmingTrend = calculateLinearTrend(temperature.annualAvg);
-      }
-      
-      if (precipitation.annualTotal.length > 1) {
-        precipitation.trend = calculateLinearTrend(precipitation.annualTotal);
-      }
-      
-      return { temperature, precipitation };
-    }
-
-    function calculateMonthlyMetrics(dailyData) {
-      const monthlyPrecip = Array(12).fill(0);
-      const monthlyTemps = Array(12).fill(0);
-      const monthCounts = Array(12).fill(0);
-      
-      dailyData.time.forEach((date, idx) => {
-        const month = new Date(date).getMonth();
-        const temp = (dailyData.temperature_2m_max[idx] + dailyData.temperature_2m_min[idx]) / 2;
-        
-        monthlyPrecip[month] += dailyData.precipitation_sum[idx] || 0;
-        monthlyTemps[month] += temp;
-        monthCounts[month]++;
-      });
-      
-      monthlyTemps.forEach((temp, month) => {
-        monthlyTemps[month] = monthCounts[month] > 0 ? temp / monthCounts[month] : 0;
-      });
-      
-      return {
-        precipitation: monthlyPrecip,
-        temperature: monthlyTemps,
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-      };
-    }
-
-    function analyzeFrostData(dailyData, years) {
-      const annualFrostDays = years.map(year => {
-        const yearIndices = dailyData.time.map((date, idx) => 
-          new Date(date).getFullYear() === year ? idx : -1
-        ).filter(idx => idx !== -1);
-        
-        return yearIndices.filter(idx => dailyData.temperature_2m_min[idx] <= 0).length;
-      });
-      
-      const frostThreshold = calculatePercentile(annualFrostDays, 75);
-      const highFrostYears = years.filter((_, i) => annualFrostDays[i] > frostThreshold);
-      
-      return {
-        annualDays: annualFrostDays,
-        highYears: highFrostYears,
-        threshold: frostThreshold
-      };
-    }
-
-    function analyzeDroughtData(dailyData, years) {
-      const annualPrecip = years.map(year => {
-        const yearIndices = dailyData.time.map((date, idx) => 
-          new Date(date).getFullYear() === year ? idx : -1
-        ).filter(idx => idx !== -1);
-        
-        return yearIndices.reduce((sum, idx) => sum + (dailyData.precipitation_sum[idx] || 0), 0);
-      });
-      
-      const avgPrecip = annualPrecip.reduce((a, b) => a + b, 0) / annualPrecip.length;
-      const departures = annualPrecip.map(p => parseFloat(((p - avgPrecip) / avgPrecip * 100).toFixed(1)));
-      
-      const moderateDroughtYears = years.filter((_, i) => departures[i] < -25);
-      const severeDroughtYears = years.filter((_, i) => departures[i] < -50);
-      
-      return {
-        departures: departures,
-        moderateYears: moderateDroughtYears,
-        severeYears: severeDroughtYears,
-        average: avgPrecip
-      };
-    }
-
-    function generatePredictions(annualMetrics, frostAnalysis, droughtAnalysis) {
-      const tempTrend = annualMetrics.temperature.warmingTrend;
-      const precipTrend = annualMetrics.precipitation.trend;
-      const avgFrost = frostAnalysis.annualDays.reduce((a, b) => a + b, 0) / frostAnalysis.annualDays.length;
-      
-      const nextYearTemp = annualMetrics.temperature.annualAvg[annualMetrics.temperature.annualAvg.length - 1] + 
-                          (tempTrend / annualMetrics.temperature.annualAvg.length);
-      
-      const nextYearPrecip = annualMetrics.precipitation.annualTotal[annualMetrics.precipitation.annualTotal.length - 1] * 
-                            (1 + precipTrend / 100 / annualMetrics.precipitation.annualTotal.length);
-      
-      const nextYearFrost = avgFrost + (tempTrend > 0 ? -1 : 1);
-      
-      return {
-        temperature: parseFloat(nextYearTemp.toFixed(1)),
-        precipitation: Math.max(0, Math.round(nextYearPrecip)),
-        frostDays: Math.max(0, Math.round(nextYearFrost)),
-        confidence: 'moderate'
-      };
-    }
-
-    function calculateSummaryStats(annualMetrics, frostAnalysis, droughtAnalysis) {
-      return {
-        avgTemp: (annualMetrics.temperature.annualAvg.reduce((a, b) => a + b, 0) / 
-                 annualMetrics.temperature.annualAvg.length).toFixed(1),
-        maxTemp: Math.max(...annualMetrics.temperature.annualMax).toFixed(1),
-        minTemp: Math.min(...annualMetrics.temperature.annualMin).toFixed(1),
-        warming: annualMetrics.temperature.warmingTrend,
-        annualPrecip: droughtAnalysis.average.toFixed(1),
-        maxMonthlyPrecip: Math.max(...annualMetrics.monthly.precipitation).toFixed(1),
-        drySpells: calculateDrySpells(annualMetrics.precipitation.annualTotal),
-        precipTrend: annualMetrics.precipitation.trend,
-        highFrostYears: frostAnalysis.highYears,
-        totalFrost: frostAnalysis.annualDays[frostAnalysis.annualDays.length - 1] || 0,
-        avgFrost: (frostAnalysis.annualDays.reduce((a, b) => a + b, 0) / 
-                  frostAnalysis.annualDays.length).toFixed(1),
-        moderateDroughtYears: droughtAnalysis.moderateYears,
-        severeDroughtYears: droughtAnalysis.severeYears
-      };
-    }
-
-    // Utility functions
-    function isValidCoordinates(lat, lon) {
-      return !isNaN(lat) && !isNaN(lon) && 
-             lat >= -90 && lat <= 90 && 
-             lon >= -180 && lon <= 180;
-    }
-
-    function extractAvailableYears(timeArray) {
-      const years = [];
-      const yearCounts = {};
-      
-      timeArray.forEach(dateStr => {
-        try {
-          const year = new Date(dateStr).getFullYear();
-          if (year >= 1940 && year <= new Date().getFullYear()) {
-            yearCounts[year] = (yearCounts[year] || 0) + 1;
-          }
-        } catch (e) {
-          console.warn('Invalid date in data:', dateStr);
-        }
-      });
-      
-      Object.keys(yearCounts).forEach(year => {
-        if (yearCounts[year] >= 300) {
-          years.push(parseInt(year));
-        }
-      });
-      
-      return years.sort((a, b) => a - b);
-    }
-
-    function validateClimateData(dailyData) {
-      if (dailyData.temperature_2m_max) {
-        const validTemps = dailyData.temperature_2m_max.filter(temp => temp != null && temp !== 0);
-        if (validTemps.length < dailyData.temperature_2m_max.length * 0.5) {
-          return false;
-        }
-      }
-      
-      if (dailyData.time && dailyData.time.length > 0) {
-        const startDate = new Date(dailyData.time[0]);
-        const endDate = new Date(dailyData.time[dailyData.time.length - 1]);
-        const dayDiff = (endDate - startDate) / (1000 * 60 * 60 * 24);
-        
-        if (dayDiff < 30) {
-          console.warn('Very limited data range:', dayDiff, 'days');
-        }
-      }
-      
-      return true;
-    }
-
-    function assessDataQuality(dailyData, years) {
-      const totalExpectedDays = years.length * 365;
-      const actualDays = dailyData.time.length;
-      const completeness = (actualDays / totalExpectedDays) * 100;
-      
-      let quality = 'good';
-      if (completeness < 50) quality = 'poor';
-      else if (completeness < 80) quality = 'fair';
-      
-      return {
-        completeness: Math.round(completeness),
-        quality: quality,
-        missingData: totalExpectedDays - actualDays
-      };
-    }
-
-    function calculateLinearTrend(data) {
-      const n = data.length;
-      const x = Array.from({length: n}, (_, i) => i);
-      const y = data;
-      
-      const sumX = x.reduce((a, b) => a + b, 0);
-      const sumY = y.reduce((a, b) => a + b, 0);
-      const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
-      const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
-      
-      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-      return parseFloat(slope.toFixed(3));
-    }
-
-    function calculatePercentile(arr, percentile) {
-      const sorted = [...arr].sort((a, b) => a - b);
-      const index = (percentile / 100) * (sorted.length - 1);
-      const lower = Math.floor(index);
-      const upper = Math.ceil(index);
-      
-      if (lower === upper) return sorted[lower];
-      return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
-    }
-    
-    function calculateDrySpells(annualPrecip) {
-      return (annualPrecip.filter(p => p < 300).length / annualPrecip.length).toFixed(1);
-    }
-
-    function generateCacheKey(lat, lon, startDate, endDate) {
-      return `${lat.toFixed(4)}_${lon.toFixed(4)}_${startDate}_${endDate}`;
-    }
-
-    function isCacheValid(cacheKey) {
-      if (!CONFIG.CACHE.ENABLED) return false;
-      
-      const cached = dataCache.get(cacheKey);
-      if (!cached) return false;
-      
-      return (Date.now() - cached.timestamp) < CONFIG.CACHE.DURATION;
-    }
-
-    /**
-     * Enhanced report generation
-     */
-    async function generateReport() {
-      if (!lastPolygonCenter) {
-        showNotification("Draw a farm boundary or search a location first.", 'error');
-        return;
-      }
-
-      const lat = lastPolygonCenter.lat;
-      const lon = lastPolygonCenter.lng;
-      
-      updateProgress(10, "Initializing analysis...");
-      document.getElementById('generateBtn').disabled = true;
-      
-      try {
-        const apiAvailable = await checkApiStatus();
-        if (!apiAvailable) {
-          showNotification("Climate API is currently unavailable. Using cached data if available.", 'warning');
-        }
-        
-        const endDate = CONFIG.OPEN_METEO.END_DATE;
-        const startDate = CONFIG.OPEN_METEO.START_DATE;
-        
-        updateProgress(30, "Fetching comprehensive climate data...");
-        
-        let historicalData, currentData;
-        
-        try {
-          historicalData = await fetchOpenMeteoData(lat, lon, startDate, endDate);
-        } catch (error) {
-          throw new Error(`Unable to retrieve historical climate data: ${error.message}`);
-        }
-        
-        try {
-          currentData = await fetchCurrentWeather(lat, lon);
-        } catch (error) {
-          currentData = createIntelligentFallbackData(lat, lon);
-        }
-        
-        const processedData = processClimateData(historicalData, currentData, lat, lon);
-        
-        updateProgress(100, "Analysis complete!");
-        
-        setTimeout(() => {
-          openAnalysisPanel(processedData);
-          document.getElementById('generateBtn').disabled = false;
-          setTimeout(() => updateProgress(0, "Ready"), 2000);
-        }, 1000);
-        
-      } catch (error) {
-        console.error('Error generating report:', error);
-        showNotification(`Analysis failed: ${error.message}`, 'error');
-        document.getElementById('generateBtn').disabled = false;
-        updateProgress(0, "Analysis failed");
-      }
-    }
-
-    /**
-     * Open analysis panel with results
-     */
-    function openAnalysisPanel(data) {
-      const panel = document.getElementById('analysisPanel');
-      const content = document.getElementById('analysisContent');
-      
-      const html = `
-        <div class="metric-card">
-          <div class="metric-title">Average Temperature</div>
-          <div class="metric-value">${data.stats.avgTemp}°C</div>
-          <div class="metric-trend ${data.stats.warming < 0 ? 'negative' : ''}">
-            ${data.stats.warming > 0 ? '+' : ''}${data.stats.warming}°C/decade
-          </div>
-        </div>
-        
-        <div class="metric-card">
-          <div class="metric-title">Annual Precipitation</div>
-          <div class="metric-value">${data.stats.annualPrecip} mm</div>
-          <div class="metric-trend ${data.stats.precipTrend < 0 ? 'negative' : ''}">
-            ${data.stats.precipTrend > 0 ? '+' : ''}${data.stats.precipTrend}% trend
-          </div>
-        </div>
-        
-        <div class="metric-card">
-          <div class="metric-title">Frost Days (Annual)</div>
-          <div class="metric-value">${data.stats.avgFrost} days</div>
-          <div class="metric-trend">
-            ${data.stats.highFrostYears.length} high-risk years
-          </div>
-        </div>
-        
-        <div class="metric-card">
-          <div class="metric-title">Drought Risk</div>
-          <div class="metric-value">${data.stats.moderateDroughtYears.length}</div>
-          <div class="metric-trend">
-            Moderate drought years
-          </div>
-        </div>
-        
-        <div class="metric-card">
-          <div class="metric-title">Data Quality</div>
-          <div class="metric-value">${data.metadata.dataQuality.quality.toUpperCase()}</div>
-          <div class="metric-trend">
-            ${data.metadata.dataQuality.completeness}% complete
-          </div>
-        </div>
-        
-        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-          <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Next Year Prediction</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div>
-              <div style="font-size: 0.8rem; color: #666;">Temperature</div>
-              <div style="font-weight: 600;">${data.prediction.temperature}°C</div>
-            </div>
-            <div>
-              <div style="font-size: 0.8rem; color: #666;">Precipitation</div>
-              <div style="font-weight: 600;">${data.prediction.precipitation} mm</div>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      content.innerHTML = html;
-      panel.style.display = 'block';
-      
-      showNotification("Climate analysis complete!", 'success');
-    }
-
-    function closeAnalysisPanel() {
-      document.getElementById('analysisPanel').style.display = 'none';
-    }
-
-    // UI Helper functions
-    function centerMapOnLocation(lat, lon, name) {
-      if (currentMarker) {
-        map.removeLayer(currentMarker);
-      }
-      
-      currentMarker = L.marker([lat, lon])
-        .addTo(map)
-        .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`)
-        .openPopup();
-      
-      map.setView([lat, lon], 12);
-      currentLocationName = name;
-      lastPolygonCenter = { lat, lng: lon };
-      
-      showNotification(`Location found: ${name}`, 'success');
-      updateProgress(100, "Location found");
-      setTimeout(() => updateProgress(0, "Ready"), 2000);
-    }
-
-    function activatePinMode() {
-      pinModeActive = !pinModeActive;
-      const dropPinBtn = document.getElementById('dropPinBtn');
-      
-      if (pinModeActive) {
-        dropPinBtn.classList.remove('btn-outline');
-        dropPinBtn.classList.add('btn-primary');
-        dropPinBtn.innerHTML = '<i class="fas fa-times"></i> Cancel Pin';
-        
-        map.getContainer().style.cursor = 'crosshair';
-        
-        map.once('click', function(e) {
-          placePin(e.latlng);
-          deactivatePinMode();
-        });
-        
-        showNotification("Click on the map to place a pin", 'info');
-      } else {
-        deactivatePinMode();
-      }
-    }
-
-    function deactivatePinMode() {
-      pinModeActive = false;
-      const dropPinBtn = document.getElementById('dropPinBtn');
-      
-      dropPinBtn.classList.remove('btn-primary');
-      dropPinBtn.classList.add('btn-outline');
-      dropPinBtn.innerHTML = '<i class="fas fa-map-pin"></i> Drop Pin';
-      
-      map.getContainer().style.cursor = '';
-      map.off('click');
-    }
-
-    function placePin(latlng) {
-      if (currentMarker) {
-        map.removeLayer(currentMarker);
-      }
-      
-      currentMarker = L.marker(latlng)
-        .addTo(map)
-        .bindPopup(`<b>Custom Pin</b><br>Lat: ${latlng.lat.toFixed(4)}, Lon: ${latlng.lng.toFixed(4)}`)
-        .openPopup();
-      
-      currentLocationName = "Custom Pin Location";
-      lastPolygonCenter = latlng;
-      
-      showNotification("Pin placed successfully", 'success');
-    }
-
-    function resetMap() {
-      drawnItems.clearLayers();
-      
-      if (currentMarker) {
-        map.removeLayer(currentMarker);
-        currentMarker = null;
-      }
-      
-      map.setView([-25.0, 30.0], 5);
-      lastPolygonCenter = null;
-      dataAvailable = false;
-      
-      document.getElementById('searchInput').value = '';
-      updateProgress(0, "Ready");
-      closeAnalysisPanel();
-      
-      showNotification("Map has been reset", 'info');
-    }
-
-    async function checkApiStatus() {
-      try {
-        const testUrl = `${CONFIG.OPEN_METEO.CURRENT_URL}?latitude=0&longitude=0&daily=temperature_2m_max&timezone=auto`;
-        const response = await fetch(testUrl, { signal: AbortSignal.timeout(5000) });
-        
-        if (response.ok) {
-          updateApiStatus('online');
-          return true;
-        } else {
-          updateApiStatus('error');
-          return false;
-        }
-      } catch (error) {
-        updateApiStatus('error');
-        return false;
-      }
-    }
-
-    function updateApiStatus(status) {
-      apiStatus = status;
-      const statusElement = document.getElementById('apiStatus');
-      const dot = statusElement.querySelector('.status-dot');
-      const text = statusElement.querySelector('span:last-child');
-      
-      statusElement.className = 'api-status';
-      dot.className = 'status-dot';
-      
-      switch (status) {
-        case 'online':
-          dot.classList.add('status-online');
-          text.textContent = 'API Online';
-          break;
-        case 'warning':
-          dot.classList.add('status-warning');
-          text.textContent = 'API Limited';
-          break;
-        case 'error':
-          dot.classList.add('status-offline');
-          text.textContent = 'API Offline';
-          break;
-      }
-    }
-
-    function updateProgress(percentage, text) {
-      const fill = document.getElementById('progress-fill');
-      const label = document.getElementById('progress-label');
-      const percentageDisplay = document.getElementById('progress-percentage');
-      
-      if (fill) fill.style.width = `${percentage}%`;
-      if (label) label.textContent = text;
-      if (percentageDisplay) percentageDisplay.textContent = `${Math.round(percentage)}%`;
-    }
-    
-    function showNotification(message, type) {
-      const notification = document.getElementById('notification');
-      const notificationText = document.getElementById('notification-text');
-      
-      notification.className = `notification ${type}`;
-      notificationText.textContent = message;
-      notification.classList.add('show');
-      
-      setTimeout(() => notification.classList.remove('show'), 3000);
-    }
-
-    // Initialize the application
-    document.addEventListener('DOMContentLoaded', function() {
-      initMap();
-      checkApiStatus();
-      updateProgress(0, 'Ready');
-      
-      document.getElementById('searchInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          searchLocation();
-        }
-      });
-      
-      showNotification("PlaasRisk initialized successfully", 'success');
-    });
-  </script>
-  <script>
-
-// ------------------------------
+// ----------------------------------------------------
 // GLOBAL VARIABLES
-// ------------------------------
+// ----------------------------------------------------
 
 let map
+let drawnItems
 let currentMarker = null
 let lastPolygonCenter = null
-let currentLocationName = "Unknown Location"
+let currentLocationName = "Unknown location"
 
-let drawnItems
+const dataCache = new Map()
+
+// ----------------------------------------------------
+// CONFIGURATION
+// ----------------------------------------------------
 
 const CONFIG = {
 
 OPEN_METEO:{
-BASE_URL:'https://archive-api.open-meteo.com/v1/archive',
-START_DATE:'2000-01-01',
-END_DATE:new Date().toISOString().split('T')[0],
+
+BASE_URL:"https://archive-api.open-meteo.com/v1/archive",
+FORECAST_URL:"https://api.open-meteo.com/v1/forecast",
+
+START_DATE:"2000-01-01",
+END_DATE:new Date().toISOString().split("T")[0],
+
 DAILY_VARIABLES:[
-'temperature_2m_max',
-'temperature_2m_min',
-'precipitation_sum'
-].join(',')
+"temperature_2m_max",
+"temperature_2m_min",
+"temperature_2m_mean",
+"precipitation_sum",
+"wind_speed_10m_max",
+"et0_fao_evapotranspiration"
+].join(","),
+
+TIMEZONE:"auto",
+
+TIMEOUT:30000
+
+},
+
+CACHE:{
+ENABLED:true,
+DURATION:24*60*60*1000,
+MAX_ITEMS:50
+},
+
+RETRY:{
+MAX_ATTEMPTS:3,
+DELAY:1000
 }
 
 }
 
-// ------------------------------
+// ----------------------------------------------------
 // MAP INITIALIZATION
-// ------------------------------
+// ----------------------------------------------------
 
 function initMap(){
 
-map = L.map('map').setView([-25,30],5)
+map = L.map("map").setView([-25,30],5)
 
 L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{ maxZoom:18 }
+"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+{maxZoom:18}
 ).addTo(map)
 
 drawnItems = new L.FeatureGroup()
@@ -1850,7 +795,7 @@ const drawControl = new L.Control.Draw({
 draw:{
 polygon:{
 allowIntersection:false,
-shapeOptions:{color:'#2e7d32'}
+shapeOptions:{color:"#2e7d32"}
 },
 polyline:false,
 rectangle:false,
@@ -1881,11 +826,71 @@ showNotification("Farm boundary created","success")
 
 }
 
-// ------------------------------
+// ----------------------------------------------------
+// FETCH WITH RETRY
+// ----------------------------------------------------
+
+async function fetchWithRetry(url,retries=CONFIG.RETRY.MAX_ATTEMPTS){
+
+let lastError
+
+for(let i=1;i<=retries;i++){
+
+try{
+
+const controller = new AbortController()
+const timeout=setTimeout(()=>controller.abort(),CONFIG.OPEN_METEO.TIMEOUT)
+
+const res = await fetch(url,{signal:controller.signal})
+
+clearTimeout(timeout)
+
+if(!res.ok) throw new Error("API error "+res.status)
+
+return await res.json()
+
+}
+catch(err){
+
+lastError=err
+
+if(i===retries) break
+
+await new Promise(r=>setTimeout(r,CONFIG.RETRY.DELAY*i))
+
+}
+
+}
+
+throw lastError
+
+}
+
+// ----------------------------------------------------
 // FETCH CLIMATE DATA
-// ------------------------------
+// ----------------------------------------------------
 
 async function fetchClimate(lat,lon){
+
+lat=Number(lat)
+lon=Number(lon)
+
+if(isNaN(lat)||isNaN(lon))
+throw new Error("Invalid coordinates")
+
+const cacheKey = `${lat}_${lon}`
+
+if(CONFIG.CACHE.ENABLED){
+
+const cached=dataCache.get(cacheKey)
+
+if(cached && Date.now()-cached.timestamp<CONFIG.CACHE.DURATION){
+
+return cached.data
+
+}
+
+}
 
 const params = new URLSearchParams({
 
@@ -1894,38 +899,55 @@ longitude:lon,
 start_date:CONFIG.OPEN_METEO.START_DATE,
 end_date:CONFIG.OPEN_METEO.END_DATE,
 daily:CONFIG.OPEN_METEO.DAILY_VARIABLES,
-timezone:'auto'
+timezone:"auto"
 
 })
 
-const url = CONFIG.OPEN_METEO.BASE_URL + "?" + params
+const url = CONFIG.OPEN_METEO.BASE_URL+"?"+params
 
-const response = await fetch(url)
+const data = await fetchWithRetry(url)
 
-if(!response.ok) throw new Error("Climate API error")
+if(!data.daily || !data.daily.time)
+throw new Error("Climate data unavailable")
 
-const data = await response.json()
+validateClimateData(data.daily)
 
-if(!data.daily) throw new Error("No climate data")
+dataCache.set(cacheKey,{
+data:data,
+timestamp:Date.now()
+})
 
 return data
 
 }
 
-// ------------------------------
+// ----------------------------------------------------
+// DATA VALIDATION
+// ----------------------------------------------------
+
+function validateClimateData(d){
+
+if(!Array.isArray(d.time)) throw new Error("Invalid climate dataset")
+
+if(d.time.length<30)
+throw new Error("Insufficient climate data")
+
+}
+
+// ----------------------------------------------------
 // PROCESS CLIMATE DATA
-// ------------------------------
+// ----------------------------------------------------
 
-function processClimate(data){
+function processClimateData(data){
 
-const daily = data.daily
+const daily=data.daily
 
-const years = [...new Set(
+const years=[...new Set(
 daily.time.map(d=>new Date(d).getFullYear())
 )]
 
-let annualTemps = []
-let annualRain = []
+let annualTemp=[]
+let annualRain=[]
 
 years.forEach(year=>{
 
@@ -1936,65 +958,84 @@ daily.time.forEach((date,i)=>{
 
 if(new Date(date).getFullYear()===year){
 
-const max = daily.temperature_2m_max[i]
-const min = daily.temperature_2m_min[i]
+if(daily.temperature_2m_mean[i]!=null)
+temps.push(daily.temperature_2m_mean[i])
 
-if(max!=null && min!=null){
-
-temps.push((max+min)/2)
-
-}
-
-rain += daily.precipitation_sum[i] || 0
+rain+=daily.precipitation_sum[i]||0
 
 }
 
 })
 
-if(temps.length>0){
-
-annualTemps.push(
-temps.reduce((a,b)=>a+b)/temps.length
-)
-
-}
+if(temps.length>0)
+annualTemp.push(avg(temps))
 
 annualRain.push(rain)
 
 })
 
-const avgTemp =
-annualTemps.reduce((a,b)=>a+b)/annualTemps.length
+const monthlyTemp=Array(12).fill(0)
+const monthlyRain=Array(12).fill(0)
+const monthCount=Array(12).fill(0)
 
-const avgRain =
-annualRain.reduce((a,b)=>a+b)/annualRain.length
+daily.time.forEach((date,i)=>{
 
-const trendTemp = linearTrend(annualTemps)
-const trendRain = linearTrend(annualRain)
+const m=new Date(date).getMonth()
+
+monthlyTemp[m]+=daily.temperature_2m_mean[i]||0
+monthlyRain[m]+=daily.precipitation_sum[i]||0
+monthCount[m]++
+
+})
+
+for(let m=0;m<12;m++){
+
+if(monthCount[m]>0){
+
+monthlyTemp[m]/=monthCount[m]
+
+}
+
+}
+
+const frostDays = daily.temperature_2m_min
+.filter(t=>t<=0).length
 
 return{
 
-avgTemp:avgTemp.toFixed(1),
+years:years.length,
 
-avgRain:avgRain.toFixed(0),
+avgTemp:avg(annualTemp).toFixed(1),
 
-trendTemp:trendTemp.toFixed(3),
+avgRain:avg(annualRain).toFixed(0),
 
-trendRain:trendRain.toFixed(3),
+trendTemp:linearTrend(annualTemp).toFixed(3),
 
-years:years.length
+trendRain:linearTrend(annualRain).toFixed(3),
+
+frostDays:frostDays,
+
+monthlyTemp:monthlyTemp,
+
+monthlyRain:monthlyRain
 
 }
 
 }
 
-// ------------------------------
-// TREND CALCULATION
-// ------------------------------
+// ----------------------------------------------------
+// STATISTICS
+// ----------------------------------------------------
+
+function avg(arr){
+
+return arr.reduce((a,b)=>a+b,0)/arr.length
+
+}
 
 function linearTrend(arr){
 
-const n = arr.length
+const n=arr.length
 
 let xSum=0
 let ySum=0
@@ -2010,13 +1051,13 @@ xxSum+=i*i
 
 }
 
-return (n*xySum - xSum*ySum) / (n*xxSum - xSum*xSum)
+return (n*xySum-xSum*ySum)/(n*xxSum-xSum*xSum)
 
 }
 
-// ------------------------------
-// ANALYSIS
-// ------------------------------
+// ----------------------------------------------------
+// GENERATE REPORT
+// ----------------------------------------------------
 
 async function generateReport(){
 
@@ -2036,12 +1077,14 @@ lastPolygonCenter.lat,
 lastPolygonCenter.lng
 )
 
-const result = processClimate(data)
+const result = processClimateData(data)
 
 openAnalysisPanel(result)
 
 }
 catch(err){
+
+console.error(err)
 
 showNotification("Climate analysis failed","error")
 
@@ -2049,24 +1092,24 @@ showNotification("Climate analysis failed","error")
 
 }
 
-// ------------------------------
-// SHOW RESULTS
-// ------------------------------
+// ----------------------------------------------------
+// RESULTS PANEL
+// ----------------------------------------------------
 
 function openAnalysisPanel(data){
 
-const panel = document.getElementById("analysisPanel")
-const content = document.getElementById("analysisContent")
+const panel=document.getElementById("analysisPanel")
+const content=document.getElementById("analysisContent")
 
-content.innerHTML = `
+content.innerHTML=`
 
 <div class="metric-card">
-<div class="metric-title">Annual Avg Temperature</div>
+<div class="metric-title">Average Temperature</div>
 <div class="metric-value">${data.avgTemp} °C</div>
 </div>
 
 <div class="metric-card">
-<div class="metric-title">Annual Avg Rainfall</div>
+<div class="metric-title">Annual Rainfall</div>
 <div class="metric-value">${data.avgRain} mm</div>
 </div>
 
@@ -2081,6 +1124,11 @@ content.innerHTML = `
 </div>
 
 <div class="metric-card">
+<div class="metric-title">Frost Days</div>
+<div class="metric-value">${data.frostDays}</div>
+</div>
+
+<div class="metric-card">
 <div class="metric-title">Years Analyzed</div>
 <div class="metric-value">${data.years}</div>
 </div>
@@ -2091,21 +1139,21 @@ panel.style.display="block"
 
 }
 
-// ------------------------------
-// SEARCH LOCATION
-// ------------------------------
+// ----------------------------------------------------
+// LOCATION SEARCH
+// ----------------------------------------------------
 
 async function searchLocation(){
 
-const input = document.getElementById("searchInput").value
+const query=document.getElementById("searchInput").value
 
-if(!input) return
+if(!query) return
 
-const url = `https://nominatim.openstreetmap.org/search?format=json&q=${input}`
+const url=`https://nominatim.openstreetmap.org/search?format=json&q=${query}`
 
-const res = await fetch(url)
+const res=await fetch(url)
 
-const data = await res.json()
+const data=await res.json()
 
 if(data.length===0){
 
@@ -2114,14 +1162,14 @@ return
 
 }
 
-const lat = parseFloat(data[0].lat)
-const lon = parseFloat(data[0].lon)
+const lat=parseFloat(data[0].lat)
+const lon=parseFloat(data[0].lon)
 
 centerMap(lat,lon,data[0].display_name)
 
 }
 
-// ------------------------------
+// ----------------------------------------------------
 
 function centerMap(lat,lon,name){
 
@@ -2131,33 +1179,37 @@ map.removeLayer(currentMarker)
 
 }
 
-currentMarker = L.marker([lat,lon]).addTo(map)
+currentMarker=L.marker([lat,lon]).addTo(map)
 
 map.setView([lat,lon],12)
 
-lastPolygonCenter = {lat:lat,lng:lon}
+lastPolygonCenter={lat:lat,lng:lon}
 
-currentLocationName = name
+currentLocationName=name
 
 }
 
-// ------------------------------
+// ----------------------------------------------------
+// NOTIFICATIONS
+// ----------------------------------------------------
 
 function showNotification(text,type){
 
-const n = document.getElementById("notification")
+const n=document.getElementById("notification")
 
 n.innerText=text
 n.className="notification "+type
 n.classList.add("show")
 
 setTimeout(()=>{
+
 n.classList.remove("show")
+
 },3000)
 
 }
 
-// ------------------------------
+// ----------------------------------------------------
 
 document.addEventListener("DOMContentLoaded",()=>{
 
@@ -2166,3 +1218,8 @@ initMap()
 })
 
 </script>
+    
+      
+
+    
+    /
