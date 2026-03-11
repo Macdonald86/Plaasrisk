@@ -707,22 +707,30 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script>
-    // Global variables
-    let map;
-    let currentMarker = null;
-    let lastPolygonCenter = null;
-    let currentLocationName = "Unknown Location";
-    let pinModeActive = false;
-    let dataAvailable = false;
-    let apiStatus = 'online';
-    let drawnItems;
+  // ----------------------------------------------------
+// GLOBAL VARIABLES
+// ----------------------------------------------------
 
-    // Enhanced API Configuration
-    
+let map
+let currentMarker = null
+let lastPolygonCenter = null
+let currentLocationName = "Unknown Location"
+let pinModeActive = false
+let dataAvailable = false
+let apiStatus = "online"
+let drawnItems
+
+const dataCache = new Map()
+
+// ----------------------------------------------------
+// CONFIGURATION
+// ----------------------------------------------------
+
+const CONFIG = {
+
 OPEN_METEO:{
 
 BASE_URL:"https://archive-api.open-meteo.com/v1/archive",
-FORECAST_URL:"https://api.open-meteo.com/v1/forecast",
 
 START_DATE:"2000-01-01",
 END_DATE:new Date().toISOString().split("T")[0],
@@ -737,15 +745,13 @@ DAILY_VARIABLES:[
 ].join(","),
 
 TIMEZONE:"auto",
-
 TIMEOUT:30000
 
 },
 
 CACHE:{
 ENABLED:true,
-DURATION:24*60*60*1000,
-MAX_ITEMS:50
+DURATION:24*60*60*1000
 },
 
 RETRY:{
@@ -908,7 +914,7 @@ return data
 
 function validateClimateData(d){
 
-if(!Array.isArray(d.time)) throw new Error("Invalid climate dataset")
+if(!Array.isArray(d.time)) throw new Error("Invalid dataset")
 
 if(d.time.length<30)
 throw new Error("Insufficient climate data")
@@ -955,30 +961,6 @@ annualRain.push(rain)
 
 })
 
-const monthlyTemp=Array(12).fill(0)
-const monthlyRain=Array(12).fill(0)
-const monthCount=Array(12).fill(0)
-
-daily.time.forEach((date,i)=>{
-
-const m=new Date(date).getMonth()
-
-monthlyTemp[m]+=daily.temperature_2m_mean[i]||0
-monthlyRain[m]+=daily.precipitation_sum[i]||0
-monthCount[m]++
-
-})
-
-for(let m=0;m<12;m++){
-
-if(monthCount[m]>0){
-
-monthlyTemp[m]/=monthCount[m]
-
-}
-
-}
-
 const frostDays = daily.temperature_2m_min
 .filter(t=>t<=0).length
 
@@ -994,11 +976,7 @@ trendTemp:linearTrend(annualTemp).toFixed(3),
 
 trendRain:linearTrend(annualRain).toFixed(3),
 
-frostDays:frostDays,
-
-monthlyTemp:monthlyTemp,
-
-monthlyRain:monthlyRain
+frostDays:frostDays
 
 }
 
@@ -1009,9 +987,7 @@ monthlyRain:monthlyRain
 // ----------------------------------------------------
 
 function avg(arr){
-
 return arr.reduce((a,b)=>a+b,0)/arr.length
-
 }
 
 function linearTrend(arr){
@@ -1066,7 +1042,6 @@ openAnalysisPanel(result)
 catch(err){
 
 console.error(err)
-
 showNotification("Climate analysis failed","error")
 
 }
@@ -1121,6 +1096,41 @@ panel.style.display="block"
 }
 
 // ----------------------------------------------------
+// UI FUNCTIONS
+// ----------------------------------------------------
+
+function closeAnalysisPanel(){
+document.getElementById("analysisPanel").style.display="none"
+}
+
+function resetMap(){
+
+drawnItems.clearLayers()
+
+if(currentMarker){
+map.removeLayer(currentMarker)
+currentMarker=null
+}
+
+lastPolygonCenter=null
+
+showNotification("Map cleared","info")
+
+}
+
+function activatePinMode(){
+
+map.once("click",function(e){
+
+centerMap(e.latlng.lat,e.latlng.lng,"Custom Pin")
+
+})
+
+showNotification("Click map to drop pin","info")
+
+}
+
+// ----------------------------------------------------
 // LOCATION SEARCH
 // ----------------------------------------------------
 
@@ -1150,8 +1160,6 @@ centerMap(lat,lon,data[0].display_name)
 
 }
 
-// ----------------------------------------------------
-
 function centerMap(lat,lon,name){
 
 if(currentMarker){
@@ -1178,7 +1186,7 @@ function showNotification(text,type){
 
 const n=document.getElementById("notification")
 
-n.innerText=text
+n.querySelector("#notification-text").innerText=text
 n.className="notification "+type
 n.classList.add("show")
 
