@@ -3,14 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>PlaasRisk Climate Intelligence</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-body{margin:0;font-family:Arial;background:#f4f6f4}
-#map{height:90vh}
+
+body{
+margin:0;
+font-family:Arial;
+background:#f4f7f4;
+}
 
 .control-bar{
 display:flex;
@@ -21,15 +28,17 @@ border-bottom:1px solid #ddd;
 }
 
 button{
-padding:8px 12px;
-border:none;
 background:#2e7d32;
+border:none;
 color:white;
-cursor:pointer;
+padding:8px 14px;
 border-radius:6px;
+cursor:pointer;
 }
 
-button:hover{background:#1b5e20}
+button:hover{
+background:#1b5e20;
+}
 
 input{
 padding:8px;
@@ -37,46 +46,41 @@ border:1px solid #ccc;
 border-radius:6px;
 }
 
+#map{
+height:80vh;
+}
+
 .analysis-panel{
 position:absolute;
-top:80px;
+top:90px;
 right:20px;
-width:320px;
+width:380px;
 background:white;
-padding:20px;
 border-radius:10px;
-box-shadow:0 4px 15px rgba(0,0,0,0.2);
+padding:20px;
+box-shadow:0 4px 20px rgba(0,0,0,0.2);
 display:none;
-z-index:1000;
+max-height:80vh;
+overflow:auto;
 }
 
 .metric{
-margin-bottom:10px;
+margin-bottom:12px;
 }
 
 .metric-title{
-font-size:14px;
-color:#444
+font-size:13px;
+color:#444;
 }
 
 .metric-value{
 font-size:20px;
 font-weight:bold;
-color:#2e7d32
+color:#2e7d32;
 }
 
-.progress{
-width:200px;
-height:8px;
-background:#ddd;
-border-radius:4px;
-overflow:hidden;
-}
-
-.progress-fill{
-height:8px;
-background:#2e7d32;
-width:0%;
+canvas{
+margin-top:20px;
 }
 
 </style>
@@ -94,21 +98,23 @@ width:0%;
 
 <button onclick="resetMap()">Clear</button>
 
-<button onclick="generateReport()">Analyze</button>
-
-<div class="progress">
-<div class="progress-fill" id="progressFill"></div>
-</div>
+<button onclick="runAnalysis()">Analyze</button>
 
 </div>
 
 <div id="map"></div>
 
 <div class="analysis-panel" id="analysisPanel">
-<h3>Climate Analysis</h3>
-<div id="analysisContent"></div>
-</div>
 
+<h3>Farm Climate Analysis</h3>
+
+<div id="metrics"></div>
+
+<canvas id="rainChart"></canvas>
+
+<canvas id="seasonChart"></canvas>
+
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -118,10 +124,9 @@ width:0%;
 /* ---------------- MAP ---------------- */
 
 let map
+let marker
 let drawnItems
-let currentMarker=null
-let lastPolygonCenter=null
-let pinMode=false
+let selectedPoint=null
 
 function initMap(){
 
@@ -152,11 +157,10 @@ map.on(L.Draw.Event.CREATED,function(e){
 drawnItems.clearLayers()
 
 const layer=e.layer
+
 drawnItems.addLayer(layer)
 
-const center=layer.getBounds().getCenter()
-
-lastPolygonCenter=center
+selectedPoint=layer.getBounds().getCenter()
 
 })
 
@@ -169,60 +173,54 @@ window.onload=initMap
 
 async function searchLocation(){
 
-const input=document.getElementById("searchInput").value
+const q=document.getElementById("searchInput").value
 
-if(input.includes(",")){
+if(q.includes(",")){
 
-const parts=input.split(",")
+const p=q.split(",")
 
-const lat=parseFloat(parts[0])
-const lon=parseFloat(parts[1])
+setPoint(parseFloat(p[0]),parseFloat(p[1]))
 
-setMarker(lat,lon)
-map.setView([lat,lon],10)
 return
 
 }
 
-const url=`https://nominatim.openstreetmap.org/search?format=json&q=${input}`
+const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
 
-const res=await fetch(url)
-const data=await res.json()
+const r=await fetch(url)
 
-if(data.length==0) return
+const d=await r.json()
 
-const place=data[0]
+if(d.length>0){
 
-setMarker(place.lat,place.lon)
+setPoint(d[0].lat,d[0].lon)
 
-map.setView([place.lat,place.lon],10)
+}
+
+}
+
+function setPoint(lat,lon){
+
+if(marker) map.removeLayer(marker)
+
+marker=L.marker([lat,lon]).addTo(map)
+
+map.setView([lat,lon],10)
+
+selectedPoint={lat:parseFloat(lat),lng:parseFloat(lon)}
 
 }
 
 
-/* ---------------- PIN ---------------- */
+/* ---------------- PIN MODE ---------------- */
 
 function activatePinMode(){
 
-pinMode=true
-
 map.once("click",function(e){
 
-setMarker(e.latlng.lat,e.latlng.lng)
-
-pinMode=false
+setPoint(e.latlng.lat,e.latlng.lng)
 
 })
-
-}
-
-function setMarker(lat,lon){
-
-if(currentMarker) map.removeLayer(currentMarker)
-
-currentMarker=L.marker([lat,lon]).addTo(map)
-
-lastPolygonCenter={lat:lat,lng:lon}
 
 }
 
@@ -233,9 +231,9 @@ function resetMap(){
 
 drawnItems.clearLayers()
 
-if(currentMarker) map.removeLayer(currentMarker)
+if(marker) map.removeLayer(marker)
 
-lastPolygonCenter=null
+selectedPoint=null
 
 document.getElementById("analysisPanel").style.display="none"
 
@@ -244,156 +242,164 @@ document.getElementById("analysisPanel").style.display="none"
 
 /* ---------------- CLIMATE API ---------------- */
 
-const BASE_URL="https://archive-api.open-meteo.com/v1/archive"
-
-
 async function fetchClimate(lat,lon){
 
-const url=BASE_URL+
-`?latitude=${lat}&longitude=${lon}`+
-`&start_date=2000-01-01`+
-`&end_date=2024-12-31`+
-`&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max`+
-`&timezone=auto`
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2024-12-31&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
 
-const res=await fetch(url)
+const r=await fetch(url)
 
-return await res.json()
+return await r.json()
 
 }
 
 
-/* ---------------- METRICS ---------------- */
+/* ---------------- PROCESS DATA ---------------- */
 
-function avg(arr){
+function processClimate(daily){
 
-return arr.reduce((a,b)=>a+b,0)/arr.length
+let yearlyRain={}
+let yearlyFrost={}
 
+daily.time.forEach((d,i)=>{
+
+const date=new Date(d)
+
+const year=date.getFullYear()
+
+if(!yearlyRain[year]){
+yearlyRain[year]=0
+yearlyFrost[year]=0
 }
 
-function heatStress(daily){
+yearlyRain[year]+=daily.precipitation_sum[i]||0
 
-return daily.temperature_2m_max.filter(t=>t>35).length
-
-}
-
-function drySpells(daily){
-
-let maxDry=0
-let current=0
-
-daily.precipitation_sum.forEach(p=>{
-
-if(p<1){
-
-current++
-maxDry=Math.max(maxDry,current)
-
-}else{
-
-current=0
-
-}
+if(daily.temperature_2m_min[i]<=0) yearlyFrost[year]++
 
 })
 
-return maxDry
+const years=Object.keys(yearlyRain)
 
-}
+const rain=years.map(y=>yearlyRain[y])
 
-function hailProbability(daily){
+const frost=years.map(y=>yearlyFrost[y])
 
-let risk=0
+const avgRain=rain.reduce((a,b)=>a+b)/rain.length
 
-daily.temperature_2m_max.forEach((t,i)=>{
+const avgFrost=frost.reduce((a,b)=>a+b)/frost.length
 
-const rain=daily.precipitation_sum[i]
-const wind=daily.wind_speed_10m_max[i]
+let drought=[]
+let wet=[]
 
-if(t>28 && rain>5 && wind>10) risk++
+years.forEach(y=>{
+
+if(yearlyRain[y] < avgRain*0.75) drought.push(y)
+
+if(yearlyRain[y] > avgRain*1.25) wet.push(y)
 
 })
 
-return Math.round((risk/daily.time.length)*100)
+return{
+years,
+rain,
+frost,
+avgRain:avgRain.toFixed(0),
+avgFrost:avgFrost.toFixed(1),
+drought,
+wet
+}
+
+}
+
+
+/* ---------------- SEASONAL ---------------- */
+
+function seasonalRain(daily){
+
+let seasons={}
+
+daily.time.forEach((d,i)=>{
+
+const date=new Date(d)
+
+const m=date.getMonth()+1
+const y=date.getFullYear()
+
+let s
+
+if(m>=10) s=y
+else if(m<=3) s=y-1
+else return
+
+const label=s+"/"+(s+1)
+
+if(!seasons[label]) seasons[label]=0
+
+seasons[label]+=daily.precipitation_sum[i]||0
+
+})
+
+const labels=Object.keys(seasons)
+
+const values=labels.map(l=>seasons[l])
+
+return{labels,values}
 
 }
 
 
 /* ---------------- ANALYSIS ---------------- */
 
-async function generateReport(){
+async function runAnalysis(){
 
-if(!lastPolygonCenter){
+if(!selectedPoint){
 
-alert("Select a field or drop pin first")
+alert("Select a field or point")
 
 return
 
 }
 
-updateProgress(20)
+const data=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
-const data=await fetchClimate(lastPolygonCenter.lat,lastPolygonCenter.lng)
+const climate=processClimate(data.daily)
 
-updateProgress(60)
+const season=seasonalRain(data.daily)
 
-const daily=data.daily
+showMetrics(climate)
 
-const metrics={
+drawRainChart(climate)
 
-avgTemp:avg(daily.temperature_2m_mean).toFixed(1),
-avgRain:avg(daily.precipitation_sum).toFixed(1),
+drawSeasonChart(season)
 
-heatStress:heatStress(daily),
-
-drySpells:drySpells(daily),
-
-hail:hailProbability(daily)
-
-}
-
-updateProgress(90)
-
-displayResults(metrics)
-
-updateProgress(100)
+document.getElementById("analysisPanel").style.display="block"
 
 }
 
 
-/* ---------------- RESULTS ---------------- */
+/* ---------------- METRICS ---------------- */
 
-function displayResults(m){
+function showMetrics(c){
 
-const panel=document.getElementById("analysisPanel")
-
-panel.style.display="block"
-
-document.getElementById("analysisContent").innerHTML=`
+document.getElementById("metrics").innerHTML=`
 
 <div class="metric">
-<div class="metric-title">Average Temperature</div>
-<div class="metric-value">${m.avgTemp} °C</div>
+<div class="metric-title">Average Annual Rainfall</div>
+<div class="metric-value">${c.avgRain} mm</div>
 </div>
 
 <div class="metric">
-<div class="metric-title">Average Rainfall</div>
-<div class="metric-value">${m.avgRain} mm/day</div>
+<div class="metric-title">Average Frost Days / Year</div>
+<div class="metric-value">${c.avgFrost}</div>
 </div>
 
 <div class="metric">
-<div class="metric-title">Heat Stress Days</div>
-<div class="metric-value">${m.heatStress}</div>
+<div class="metric-title">Drought Years</div>
+<div>${c.drought.join(", ")}</div>
 </div>
 
 <div class="metric">
-<div class="metric-title">Max Dry Spell</div>
-<div class="metric-value">${m.drySpells} days</div>
-</div>
-
-<div class="metric">
-<div class="metric-title">Hail Probability</div>
-<div class="metric-value">${m.hail}%</div>
+<div class="metric-title">Excess Rainfall Years</div>
+<div>${c.wet.join(", ")}</div>
 </div>
 
 `
@@ -401,11 +407,42 @@ document.getElementById("analysisContent").innerHTML=`
 }
 
 
-/* ---------------- PROGRESS ---------------- */
+/* ---------------- CHARTS ---------------- */
 
-function updateProgress(v){
+function drawRainChart(c){
 
-document.getElementById("progressFill").style.width=v+"%"
+new Chart(document.getElementById("rainChart"),{
+
+type:"bar",
+
+data:{
+labels:c.years,
+datasets:[{
+label:"Annual Rainfall (mm)",
+data:c.rain
+}]
+}
+
+})
+
+}
+
+
+function drawSeasonChart(s){
+
+new Chart(document.getElementById("seasonChart"),{
+
+type:"bar",
+
+data:{
+labels:s.labels,
+datasets:[{
+label:"Seasonal Rainfall Oct–Mar",
+data:s.values
+}]
+}
+
+})
 
 }
 
