@@ -719,40 +719,43 @@
 
     // Enhanced API Configuration
     const CONFIG = {
-      OPEN_METEO: {
-        BASE_URL: 'https://archive-api.open-meteo.com/v1/archive',
-        CURRENT_URL: 'https://api.open-meteo.com/v1/forecast',
-        START_DATE: '2020-01-01',
-        END_DATE: new Date().toISOString().split('T')[0],
-        DAILY_VARIABLES: [
-          'temperature_2m_max',
-          'temperature_2m_min', 
-          'precipitation_sum',
-          'rain_sum',
-          'windspeed_10m_max',
-          'et0_fao_evapotranspiration'
-        ].join(','),
-        TIMEZONE: 'auto',
-        TIMEOUT: 30000
-      },
-      NOMINATIM: {
-        BASE_URL: 'https://nominatim.openstreetmap.org/search',
-        FORMAT: 'json',
-        LIMIT: 5,
-        DELAY: 1000
-      },
-      CACHE: {
-        ENABLED: true,
-        DURATION: 24 * 60 * 60 * 1000,
-        MAX_ITEMS: 50
-      },
-      RETRY: {
-        MAX_ATTEMPTS: 3,
-        DELAY: 1000,
-        BACKOFF_MULTIPLIER: 2
-      }
-    };
+  OPEN_METEO: {
+    BASE_URL: 'https://archive-api.open-meteo.com/v1/archive',
+    CURRENT_URL: 'https://api.open-meteo.com/v1/forecast',
+    START_DATE: '2020-01-01',
+    END_DATE: new Date().toISOString().split('T')[0],
+    DAILY_VARIABLES: [
+      'temperature_2m_max',
+      'temperature_2m_min',
+      'precipitation_sum',
+      'rain_sum',
+      'wind_speed_10m_max',
+      'et0_fao_evapotranspiration'
+    ].join(','),
+    TIMEZONE: 'auto',
+    TIMEOUT: 30000
+  },
 
+  NOMINATIM: {
+    BASE_URL: 'https://nominatim.openstreetmap.org/search',
+    FORMAT: 'json',
+    LIMIT: 5,
+    COUNTRY: 'za',
+    DELAY: 1000
+  },
+
+  CACHE: {
+    ENABLED: true,
+    DURATION: 24 * 60 * 60 * 1000,
+    MAX_ITEMS: 50
+  },
+
+  RETRY: {
+    MAX_ATTEMPTS: 3,
+    DELAY: 1000,
+    BACKOFF_MULTIPLIER: 2
+  }
+};
     // Cache implementation
     const dataCache = new Map();
 
