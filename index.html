@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>PlaasRisk Climate Intelligence</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -11,14 +10,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-
 body{
 margin:0;
 font-family:Arial;
 background:#f4f7f4;
 }
-
-/* CONTROL BAR */
 
 .control-bar{
 display:flex;
@@ -38,9 +34,7 @@ border-radius:6px;
 cursor:pointer;
 }
 
-button:hover{
-background:#1b5e20;
-}
+button:hover{background:#1b5e20;}
 
 input{
 padding:8px;
@@ -48,21 +42,13 @@ border:1px solid #ccc;
 border-radius:6px;
 }
 
-/* STATUS BAR */
-
 .status-bar{
 margin-left:auto;
 font-size:13px;
 color:#555;
 }
 
-/* MAP */
-
-#map{
-height:80vh;
-}
-
-/* REPORT PANEL */
+#map{height:80vh;}
 
 .analysis-panel{
 position:absolute;
@@ -106,8 +92,6 @@ font-weight:bold;
 color:#2e7d32;
 }
 
-/* ERROR MESSAGE */
-
 .error-box{
 position:absolute;
 top:80px;
@@ -121,26 +105,19 @@ display:none;
 z-index:20000;
 }
 
-canvas{
-margin-top:20px;
-}
-
+canvas{margin-top:20px;}
 </style>
 </head>
 
 <body>
 
 <div class="control-bar">
-
 <input id="searchInput" placeholder="Search location or lat,lon">
-
 <button onclick="searchLocation()">Search</button>
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
-
 <div class="status-bar" id="statusBar">Ready</div>
-
 </div>
 
 <div id="map"></div>
@@ -148,20 +125,12 @@ margin-top:20px;
 <div class="error-box" id="errorBox"></div>
 
 <div class="analysis-panel" id="analysisPanel">
-
-<div class="panel-header" id="panelHeader">
-Farm Climate Analysis
-</div>
-
+<div class="panel-header" id="panelHeader">Farm Climate Analysis</div>
 <div class="panel-body">
-
 <div id="metrics"></div>
-
 <canvas id="rainChart"></canvas>
 <canvas id="seasonChart"></canvas>
-
 </div>
-
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -169,32 +138,22 @@ Farm Climate Analysis
 
 <script>
 
-/* GLOBAL */
-
 let map
 let marker
 let drawnItems
 let selectedPoint=null
-
 let rainChart=null
 let seasonalChart=null
-
-/* STATUS + ERROR */
 
 function setStatus(text){
 document.getElementById("statusBar").innerText=text
 }
 
 function showError(msg){
-
 const box=document.getElementById("errorBox")
 box.innerText=msg
 box.style.display="block"
-
-setTimeout(()=>{
-box.style.display="none"
-},4000)
-
+setTimeout(()=>{box.style.display="none"},4000)
 }
 
 /* MAP */
@@ -203,36 +162,23 @@ function initMap(){
 
 map=L.map("map").setView([-25.7,28.2],6)
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-maxZoom:19
-}).addTo(map)
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map)
 
 drawnItems=new L.FeatureGroup()
 map.addLayer(drawnItems)
 
 const drawControl=new L.Control.Draw({
-draw:{
-polygon:true,
-rectangle:true,
-circle:false,
-polyline:false,
-marker:false
-},
+draw:{polygon:true,rectangle:true,circle:false,polyline:false,marker:false},
 edit:{featureGroup:drawnItems}
 })
 
 map.addControl(drawControl)
 
 map.on(L.Draw.Event.CREATED,function(e){
-
 drawnItems.clearLayers()
-
 const layer=e.layer
-
 drawnItems.addLayer(layer)
-
 selectedPoint=layer.getBounds().getCenter()
-
 })
 
 }
@@ -248,91 +194,69 @@ const q=document.getElementById("searchInput").value
 try{
 
 if(q.includes(",")){
-
 const p=q.split(",")
-
 setPoint(parseFloat(p[0]),parseFloat(p[1]))
-
 return
-
 }
 
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
-
 const r=await fetch(url)
-
 const d=await r.json()
 
 if(d.length>0){
-
 setPoint(d[0].lat,d[0].lon)
-
 }else{
 showError("Location not found")
 }
 
-}catch(e){
-showError("Search failed")
-}
-
+}catch(e){showError("Search failed")}
 }
 
 function setPoint(lat,lon){
-
 lat=Number(lat)
 lon=Number(lon)
 
 if(marker) map.removeLayer(marker)
 
 marker=L.marker([lat,lon]).addTo(map)
-
 map.setView([lat,lon],10)
 
 selectedPoint={lat:lat,lng:lon}
-
 }
 
-/* PIN MODE */
+/* PIN */
 
 function activatePinMode(){
-
 map.once("click",function(e){
-
 setPoint(e.latlng.lat,e.latlng.lng)
-
 })
-
 }
 
 /* RESET */
 
 function resetMap(){
-
 drawnItems.clearLayers()
-
 if(marker) map.removeLayer(marker)
-
 selectedPoint=null
-
 document.getElementById("analysisPanel").style.display="none"
-
 }
 
 /* CLIMATE API */
 
 async function fetchClimate(lat,lon){
 
-cconst url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${today}&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
+const today=new Date().toISOString().split("T")[0]
+
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${today}&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
 
 const r=await fetch(url)
-
 if(!r.ok) throw new Error("API error")
 
 return await r.json()
 
 }
 
-/* PROCESS DATA */
+/* PROCESS CLIMATE */
 
 function processClimate(daily){
 
@@ -341,8 +265,7 @@ let yearlyFrost={}
 
 daily.time.forEach((d,i)=>{
 
-const date=new Date(d)
-const year=date.getFullYear()
+const year=new Date(d).getFullYear()
 
 if(!yearlyRain[year]){
 yearlyRain[year]=0
@@ -363,27 +286,15 @@ const frost=years.map(y=>yearlyFrost[y])
 const avgRain=rain.reduce((a,b)=>a+b)/rain.length
 const avgFrost=frost.reduce((a,b)=>a+b)/frost.length
 
-let drought=[]
-let wet=[]
-
-years.forEach(y=>{
-
-if(yearlyRain[y]<avgRain*0.75) drought.push(y)
-
-if(yearlyRain[y]>avgRain*1.25) wet.push(y)
-
-})
-
 return{
 years,rain,frost,
 avgRain:avgRain.toFixed(0),
-avgFrost:avgFrost.toFixed(1),
-drought,wet
+avgFrost:avgFrost.toFixed(1)
 }
 
 }
 
-/* SEASONAL */
+/* SEASONAL ANALYSIS */
 
 function seasonalRain(daily){
 
@@ -412,8 +323,12 @@ seasons[label]+=daily.precipitation_sum[i]||0
 const labels=Object.keys(seasons)
 const values=labels.map(l=>seasons[l])
 
-return{labels,values}
+const avg=values.reduce((a,b)=>a+b)/values.length
 
+const drought=values.map(v=>v<avg*0.75)
+const wet=values.map(v=>v>avg*1.25)
+
+return{labels,values,drought,wet}
 }
 
 /* ANALYSIS */
@@ -433,15 +348,10 @@ const data=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
 setStatus("Processing climate data...")
 
-if(!data.daily){
-throw new Error("No data returned")
-}
-
 const climate=processClimate(data.daily)
 const season=seasonalRain(data.daily)
 
 showMetrics(climate)
-
 drawRainChart(climate)
 drawSeasonChart(season)
 
@@ -452,9 +362,7 @@ setStatus("Analysis complete")
 }catch(e){
 
 console.error(e)
-
 showError("Climate data could not be loaded")
-
 setStatus("Error")
 
 }
@@ -477,16 +385,6 @@ document.getElementById("metrics").innerHTML=`
 <div class="metric-value">${c.avgFrost}</div>
 </div>
 
-<div class="metric">
-<div class="metric-title">Drought Years</div>
-<div>${c.drought.join(", ")}</div>
-</div>
-
-<div class="metric">
-<div class="metric-title">Excess Rainfall Years</div>
-<div>${c.wet.join(", ")}</div>
-</div>
-
 `
 
 }
@@ -500,12 +398,12 @@ if(rainChart) rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
 
 type:"bar",
-
 data:{
 labels:c.years,
 datasets:[{
 label:"Annual Rainfall (mm)",
-data:c.rain
+data:c.rain,
+backgroundColor:"#4CAF50"
 }]
 }
 
@@ -517,15 +415,21 @@ function drawSeasonChart(s){
 
 if(seasonalChart) seasonalChart.destroy()
 
+const colors=s.values.map((v,i)=>{
+if(s.drought[i]) return "#e53935"
+if(s.wet[i]) return "#1e88e5"
+return "#4CAF50"
+})
+
 seasonalChart=new Chart(document.getElementById("seasonChart"),{
 
 type:"bar",
-
 data:{
 labels:s.labels,
 datasets:[{
-label:"Seasonal Rainfall Oct–Mar",
-data:s.values
+label:"Seasonal Rainfall (Oct–Mar)",
+data:s.values,
+backgroundColor:colors
 }]
 }
 
@@ -533,7 +437,7 @@ data:s.values
 
 }
 
-/* DRAG PANEL */
+/* DRAG REPORT */
 
 const panel=document.getElementById("analysisPanel")
 const header=document.getElementById("panelHeader")
@@ -544,7 +448,6 @@ let offsetX,offsetY
 header.addEventListener("mousedown",function(e){
 
 dragging=true
-
 offsetX=e.clientX-panel.offsetLeft
 offsetY=e.clientY-panel.offsetTop
 
@@ -560,9 +463,7 @@ panel.style.right="auto"
 
 })
 
-document.addEventListener("mouseup",function(){
-dragging=false
-})
+document.addEventListener("mouseup",function(){dragging=false})
 
 </script>
 
