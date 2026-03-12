@@ -356,7 +356,7 @@ return{labels,values}
 /* ---------------- ANALYSIS ---------------- */
 
 async function runAnalysis(){
-
+console.log("Selected point:", selectedPoint)
 if(!selectedPoint){
 
 alert("Select a field or point")
@@ -414,10 +414,13 @@ document.getElementById("metrics").innerHTML=`
 
 
 /* ---------------- CHARTS ---------------- */
-
+let rainchart
 function drawRainChart(c){
-
-new Chart(document.getElementById("rainChart"),{
+if(rainChart){
+rainChart.destroy()
+}
+  
+rainChat = new Chart(document.getElementById("rainChart"),{
 
 type:"bar",
 
@@ -433,10 +436,14 @@ data:c.rain
 
 }
 
-
+let seasonalChart
+  
 function drawSeasonChart(s){
 
-new Chart(document.getElementById("seasonChart"),{
+if(seasonalChart){
+seasonalChart.destroy()
+}
+seasonalChart = new Chart(document.getElementById("seasonChart"),{
 
 type:"bar",
 
