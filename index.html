@@ -1,531 +1,521 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>PlaasRisk Climate Intelligence</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 
-body{
+:root{
+--primary:#2e7d32;
+--secondary:#4caf50;
+--light:#f5f9f5;
+--border:#e0e0e0;
+--text:#333;
+--success:#4caf50;
+--shadow:0 4px 20px rgba(0,0,0,0.08);
+}
+
+*{
 margin:0;
-font-family:Arial;
-background:#f4f7f4;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#f5f9f5,#e8f5e9);
+color:var(--text);
+}
+
+.container{
+max-width:1600px;
+margin:auto;
+padding:10px;
+}
+
+.map-section{
+background:white;
+border-radius:16px;
+box-shadow:var(--shadow);
+overflow:hidden;
+}
+
+#map{
+height:75vh;
 }
 
 .control-bar{
 display:flex;
-gap:10px;
-padding:10px;
-background:white;
-border-bottom:1px solid #ddd;
 flex-wrap:wrap;
+gap:10px;
+padding:12px;
+border-bottom:1px solid var(--border);
+align-items:center;
 }
 
-.control-bar input,
-.control-bar select{
+.logo{
+font-weight:700;
+color:var(--primary);
+font-size:1.3rem;
+}
+
+.form-control{
 padding:8px;
-border:1px solid #ccc;
-border-radius:6px;
+border-radius:8px;
+border:1px solid var(--border);
 }
 
-button{
-background:#2e7d32;
-color:white;
+.btn{
+padding:8px 14px;
 border:none;
-padding:9px 14px;
-border-radius:6px;
+border-radius:8px;
 cursor:pointer;
+font-weight:500;
 }
 
-#map{
-height:60vh;
-width:100%;
+.btn-primary{
+background:var(--primary);
+color:white;
 }
 
-.panel{
-padding:15px;
+.btn-outline{
+border:1px solid var(--primary);
 background:white;
+color:var(--primary);
+}
+
+.analysis-panel{
+position:absolute;
+top:90px;
+right:20px;
+width:320px;
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:var(--shadow);
+display:none;
 }
 
 .metric{
-margin-bottom:10px;
+margin-bottom:12px;
 }
 
 .metric-title{
-font-size:13px;
-color:#444;
+font-size:0.85rem;
+color:#777;
 }
 
 .metric-value{
-font-size:22px;
-font-weight:bold;
-color:#2e7d32;
+font-size:1.3rem;
+font-weight:600;
+color:var(--primary);
 }
 
-canvas{
-margin-top:20px;
-max-height:400px;
+.notification{
+position:fixed;
+top:20px;
+right:20px;
+background:var(--success);
+color:white;
+padding:10px 16px;
+border-radius:8px;
+display:none;
+}
+
+footer{
+margin-top:10px;
+font-size:0.8rem;
+text-align:center;
 }
 
 </style>
-
 </head>
 
 <body>
 
+<div class="container">
+
+<div class="map-section">
+
 <div class="control-bar">
 
-<input id="searchBox" placeholder="Search place or lat,lon">
+<div class="logo">
+<i class="fas fa-seedling"></i> PlaasRisk
+</div>
 
-<select id="seasonWindow">
-<option value="5">5 years</option>
-<option value="10" selected>10 years</option>
-<option value="15">15 years</option>
-</select>
+<input id="searchInput" class="form-control" placeholder="Search location or lat,long"/>
 
-<button onclick="searchLocation()">Search</button>
-<button onclick="enablePin()">Drop Pin</button>
-<button onclick="runAnalysis()">Analyze</button>
+<button class="btn btn-primary" onclick="searchLocation()">Search</button>
+
+<button class="btn btn-outline" onclick="activatePinMode()">Drop Pin</button>
+
+<button class="btn btn-primary" onclick="generateReport()">Analyze</button>
+
+<button class="btn btn-outline" onclick="resetMap()">Clear</button>
 
 </div>
 
 <div id="map"></div>
 
-<div class="panel">
+</div>
 
-<div id="metrics"></div>
+<div id="analysisPanel" class="analysis-panel"></div>
 
-<canvas id="annualChart"></canvas>
-
-<canvas id="seasonChart"></canvas>
+<footer>
+Farm Climate Intelligence • Powered by Open-Meteo ERA5
+</footer>
 
 </div>
 
+<div id="notification" class="notification"></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
 
-/* ---------------- MAP ---------------- */
+/* ================================
+MAP
+================================ */
 
 let map
-let marker=null
-let droughtCircle=null
-
-let annualChart=null
-let seasonChart=null
-
-let selectedPoint=null
+let currentMarker=null
+let lastLocation=null
+let pinMode=false
+let pinHandler=null
+let drawnItems
 
 function initMap(){
 
-map=L.map("map").setView([-25.7,28.2],6)
+map=L.map("map").setView([-25,30],5)
 
 L.tileLayer(
 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{
-maxZoom:19,
-attribution:"© OpenStreetMap"
-}).addTo(map)
+{maxZoom:19}
+).addTo(map)
 
-}
+drawnItems=new L.FeatureGroup()
+map.addLayer(drawnItems)
 
-initMap()
-
-/* ---------------- SEARCH ---------------- */
-
-async function searchLocation(){
-
-const q=document.getElementById("searchBox").value
-
-if(q.includes(",")){
-
-const p=q.split(",")
-
-setPoint(parseFloat(p[0]),parseFloat(p[1]))
-
-return
-
-}
-
-const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
-
-const r=await fetch(url,{
-headers:{
-"User-Agent":"PlaasRisk Climate Tool"
-}
+const drawControl=new L.Control.Draw({
+draw:{
+polygon:true,
+rectangle:false,
+circle:false,
+polyline:false,
+marker:false,
+circlemarker:false
+},
+edit:{featureGroup:drawnItems}
 })
 
-const data=await r.json()
+map.addControl(drawControl)
 
-if(data.length>0){
+map.on(L.Draw.Event.CREATED,function(e){
 
-setPoint(data[0].lat,data[0].lon)
+drawnItems.addLayer(e.layer)
+
+const center=e.layer.getBounds().getCenter()
+
+lastLocation=center
+
+notify("Farm boundary added")
+
+})
+
+}
+
+/* ================================
+PIN MODE
+================================ */
+
+function activatePinMode(){
+
+pinMode=!pinMode
+
+if(pinMode){
+
+notify("Click map to drop pin")
+
+pinHandler=function(e){
+
+placePin(e.latlng)
+
+map.off("click",pinHandler)
+
+pinMode=false
+
+}
+
+map.on("click",pinHandler)
 
 }else{
 
-alert("Location not found")
+map.off("click",pinHandler)
 
 }
 
 }
 
-function setPoint(lat,lon){
+function placePin(latlng){
 
-lat=Number(lat)
-lon=Number(lon)
+if(currentMarker) map.removeLayer(currentMarker)
 
-if(marker) map.removeLayer(marker)
+currentMarker=L.marker(latlng).addTo(map)
 
-marker=L.marker([lat,lon]).addTo(map)
+lastLocation=latlng
 
-map.setView([lat,lon],10)
-
-selectedPoint={lat:lat,lng:lon}
+notify("Pin placed")
 
 }
 
-/* ---------------- DROP PIN ---------------- */
+function resetMap(){
 
-function enablePin(){
+drawnItems.clearLayers()
 
-map.once("click",function(e){
+if(currentMarker) map.removeLayer(currentMarker)
 
-setPoint(e.latlng.lat,e.latlng.lng)
+lastLocation=null
 
-})
+document.getElementById("analysisPanel").style.display="none"
 
-}
-
-/* ---------------- FETCH CLIMATE ---------------- */
-
-async function fetchClimate(lat,lon){
-
-try{
-
-const today=new Date()
-
-const endDate=today.toISOString().split("T")[0]
-
-const startYear=today.getFullYear()-20
-
-const startDate=startYear+"-01-01"
-
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum&timezone=auto`
-
-const r=await fetch(url)
-
-if(!r.ok){
-
-throw new Error("API request failed")
+notify("Map cleared")
 
 }
 
-const data=await r.json()
+/* ================================
+LOCATION SEARCH
+================================ */
 
-if(!data.daily){
+async function searchLocation(){
 
-throw new Error("No climate data returned")
+const q=document.getElementById("searchInput").value.trim()
 
-}
+if(!q) return notify("Enter location")
 
-return data.daily
+const coord=q.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
 
-}catch(err){
+if(coord){
 
-console.error(err)
+const lat=parseFloat(coord[1])
+const lon=parseFloat(coord[2])
 
-alert("Climate data could not be loaded.")
+map.setView([lat,lon],12)
 
-return null
-
-}
-
-}
-
-/* ---------------- ANNUAL RAIN ---------------- */
-
-function annualRain(daily){
-
-let rain={}
-let days={}
-
-const currentYear=new Date().getFullYear()
-
-daily.time.forEach((d,i)=>{
-
-const y=new Date(d).getFullYear()
-
-if(y===currentYear) return
-
-if(!rain[y]){
-
-rain[y]=0
-days[y]=0
-
-}
-
-rain[y]+=daily.precipitation_sum[i]||0
-days[y]++
-
-})
-
-const years=Object.keys(rain)
-
-const values=years.map(y=>rain[y])
-
-const avg=values.reduce((a,b)=>a+b,0)/values.length
-
-return{
-
-years,
-values,
-avg:avg.toFixed(0)
-
-}
-
-}
-
-/* ---------------- SEASONAL RAIN ---------------- */
-
-function seasonalRain(daily){
-
-let seasons={}
-let counts={}
-
-const today=new Date()
-const currentYear=today.getFullYear()
-
-daily.time.forEach((d,i)=>{
-
-const date=new Date(d)
-
-const m=date.getMonth()+1
-const y=date.getFullYear()
-
-let s
-
-if(m>=10) s=y
-else if(m<=3) s=y-1
-else return
-
-if(s===currentYear) return
-
-const label=s+"/"+(s+1)
-
-if(!seasons[label]){
-
-seasons[label]=0
-counts[label]=0
-
-}
-
-seasons[label]+=daily.precipitation_sum[i]||0
-counts[label]++
-
-})
-
-let labels=Object.keys(seasons)
-
-labels.sort()
-
-const window=parseInt(document.getElementById("seasonWindow").value)
-
-labels=labels.slice(-window)
-
-const values=labels.map(l=>seasons[l])
-
-const avg=values.reduce((a,b)=>a+b,0)/values.length
-
-const drought=[]
-const wet=[]
-
-labels.forEach((l,i)=>{
-
-drought.push(values[i]<avg*0.75)
-wet.push(values[i]>avg*1.25)
-
-})
-
-return{
-
-labels,
-values,
-drought,
-wet
-
-}
-
-}
-
-/* ---------------- DROUGHT PROBABILITY ---------------- */
-
-function droughtProbability(season){
-
-let d=0
-
-season.drought.forEach(x=>{
-
-if(x) d++
-
-})
-
-return ((d/season.labels.length)*100).toFixed(1)
-
-}
-
-/* ---------------- MAP RISK CIRCLE ---------------- */
-
-function drawDrought(lat,lon,prob){
-
-if(droughtCircle) map.removeLayer(droughtCircle)
-
-let color="#2e7d32"
-
-if(prob>60) color="#c62828"
-else if(prob>40) color="#fb8c00"
-else if(prob>20) color="#fdd835"
-
-droughtCircle=L.circle([lat,lon],{
-
-radius:40000,
-color:color,
-fillColor:color,
-fillOpacity:0.35
-
-}).addTo(map)
-
-}
-
-/* ---------------- CHARTS ---------------- */
-
-function drawAnnualChart(data){
-
-if(annualChart) annualChart.destroy()
-
-annualChart=new Chart(
-
-document.getElementById("annualChart"),
-
-{
-
-type:"bar",
-
-data:{
-labels:data.years,
-datasets:[{
-label:"Annual Rainfall (mm)",
-data:data.values
-}]
-},
-
-options:{
-responsive:true
-}
-
-})
-
-}
-
-function drawSeasonChart(data){
-
-if(seasonChart) seasonChart.destroy()
-
-const colors=data.values.map((v,i)=>{
-
-if(data.drought[i]) return "#e53935"
-if(data.wet[i]) return "#1e88e5"
-
-return "#4CAF50"
-
-})
-
-seasonChart=new Chart(
-
-document.getElementById("seasonChart"),
-
-{
-
-type:"bar",
-
-data:{
-labels:data.labels,
-datasets:[{
-label:"Season Rainfall Oct–Mar",
-data:data.values,
-backgroundColor:colors
-}]
-},
-
-options:{
-responsive:true
-}
-
-})
-
-}
-
-/* ---------------- ANALYSIS ---------------- */
-
-async function runAnalysis(){
-
-if(!selectedPoint){
-
-alert("Select farm location first")
+placePin({lat:lat,lng:lon})
 
 return
 
 }
 
-const daily=await fetchClimate(
+const url=`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`
 
-selectedPoint.lat,
-selectedPoint.lng
+const res=await fetch(url)
+const data=await res.json()
 
-)
+if(!data.length) return notify("Location not found")
 
-if(!daily) return
+const lat=parseFloat(data[0].lat)
+const lon=parseFloat(data[0].lon)
 
-const annual=annualRain(daily)
+map.setView([lat,lon],12)
 
-const season=seasonalRain(daily)
+placePin({lat:lat,lng:lon})
 
-const prob=droughtProbability(season)
+}
 
-drawAnnualChart(annual)
+/* ================================
+CLIMATE API
+================================ */
 
-drawSeasonChart(season)
+async function fetchClimate(lat,lon){
 
-drawDrought(selectedPoint.lat,selectedPoint.lng,prob)
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-01-01&end_date=2024-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
 
-document.getElementById("metrics").innerHTML=`
+const res=await fetch(url)
+
+if(!res.ok) throw new Error("Climate API error")
+
+return await res.json()
+
+}
+
+/* ================================
+SEASONAL ANALYSIS
+Oct–Apr Growing Season
+================================ */
+
+function analyzeClimate(data){
+
+const daily=data.daily
+const seasons={}
+
+for(let i=0;i<daily.time.length;i++){
+
+const date=new Date(daily.time[i])
+const year=date.getFullYear()
+const month=date.getMonth()+1
+
+let seasonYear=null
+
+if(month>=10) seasonYear=year
+if(month<=4) seasonYear=year-1
+
+if(seasonYear===null) continue
+
+if(!seasons[seasonYear]){
+
+seasons[seasonYear]={
+tempSum:0,
+tempDays:0,
+rain:0,
+frost:0
+}
+
+}
+
+const tmax=daily.temperature_2m_max[i]
+const tmin=daily.temperature_2m_min[i]
+const rain=daily.precipitation_sum[i]
+
+if(tmax!=null && tmin!=null){
+
+seasons[seasonYear].tempSum+=(tmax+tmin)/2
+seasons[seasonYear].tempDays++
+
+}
+
+if(rain!=null){
+
+seasons[seasonYear].rain+=rain
+
+}
+
+if(tmin!=null && tmin<=0){
+
+seasons[seasonYear].frost++
+
+}
+
+}
+
+const temps=[]
+const rain=[]
+const frost=[]
+
+for(const s in seasons){
+
+temps.push(seasons[s].tempSum/seasons[s].tempDays)
+rain.push(seasons[s].rain)
+frost.push(seasons[s].frost)
+
+}
+
+return{
+
+avgTemp:(temps.reduce((a,b)=>a+b)/temps.length).toFixed(1),
+avgRain:(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0),
+avgFrost:(frost.reduce((a,b)=>a+b)/frost.length).toFixed(0),
+seasons:temps.length
+
+}
+
+}
+
+/* ================================
+REPORT
+================================ */
+
+async function generateReport(){
+
+if(!lastLocation) return notify("Select location")
+
+notify("Fetching climate data...")
+
+try{
+
+const data=await fetchClimate(lastLocation.lat,lastLocation.lng)
+
+const result=analyzeClimate(data)
+
+showAnalysis(result)
+
+notify("Analysis complete")
+
+}catch(e){
+
+notify("Climate API error")
+
+}
+
+}
+
+function showAnalysis(r){
+
+const panel=document.getElementById("analysisPanel")
+
+panel.innerHTML=`
 
 <div class="metric">
-
-<div class="metric-title">Average Annual Rainfall</div>
-
-<div class="metric-value">${annual.avg} mm</div>
-
+<div class="metric-title">Average Seasonal Temperature</div>
+<div class="metric-value">${r.avgTemp} °C</div>
 </div>
 
 <div class="metric">
+<div class="metric-title">Average Seasonal Rainfall</div>
+<div class="metric-value">${r.avgRain} mm</div>
+</div>
 
-<div class="metric-title">Drought Probability</div>
+<div class="metric">
+<div class="metric-title">Average Seasonal Frost Days</div>
+<div class="metric-value">${r.avgFrost}</div>
+</div>
 
-<div class="metric-value">${prob}%</div>
-
+<div class="metric">
+<div class="metric-title">Seasons Analysed</div>
+<div class="metric-value">${r.seasons}</div>
 </div>
 
 `
 
+panel.style.display="block"
+
 }
+
+/* ================================
+UTILITY
+================================ */
+
+function notify(msg){
+
+const n=document.getElementById("notification")
+
+n.innerText=msg
+n.style.display="block"
+
+setTimeout(()=>{n.style.display="none"},3000)
+
+}
+
+/* ================================
+START
+================================ */
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+initMap()
+
+notify("PlaasRisk ready")
+
+})
 
 </script>
 
