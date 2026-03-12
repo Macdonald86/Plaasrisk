@@ -72,6 +72,7 @@ color:#2e7d32;
 
 canvas{
 margin-top:20px;
+max-height:400px;
 }
 
 </style>
@@ -156,7 +157,11 @@ return
 
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
 
-const r=await fetch(url)
+const r=await fetch(url,{
+headers:{
+"User-Agent":"PlaasRisk Climate Tool"
+}
+})
 
 const data=await r.json()
 
@@ -213,7 +218,7 @@ const startYear=today.getFullYear()-20
 
 const startDate=startYear+"-01-01"
 
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&models=best_match&timezone=auto`
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum&timezone=auto`
 
 const r=await fetch(url)
 
@@ -252,9 +257,13 @@ function annualRain(daily){
 let rain={}
 let days={}
 
+const currentYear=new Date().getFullYear()
+
 daily.time.forEach((d,i)=>{
 
 const y=new Date(d).getFullYear()
+
+if(y===currentYear) return
 
 if(!rain[y]){
 
@@ -272,7 +281,7 @@ const years=Object.keys(rain)
 
 const values=years.map(y=>rain[y])
 
-const avg=values.reduce((a,b)=>a+b)/values.length
+const avg=values.reduce((a,b)=>a+b,0)/values.length
 
 return{
 
@@ -289,7 +298,10 @@ avg:avg.toFixed(0)
 function seasonalRain(daily){
 
 let seasons={}
-let days={}
+let counts={}
+
+const today=new Date()
+const currentYear=today.getFullYear()
 
 daily.time.forEach((d,i)=>{
 
@@ -304,18 +316,19 @@ if(m>=10) s=y
 else if(m<=3) s=y-1
 else return
 
+if(s===currentYear) return
+
 const label=s+"/"+(s+1)
 
 if(!seasons[label]){
 
 seasons[label]=0
-days[label]=0
+counts[label]=0
 
 }
 
 seasons[label]+=daily.precipitation_sum[i]||0
-
-days[label]++
+counts[label]++
 
 })
 
@@ -329,7 +342,7 @@ labels=labels.slice(-window)
 
 const values=labels.map(l=>seasons[l])
 
-const avg=values.reduce((a,b)=>a+b)/values.length
+const avg=values.reduce((a,b)=>a+b,0)/values.length
 
 const drought=[]
 const wet=[]
@@ -409,9 +422,12 @@ data:{
 labels:data.years,
 datasets:[{
 label:"Annual Rainfall (mm)",
-data:data.values,
-backgroundColor:"#4CAF50"
+data:data.values
 }]
+},
+
+options:{
+responsive:true
 }
 
 })
@@ -446,6 +462,10 @@ label:"Season Rainfall Oct–Mar",
 data:data.values,
 backgroundColor:colors
 }]
+},
+
+options:{
+responsive:true
 }
 
 })
@@ -510,5 +530,4 @@ document.getElementById("metrics").innerHTML=`
 </script>
 
 </body>
-
 </html>
