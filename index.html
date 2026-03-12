@@ -1,48 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>PlaasRisk Climate Intelligence</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#f4f7f4;}
+
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+font-family:Arial;
+background:#f4f7f4;
+}
+
+/* CONTROL BAR */
 
 .control-bar{
 display:flex;
-gap:10px;
+flex-wrap:wrap;
+gap:8px;
 padding:10px;
 background:white;
 border-bottom:1px solid #ddd;
 align-items:center;
 }
 
+.control-bar input{
+flex:1;
+min-width:180px;
+padding:8px;
+border:1px solid #ccc;
+border-radius:6px;
+}
+
 button{
 background:#2e7d32;
 border:none;
 color:white;
-padding:8px 14px;
+padding:10px 14px;
 border-radius:6px;
 cursor:pointer;
+font-size:14px;
 }
 
-button:hover{background:#1b5e20;}
+button:hover{
+background:#1b5e20;
+}
 
-input{padding:8px;border:1px solid #ccc;border-radius:6px;}
+.status-bar{
+margin-left:auto;
+font-size:13px;
+color:#555;
+}
 
-.status-bar{margin-left:auto;font-size:13px;color:#555;}
+/* MAP */
 
-#map{height:80vh;}
+#map{
+height:calc(100vh - 60px);
+}
+
+/* REPORT PANEL */
 
 .analysis-panel{
 position:absolute;
 top:100px;
 right:20px;
 width:380px;
+max-width:95vw;
 background:white;
 border-radius:10px;
 box-shadow:0 4px 20px rgba(0,0,0,0.25);
@@ -61,13 +96,24 @@ font-weight:bold;
 
 .panel-body{
 padding:15px;
-max-height:70vh;
+max-height:65vh;
 overflow:auto;
 }
 
-.metric{margin-bottom:12px;}
-.metric-title{font-size:13px;color:#444;}
-.metric-value{font-size:20px;font-weight:bold;color:#2e7d32;}
+.metric{
+margin-bottom:12px;
+}
+
+.metric-title{
+font-size:13px;
+color:#444;
+}
+
+.metric-value{
+font-size:20px;
+font-weight:bold;
+color:#2e7d32;
+}
 
 .error-box{
 position:absolute;
@@ -82,31 +128,71 @@ display:none;
 z-index:20000;
 }
 
-canvas{margin-top:20px;}
+/* MOBILE PANEL */
+
+@media(max-width:700px){
+
+.analysis-panel{
+top:auto;
+bottom:0;
+right:0;
+left:0;
+width:100%;
+border-radius:15px 15px 0 0;
+max-height:65vh;
+}
+
+.panel-body{
+max-height:55vh;
+}
+
+button{
+flex:1;
+}
+
+}
+
+canvas{
+margin-top:20px;
+}
+
 </style>
 </head>
 
 <body>
 
 <div class="control-bar">
+
 <input id="searchInput" placeholder="Search location or lat,lon">
+
 <button onclick="searchLocation()">Search</button>
-<button onclick="activatePinMode()">Drop Pin</button>
+<button onclick="activatePinMode()">Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
+
 <div class="status-bar" id="statusBar">Ready</div>
+
 </div>
 
 <div id="map"></div>
+
 <div class="error-box" id="errorBox"></div>
 
 <div class="analysis-panel" id="analysisPanel">
-<div class="panel-header" id="panelHeader">Farm Climate Analysis</div>
+
+<div class="panel-header" id="panelHeader">
+Farm Climate Analysis
+</div>
+
 <div class="panel-body">
+
 <div id="metrics"></div>
+
 <canvas id="rainChart"></canvas>
 <canvas id="seasonChart"></canvas>
+
 </div>
+
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -114,10 +200,13 @@ canvas{margin-top:20px;}
 
 <script>
 
+/* GLOBAL */
+
 let map
 let marker
 let drawnItems
 let selectedPoint=null
+
 let rainChart=null
 let seasonalChart=null
 
@@ -126,10 +215,13 @@ document.getElementById("statusBar").innerText=t
 }
 
 function showError(msg){
+
 const box=document.getElementById("errorBox")
 box.innerText=msg
 box.style.display="block"
+
 setTimeout(()=>{box.style.display="none"},4000)
+
 }
 
 /* MAP */
@@ -154,10 +246,15 @@ edit:{featureGroup:drawnItems}
 map.addControl(drawControl)
 
 map.on(L.Draw.Event.CREATED,function(e){
+
 drawnItems.clearLayers()
+
 const layer=e.layer
+
 drawnItems.addLayer(layer)
+
 selectedPoint=layer.getBounds().getCenter()
+
 })
 
 }
@@ -179,6 +276,7 @@ return
 }
 
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
+
 const r=await fetch(url)
 const d=await r.json()
 
@@ -188,7 +286,7 @@ setPoint(d[0].lat,d[0].lon)
 showError("Location not found")
 }
 
-}catch(e){
+}catch{
 showError("Search failed")
 }
 
@@ -202,6 +300,7 @@ lon=Number(lon)
 if(marker) map.removeLayer(marker)
 
 marker=L.marker([lat,lon]).addTo(map)
+
 map.setView([lat,lon],10)
 
 selectedPoint={lat:lat,lng:lon}
@@ -211,18 +310,25 @@ selectedPoint={lat:lat,lng:lon}
 /* PIN */
 
 function activatePinMode(){
+
 map.once("click",function(e){
 setPoint(e.latlng.lat,e.latlng.lng)
 })
+
 }
 
 /* RESET */
 
 function resetMap(){
+
 drawnItems.clearLayers()
+
 if(marker) map.removeLayer(marker)
+
 selectedPoint=null
+
 document.getElementById("analysisPanel").style.display="none"
+
 }
 
 /* CLIMATE API */
@@ -234,6 +340,7 @@ const today=new Date().toISOString().split("T")[0]
 const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${today}&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
 
 const r=await fetch(url)
+
 if(!r.ok) throw new Error("API error")
 
 return await r.json()
@@ -250,8 +357,7 @@ let yearlyDays={}
 
 daily.time.forEach((d,i)=>{
 
-const date=new Date(d)
-const year=date.getFullYear()
+const year=new Date(d).getFullYear()
 
 if(!yearlyRain[year]){
 yearlyRain[year]=0
@@ -313,7 +419,7 @@ seasonDays[label]++
 
 })
 
-const labels=Object.keys(seasons).filter(l => seasonDays[l] >= 170)
+const labels=Object.keys(seasons).filter(l=>seasonDays[l]>=170)
 
 const values=labels.map(l=>seasons[l])
 
@@ -418,7 +524,8 @@ label:"Annual Rainfall (mm)",
 data:c.rain,
 backgroundColor:"#4CAF50"
 }]
-}
+},
+options:{responsive:true}
 })
 
 }
@@ -443,7 +550,8 @@ label:"Seasonal Rainfall (Oct–Mar)",
 data:s.values,
 backgroundColor:colors
 }]
-}
+},
+options:{responsive:true}
 
 })
 
@@ -460,6 +568,7 @@ let offsetX,offsetY
 header.addEventListener("mousedown",function(e){
 
 dragging=true
+
 offsetX=e.clientX-panel.offsetLeft
 offsetY=e.clientY-panel.offsetTop
 
