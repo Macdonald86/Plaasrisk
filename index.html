@@ -202,16 +202,21 @@ setPoint(d[0].lat,d[0].lon)
 
 function setPoint(lat,lon){
 
+lat = Number(lat)
+lon = Number(lon)
+
 if(marker) map.removeLayer(marker)
 
-marker=L.marker([lat,lon]).addTo(map)
+marker = L.marker([lat,lon]).addTo(map)
 
 map.setView([lat,lon],10)
 
-selectedPoint={lat:parseFloat(lat),lng:parseFloat(lon)}
-
+selectedPoint = {
+lat: lat,
+lng: lon
 }
 
+}
 
 /* ---------------- PIN MODE ---------------- */
 
