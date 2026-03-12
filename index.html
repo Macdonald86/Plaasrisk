@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
 <meta charset="UTF-8">
@@ -7,7 +8,7 @@
 
 <title>PlaasRisk Climate Intelligence</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -16,7 +17,7 @@
 body{
 margin:0;
 font-family:Arial;
-background:#f5f7f5;
+background:#f4f7f4;
 }
 
 .control-bar{
@@ -28,10 +29,11 @@ border-bottom:1px solid #ddd;
 flex-wrap:wrap;
 }
 
-.control-bar input,select{
+.control-bar input,
+.control-bar select{
 padding:8px;
-border-radius:6px;
 border:1px solid #ccc;
+border-radius:6px;
 }
 
 button{
@@ -45,6 +47,7 @@ cursor:pointer;
 
 #map{
 height:60vh;
+width:100%;
 }
 
 .panel{
@@ -79,12 +82,12 @@ margin-top:20px;
 
 <div class="control-bar">
 
-<input id="searchBox" placeholder="Search location or lat,lon">
+<input id="searchBox" placeholder="Search place or lat,lon">
 
 <select id="seasonWindow">
-<option value="5">5 Years</option>
-<option value="10" selected>10 Years</option>
-<option value="15">15 Years</option>
+<option value="5">5 years</option>
+<option value="10" selected>10 years</option>
+<option value="15">15 years</option>
 </select>
 
 <button onclick="searchLocation()">Search</button>
@@ -126,14 +129,16 @@ map=L.map("map").setView([-25.7,28.2],6)
 
 L.tileLayer(
 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{maxZoom:19}
-).addTo(map)
+{
+maxZoom:19,
+attribution:"© OpenStreetMap"
+}).addTo(map)
 
 }
 
 initMap()
 
-/* ------------ LOCATION SEARCH ------------ */
+/* ---------------- SEARCH ---------------- */
 
 async function searchLocation(){
 
@@ -152,17 +157,25 @@ return
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
 
 const r=await fetch(url)
+
 const data=await r.json()
 
 if(data.length>0){
 
 setPoint(data[0].lat,data[0].lon)
 
+}else{
+
+alert("Location not found")
+
 }
 
 }
 
 function setPoint(lat,lon){
+
+lat=Number(lat)
+lon=Number(lon)
 
 if(marker) map.removeLayer(marker)
 
@@ -174,7 +187,7 @@ selectedPoint={lat:lat,lng:lon}
 
 }
 
-/* -------- DROP PIN -------- */
+/* ---------------- DROP PIN ---------------- */
 
 function enablePin(){
 
@@ -186,9 +199,11 @@ setPoint(e.latlng.lat,e.latlng.lng)
 
 }
 
-/* -------- FETCH CLIMATE -------- */
+/* ---------------- FETCH CLIMATE ---------------- */
 
 async function fetchClimate(lat,lon){
+
+try{
 
 const today=new Date()
 
@@ -198,25 +213,39 @@ const startYear=today.getFullYear()-20
 
 const startDate=startYear+"-01-01"
 
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&timezone=auto`
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&models=best_match&timezone=auto`
 
 const r=await fetch(url)
 
 if(!r.ok){
 
-alert("Climate API error")
-
-return null
+throw new Error("API request failed")
 
 }
 
 const data=await r.json()
 
-return data.daily
+if(!data.daily){
+
+throw new Error("No climate data returned")
 
 }
 
-/* -------- ANNUAL RAIN -------- */
+return data.daily
+
+}catch(err){
+
+console.error(err)
+
+alert("Climate data could not be loaded.")
+
+return null
+
+}
+
+}
+
+/* ---------------- ANNUAL RAIN ---------------- */
 
 function annualRain(daily){
 
@@ -235,7 +264,6 @@ days[y]=0
 }
 
 rain[y]+=daily.precipitation_sum[i]||0
-
 days[y]++
 
 })
@@ -248,15 +276,15 @@ const avg=values.reduce((a,b)=>a+b)/values.length
 
 return{
 
-years:years,
-values:values,
+years,
+values,
 avg:avg.toFixed(0)
 
 }
 
 }
 
-/* -------- SEASONAL RAIN -------- */
+/* ---------------- SEASONAL RAIN ---------------- */
 
 function seasonalRain(daily){
 
@@ -268,7 +296,6 @@ daily.time.forEach((d,i)=>{
 const date=new Date(d)
 
 const m=date.getMonth()+1
-
 const y=date.getFullYear()
 
 let s
@@ -309,9 +336,8 @@ const wet=[]
 
 labels.forEach((l,i)=>{
 
-drought.push(values[i] < avg*0.75)
-
-wet.push(values[i] > avg*1.25)
+drought.push(values[i]<avg*0.75)
+wet.push(values[i]>avg*1.25)
 
 })
 
@@ -326,7 +352,7 @@ wet
 
 }
 
-/* -------- DROUGHT PROBABILITY -------- */
+/* ---------------- DROUGHT PROBABILITY ---------------- */
 
 function droughtProbability(season){
 
@@ -342,7 +368,7 @@ return ((d/season.labels.length)*100).toFixed(1)
 
 }
 
-/* -------- DRAW DROUGHT MAP -------- */
+/* ---------------- MAP RISK CIRCLE ---------------- */
 
 function drawDrought(lat,lon,prob){
 
@@ -365,7 +391,7 @@ fillOpacity:0.35
 
 }
 
-/* -------- CHARTS -------- */
+/* ---------------- CHARTS ---------------- */
 
 function drawAnnualChart(data){
 
@@ -399,7 +425,6 @@ if(seasonChart) seasonChart.destroy()
 const colors=data.values.map((v,i)=>{
 
 if(data.drought[i]) return "#e53935"
-
 if(data.wet[i]) return "#1e88e5"
 
 return "#4CAF50"
@@ -427,7 +452,7 @@ backgroundColor:colors
 
 }
 
-/* -------- ANALYSIS -------- */
+/* ---------------- ANALYSIS ---------------- */
 
 async function runAnalysis(){
 
@@ -485,4 +510,5 @@ document.getElementById("metrics").innerHTML=`
 </script>
 
 </body>
+
 </html>
