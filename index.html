@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>PlaasRisk Climate Intelligence</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+
 body{
 margin:0;
 font-family:Arial;
 background:#f4f7f4;
 }
 
+/* CONTROL BAR */
+
 .control-bar{
 display:flex;
-gap:10px;
+flex-wrap:wrap;
+gap:8px;
 padding:10px;
 background:white;
 border-bottom:1px solid #ddd;
@@ -40,6 +47,8 @@ input{
 padding:8px;
 border:1px solid #ccc;
 border-radius:6px;
+flex:1;
+min-width:180px;
 }
 
 .status-bar{
@@ -48,27 +57,34 @@ font-size:13px;
 color:#555;
 }
 
-#map{height:80vh;}
+/* MAP */
+
+#map{
+height:80vh;
+width:100%;
+}
+
+/* PANEL */
 
 .analysis-panel{
 position:absolute;
 top:100px;
 right:20px;
-width:380px;
+width:360px;
+max-width:90%;
 background:white;
 border-radius:10px;
 box-shadow:0 4px 20px rgba(0,0,0,0.25);
 display:none;
 z-index:10000;
-overflow:hidden;
 }
 
 .panel-header{
 background:#2e7d32;
 color:white;
 padding:10px;
-cursor:move;
 font-weight:bold;
+cursor:move;
 }
 
 .panel-body{
@@ -76,6 +92,8 @@ padding:15px;
 max-height:70vh;
 overflow:auto;
 }
+
+/* METRICS */
 
 .metric{
 margin-bottom:12px;
@@ -92,6 +110,8 @@ font-weight:bold;
 color:#2e7d32;
 }
 
+/* ERROR */
+
 .error-box{
 position:absolute;
 top:80px;
@@ -105,19 +125,26 @@ display:none;
 z-index:20000;
 }
 
-canvas{margin-top:20px;}
+canvas{
+margin-top:20px;
+}
+
 </style>
 </head>
 
 <body>
 
 <div class="control-bar">
+
 <input id="searchInput" placeholder="Search location or lat,lon">
+
 <button onclick="searchLocation()">Search</button>
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
+
 <div class="status-bar" id="statusBar">Ready</div>
+
 </div>
 
 <div id="map"></div>
@@ -125,13 +152,22 @@ canvas{margin-top:20px;}
 <div class="error-box" id="errorBox"></div>
 
 <div class="analysis-panel" id="analysisPanel">
-<div class="panel-header" id="panelHeader">Farm Climate Analysis</div>
+
+<div class="panel-header" id="panelHeader">
+Farm Climate Analysis
+</div>
+
 <div class="panel-body">
+
 <div id="metrics"></div>
+
 <canvas id="rainChart"></canvas>
+
 <canvas id="seasonChart"></canvas>
+
 </div>
 </div>
+
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -142,18 +178,25 @@ let map
 let marker
 let drawnItems
 let selectedPoint=null
+
 let rainChart=null
 let seasonalChart=null
 
-function setStatus(text){
-document.getElementById("statusBar").innerText=text
+/* STATUS */
+
+function setStatus(t){
+document.getElementById("statusBar").innerText=t
 }
 
 function showError(msg){
+
 const box=document.getElementById("errorBox")
+
 box.innerText=msg
 box.style.display="block"
+
 setTimeout(()=>{box.style.display="none"},4000)
+
 }
 
 /* MAP */
@@ -165,25 +208,41 @@ map=L.map("map").setView([-25.7,28.2],6)
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map)
 
 drawnItems=new L.FeatureGroup()
+
 map.addLayer(drawnItems)
 
 const drawControl=new L.Control.Draw({
-draw:{polygon:true,rectangle:true,circle:false,polyline:false,marker:false},
+
+draw:{
+polygon:true,
+rectangle:true,
+circle:false,
+polyline:false,
+marker:false
+},
+
 edit:{featureGroup:drawnItems}
+
 })
 
 map.addControl(drawControl)
 
 map.on(L.Draw.Event.CREATED,function(e){
+
 drawnItems.clearLayers()
+
 const layer=e.layer
+
 drawnItems.addLayer(layer)
+
 selectedPoint=layer.getBounds().getCenter()
+
 })
 
 }
 
 window.onload=initMap
+
 
 /* SEARCH */
 
@@ -194,62 +253,87 @@ const q=document.getElementById("searchInput").value
 try{
 
 if(q.includes(",")){
+
 const p=q.split(",")
+
 setPoint(parseFloat(p[0]),parseFloat(p[1]))
+
 return
+
 }
 
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
+
 const r=await fetch(url)
+
 const d=await r.json()
 
 if(d.length>0){
-setPoint(d[0].lat,d[0].lon)
+
+setPoint(parseFloat(d[0].lat),parseFloat(d[0].lon))
+
 }else{
+
 showError("Location not found")
+
 }
 
-}catch(e){showError("Search failed")}
+}catch(e){
+
+showError("Search failed")
+
+}
+
 }
 
 function setPoint(lat,lon){
-lat=Number(lat)
-lon=Number(lon)
 
 if(marker) map.removeLayer(marker)
 
 marker=L.marker([lat,lon]).addTo(map)
+
 map.setView([lat,lon],10)
 
 selectedPoint={lat:lat,lng:lon}
+
 }
 
-/* PIN */
+/* PIN MODE */
 
 function activatePinMode(){
+
 map.once("click",function(e){
+
 setPoint(e.latlng.lat,e.latlng.lng)
+
 })
+
 }
 
 /* RESET */
 
 function resetMap(){
+
 drawnItems.clearLayers()
+
 if(marker) map.removeLayer(marker)
+
 selectedPoint=null
+
 document.getElementById("analysisPanel").style.display="none"
+
 }
 
 /* CLIMATE API */
 
 async function fetchClimate(lat,lon){
 
-const today=new Date().toISOString().split("T")[0]
+const endYear=new Date().getFullYear()-1
 
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${today}&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
 
 const r=await fetch(url)
+
 if(!r.ok) throw new Error("API error")
 
 return await r.json()
@@ -265,32 +349,32 @@ let yearlyFrost={}
 
 daily.time.forEach((d,i)=>{
 
-const year=new Date(d).getFullYear()
+const y=new Date(d).getFullYear()
 
-if(!yearlyRain[year]){
-yearlyRain[year]=0
-yearlyFrost[year]=0
+if(!yearlyRain[y]){
+
+yearlyRain[y]=0
+yearlyFrost[y]=0
+
 }
 
-yearlyRain[year]+=daily.precipitation_sum[i]||0
+yearlyRain[y]+=daily.precipitation_sum[i]||0
 
-if(daily.temperature_2m_min[i]<=0) yearlyFrost[year]++
+if(daily.temperature_2m_min[i]<=0) yearlyFrost[y]++
 
 })
 
 const years=Object.keys(yearlyRain)
 
 const rain=years.map(y=>yearlyRain[y])
+
 const frost=years.map(y=>yearlyFrost[y])
 
-const avgRain=rain.reduce((a,b)=>a+b)/rain.length
-const avgFrost=frost.reduce((a,b)=>a+b)/frost.length
+const avgRain=(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0)
 
-return{
-years,rain,frost,
-avgRain:avgRain.toFixed(0),
-avgFrost:avgFrost.toFixed(1)
-}
+const avgFrost=(frost.reduce((a,b)=>a+b)/frost.length).toFixed(1)
+
+return{years,rain,frost,avgRain,avgFrost}
 
 }
 
@@ -303,7 +387,9 @@ let seasons={}
 daily.time.forEach((d,i)=>{
 
 const date=new Date(d)
+
 const m=date.getMonth()+1
+
 const y=date.getFullYear()
 
 let s
@@ -320,24 +406,34 @@ seasons[label]+=daily.precipitation_sum[i]||0
 
 })
 
+/* remove current incomplete season */
+
 const labels=Object.keys(seasons)
+
+labels.pop()
+
 const values=labels.map(l=>seasons[l])
 
 const avg=values.reduce((a,b)=>a+b)/values.length
 
 const drought=values.map(v=>v<avg*0.75)
+
 const wet=values.map(v=>v>avg*1.25)
 
 return{labels,values,drought,wet}
+
 }
 
-/* ANALYSIS */
+/* RUN ANALYSIS */
 
 async function runAnalysis(){
 
 if(!selectedPoint){
-showError("Select a farm location first")
+
+showError("Select a location first")
+
 return
+
 }
 
 try{
@@ -349,10 +445,13 @@ const data=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 setStatus("Processing climate data...")
 
 const climate=processClimate(data.daily)
+
 const season=seasonalRain(data.daily)
 
 showMetrics(climate)
+
 drawRainChart(climate)
+
 drawSeasonChart(season)
 
 document.getElementById("analysisPanel").style.display="block"
@@ -362,7 +461,9 @@ setStatus("Analysis complete")
 }catch(e){
 
 console.error(e)
-showError("Climate data could not be loaded")
+
+showError("Climate API error")
+
 setStatus("Error")
 
 }
@@ -398,14 +499,16 @@ if(rainChart) rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
 
 type:"bar",
+
 data:{
 labels:c.years,
 datasets:[{
 label:"Annual Rainfall (mm)",
-data:c.rain,
-backgroundColor:"#4CAF50"
+data:c.rain
 }]
-}
+},
+
+options:{responsive:true}
 
 })
 
@@ -416,14 +519,19 @@ function drawSeasonChart(s){
 if(seasonalChart) seasonalChart.destroy()
 
 const colors=s.values.map((v,i)=>{
+
 if(s.drought[i]) return "#e53935"
+
 if(s.wet[i]) return "#1e88e5"
-return "#4CAF50"
+
+return "#43a047"
+
 })
 
 seasonalChart=new Chart(document.getElementById("seasonChart"),{
 
 type:"bar",
+
 data:{
 labels:s.labels,
 datasets:[{
@@ -431,39 +539,51 @@ label:"Seasonal Rainfall (Oct–Mar)",
 data:s.values,
 backgroundColor:colors
 }]
-}
+},
+
+options:{responsive:true}
 
 })
 
 }
 
-/* DRAG REPORT */
+/* DRAG PANEL */
 
 const panel=document.getElementById("analysisPanel")
+
 const header=document.getElementById("panelHeader")
 
 let dragging=false
-let offsetX,offsetY
+let offsetX
+let offsetY
 
-header.addEventListener("mousedown",function(e){
+header.onmousedown=function(e){
 
 dragging=true
+
 offsetX=e.clientX-panel.offsetLeft
+
 offsetY=e.clientY-panel.offsetTop
 
-})
+}
 
-document.addEventListener("mousemove",function(e){
+document.onmousemove=function(e){
 
 if(!dragging) return
 
 panel.style.left=(e.clientX-offsetX)+"px"
+
 panel.style.top=(e.clientY-offsetY)+"px"
+
 panel.style.right="auto"
 
-})
+}
 
-document.addEventListener("mouseup",function(){dragging=false})
+document.onmouseup=function(){
+
+dragging=false
+
+}
 
 </script>
 
