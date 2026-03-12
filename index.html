@@ -3,137 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>PlaasRisk Climate Intelligence</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
-
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 
-:root{
---primary:#2e7d32;
---secondary:#4caf50;
---light:#f5f9f5;
---border:#e0e0e0;
---text:#333;
---success:#4caf50;
---shadow:0 4px 20px rgba(0,0,0,0.08);
-}
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:'Poppins',sans-serif;
-}
-
 body{
-background:linear-gradient(135deg,#f5f9f5,#e8f5e9);
-color:var(--text);
-}
-
-.container{
-max-width:1600px;
-margin:auto;
-padding:10px;
-}
-
-.map-section{
-background:white;
-border-radius:16px;
-box-shadow:var(--shadow);
-overflow:hidden;
+font-family:Arial,Helvetica,sans-serif;
+margin:0;
+background:#f4f7f4;
 }
 
 #map{
-height:75vh;
+height:70vh;
 }
 
-.control-bar{
-display:flex;
-flex-wrap:wrap;
-gap:10px;
+.toolbar{
 padding:12px;
-border-bottom:1px solid var(--border);
-align-items:center;
-}
-
-.logo{
-font-weight:700;
-color:var(--primary);
-font-size:1.3rem;
-}
-
-.form-control{
-padding:8px;
-border-radius:8px;
-border:1px solid var(--border);
-}
-
-.btn{
-padding:8px 14px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-font-weight:500;
-}
-
-.btn-primary{
-background:var(--primary);
-color:white;
-}
-
-.btn-outline{
-border:1px solid var(--primary);
 background:white;
-color:var(--primary);
+display:flex;
+gap:10px;
+align-items:center;
+border-bottom:1px solid #ddd;
 }
 
-.analysis-panel{
+input{
+padding:8px;
+width:250px;
+}
+
+button{
+padding:8px 14px;
+background:#2e7d32;
+color:white;
+border:none;
+cursor:pointer;
+}
+
+button:hover{
+background:#1b5e20;
+}
+
+.panel{
 position:absolute;
-top:90px;
 right:20px;
+top:120px;
 width:320px;
 background:white;
-padding:20px;
-border-radius:12px;
-box-shadow:var(--shadow);
+border-radius:8px;
+padding:15px;
+box-shadow:0 6px 18px rgba(0,0,0,0.2);
 display:none;
 }
 
 .metric{
-margin-bottom:12px;
+margin-bottom:15px;
 }
 
-.metric-title{
-font-size:0.85rem;
-color:#777;
+.metric h4{
+margin:0;
+font-size:14px;
+color:#666;
 }
 
-.metric-value{
-font-size:1.3rem;
-font-weight:600;
-color:var(--primary);
-}
-
-.notification{
-position:fixed;
-top:20px;
-right:20px;
-background:var(--success);
-color:white;
-padding:10px 16px;
-border-radius:8px;
-display:none;
-}
-
-footer{
-margin-top:10px;
-font-size:0.8rem;
-text-align:center;
+.metric span{
+font-size:22px;
+font-weight:bold;
 }
 
 </style>
@@ -141,381 +78,280 @@ text-align:center;
 
 <body>
 
-<div class="container">
+<div class="toolbar">
 
-<div class="map-section">
+<input id="searchInput" placeholder="Search location or lat,lon">
 
-<div class="control-bar">
+<button onclick="searchLocation()">Search</button>
 
-<div class="logo">
-<i class="fas fa-seedling"></i> PlaasRisk
-</div>
-
-<input id="searchInput" class="form-control" placeholder="Search location or lat,long"/>
-
-<button class="btn btn-primary" onclick="searchLocation()">Search</button>
-
-<button class="btn btn-outline" onclick="activatePinMode()">Drop Pin</button>
-
-<button class="btn btn-primary" onclick="generateReport()">Analyze</button>
-
-<button class="btn btn-outline" onclick="resetMap()">Clear</button>
+<button onclick="generateReport()">Analyze Climate</button>
 
 </div>
 
 <div id="map"></div>
 
+<div id="analysisPanel" class="panel">
+<h3>Climate Analysis</h3>
+
+<div class="metric">
+<h4>Annual Avg Temperature</h4>
+<span id="avgTemp"></span>
 </div>
 
-<div id="analysisPanel" class="analysis-panel"></div>
-
-<footer>
-Farm Climate Intelligence • Powered by Open-Meteo ERA5
-</footer>
-
+<div class="metric">
+<h4>Annual Rainfall</h4>
+<span id="avgRain"></span>
 </div>
 
-<div id="notification" class="notification"></div>
+<div class="metric">
+<h4>Temperature Trend</h4>
+<span id="trendTemp"></span>
+</div>
+
+<div class="metric">
+<h4>Rainfall Trend</h4>
+<span id="trendRain"></span>
+</div>
+
+<div class="metric">
+<h4>Years Analyzed</h4>
+<span id="years"></span>
+</div>
+
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
 
-/* ================================
-MAP
-================================ */
+/* =========================
+MAP INITIALIZATION
+========================= */
 
 let map
-let currentMarker=null
-let lastLocation=null
-let pinMode=false
-let pinHandler=null
-let drawnItems
+let marker
+let selectedLat
+let selectedLon
 
-function initMap(){
-
-map=L.map("map").setView([-25,30],5)
+map = L.map('map').setView([-25,30],5)
 
 L.tileLayer(
-"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-{maxZoom:19}
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{maxZoom:18}
 ).addTo(map)
 
-drawnItems=new L.FeatureGroup()
-map.addLayer(drawnItems)
+map.on("click",function(e){
 
-const drawControl=new L.Control.Draw({
-draw:{
-polygon:true,
-rectangle:false,
-circle:false,
-polyline:false,
-marker:false,
-circlemarker:false
-},
-edit:{featureGroup:drawnItems}
-})
+selectedLat = e.latlng.lat
+selectedLon = e.latlng.lng
 
-map.addControl(drawControl)
+if(marker) map.removeLayer(marker)
 
-map.on(L.Draw.Event.CREATED,function(e){
-
-drawnItems.addLayer(e.layer)
-
-const center=e.layer.getBounds().getCenter()
-
-lastLocation=center
-
-notify("Farm boundary added")
+marker = L.marker(e.latlng).addTo(map)
 
 })
 
-}
-
-/* ================================
-PIN MODE
-================================ */
-
-function activatePinMode(){
-
-pinMode=!pinMode
-
-if(pinMode){
-
-notify("Click map to drop pin")
-
-pinHandler=function(e){
-
-placePin(e.latlng)
-
-map.off("click",pinHandler)
-
-pinMode=false
-
-}
-
-map.on("click",pinHandler)
-
-}else{
-
-map.off("click",pinHandler)
-
-}
-
-}
-
-function placePin(latlng){
-
-if(currentMarker) map.removeLayer(currentMarker)
-
-currentMarker=L.marker(latlng).addTo(map)
-
-lastLocation=latlng
-
-notify("Pin placed")
-
-}
-
-function resetMap(){
-
-drawnItems.clearLayers()
-
-if(currentMarker) map.removeLayer(currentMarker)
-
-lastLocation=null
-
-document.getElementById("analysisPanel").style.display="none"
-
-notify("Map cleared")
-
-}
-
-/* ================================
-LOCATION SEARCH
-================================ */
+/* =========================
+SEARCH LOCATION
+========================= */
 
 async function searchLocation(){
 
-const q=document.getElementById("searchInput").value.trim()
+let query = document.getElementById("searchInput").value
 
-if(!q) return notify("Enter location")
+if(!query) return
 
-const coord=q.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
+if(query.includes(",")){
 
-if(coord){
+let parts = query.split(",")
 
-const lat=parseFloat(coord[1])
-const lon=parseFloat(coord[2])
+selectedLat = parseFloat(parts[0])
+selectedLon = parseFloat(parts[1])
 
-map.setView([lat,lon],12)
+map.setView([selectedLat,selectedLon],10)
 
-placePin({lat:lat,lng:lon})
+if(marker) map.removeLayer(marker)
+
+marker = L.marker([selectedLat,selectedLon]).addTo(map)
 
 return
 
 }
 
-const url=`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`
+let url =
+`https://nominatim.openstreetmap.org/search?format=json&q=${query}`
 
-const res=await fetch(url)
-const data=await res.json()
+let res = await fetch(url)
 
-if(!data.length) return notify("Location not found")
+let data = await res.json()
 
-const lat=parseFloat(data[0].lat)
-const lon=parseFloat(data[0].lon)
+if(data.length===0) return
 
-map.setView([lat,lon],12)
+selectedLat = parseFloat(data[0].lat)
+selectedLon = parseFloat(data[0].lon)
 
-placePin({lat:lat,lng:lon})
+map.setView([selectedLat,selectedLon],10)
 
-}
+if(marker) map.removeLayer(marker)
 
-/* ================================
-CLIMATE API
-================================ */
-
-async function fetchClimate(lat,lon){
-
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-01-01&end_date=2024-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
-
-const res=await fetch(url)
-
-if(!res.ok) throw new Error("Climate API error")
-
-return await res.json()
+marker = L.marker([selectedLat,selectedLon]).addTo(map)
 
 }
 
-/* ================================
-SEASONAL ANALYSIS
-Oct–Apr Growing Season
-================================ */
+/* =========================
+FETCH HISTORICAL CLIMATE
+========================= */
 
-function analyzeClimate(data){
+async function fetchClimate(){
 
-const daily=data.daily
-const seasons={}
+let start = "2000-01-01"
 
-for(let i=0;i<daily.time.length;i++){
+let end = new Date().toISOString().split("T")[0]
 
-const date=new Date(daily.time[i])
-const year=date.getFullYear()
-const month=date.getMonth()+1
+let url =
+`https://archive-api.open-meteo.com/v1/archive?latitude=${selectedLat}&longitude=${selectedLon}&start_date=${start}&end_date=${end}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
 
-let seasonYear=null
+let res = await fetch(url)
 
-if(month>=10) seasonYear=year
-if(month<=4) seasonYear=year-1
+let data = await res.json()
 
-if(seasonYear===null) continue
-
-if(!seasons[seasonYear]){
-
-seasons[seasonYear]={
-tempSum:0,
-tempDays:0,
-rain:0,
-frost:0
-}
+return data
 
 }
 
-const tmax=daily.temperature_2m_max[i]
-const tmin=daily.temperature_2m_min[i]
-const rain=daily.precipitation_sum[i]
+/* =========================
+PROCESS CLIMATE DATA
+========================= */
 
-if(tmax!=null && tmin!=null){
+function processClimate(data){
 
-seasons[seasonYear].tempSum+=(tmax+tmin)/2
-seasons[seasonYear].tempDays++
+let daily = data.daily
+
+let years = [...new Set(
+daily.time.map(d=>new Date(d).getFullYear())
+)]
+
+let annualTemp=[]
+let annualRain=[]
+
+years.forEach(year=>{
+
+let temps=[]
+let rain=0
+
+daily.time.forEach((d,i)=>{
+
+if(new Date(d).getFullYear()===year){
+
+let max=daily.temperature_2m_max[i]
+let min=daily.temperature_2m_min[i]
+
+if(max!=null && min!=null){
+
+temps.push((max+min)/2)
+
+}
+
+rain+=daily.precipitation_sum[i]||0
 
 }
 
-if(rain!=null){
+})
 
-seasons[seasonYear].rain+=rain
+if(temps.length>0){
 
-}
-
-if(tmin!=null && tmin<=0){
-
-seasons[seasonYear].frost++
+annualTemp.push(
+temps.reduce((a,b)=>a+b)/temps.length
+)
 
 }
 
-}
+annualRain.push(rain)
 
-const temps=[]
-const rain=[]
-const frost=[]
+})
 
-for(const s in seasons){
+let avgTemp =
+annualTemp.reduce((a,b)=>a+b)/annualTemp.length
 
-temps.push(seasons[s].tempSum/seasons[s].tempDays)
-rain.push(seasons[s].rain)
-frost.push(seasons[s].frost)
+let avgRain =
+annualRain.reduce((a,b)=>a+b)/annualRain.length
 
-}
+let tempTrend = linearTrend(annualTemp)
+
+let rainTrend = linearTrend(annualRain)
 
 return{
-
-avgTemp:(temps.reduce((a,b)=>a+b)/temps.length).toFixed(1),
-avgRain:(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0),
-avgFrost:(frost.reduce((a,b)=>a+b)/frost.length).toFixed(0),
-seasons:temps.length
-
+avgTemp,
+avgRain,
+tempTrend,
+rainTrend,
+years:years.length
 }
 
 }
 
-/* ================================
-REPORT
-================================ */
+/* =========================
+TREND CALCULATION
+========================= */
+
+function linearTrend(arr){
+
+let n=arr.length
+
+let sumX=0
+let sumY=0
+let sumXY=0
+let sumXX=0
+
+for(let i=0;i<n;i++){
+
+sumX+=i
+sumY+=arr[i]
+sumXY+=i*arr[i]
+sumXX+=i*i
+
+}
+
+return (n*sumXY - sumX*sumY)/(n*sumXX - sumX*sumX)
+
+}
+
+/* =========================
+GENERATE REPORT
+========================= */
 
 async function generateReport(){
 
-if(!lastLocation) return notify("Select location")
+if(!selectedLat){
 
-notify("Fetching climate data...")
+alert("Select a location first")
 
-try{
-
-const data=await fetchClimate(lastLocation.lat,lastLocation.lng)
-
-const result=analyzeClimate(data)
-
-showAnalysis(result)
-
-notify("Analysis complete")
-
-}catch(e){
-
-notify("Climate API error")
+return
 
 }
 
-}
+let data = await fetchClimate()
 
-function showAnalysis(r){
+let result = processClimate(data)
 
-const panel=document.getElementById("analysisPanel")
+document.getElementById("avgTemp").innerText =
+result.avgTemp.toFixed(1)+" °C"
 
-panel.innerHTML=`
+document.getElementById("avgRain").innerText =
+result.avgRain.toFixed(0)+" mm"
 
-<div class="metric">
-<div class="metric-title">Average Seasonal Temperature</div>
-<div class="metric-value">${r.avgTemp} °C</div>
-</div>
+document.getElementById("trendTemp").innerText =
+result.tempTrend.toFixed(3)+" °C/year"
 
-<div class="metric">
-<div class="metric-title">Average Seasonal Rainfall</div>
-<div class="metric-value">${r.avgRain} mm</div>
-</div>
+document.getElementById("trendRain").innerText =
+result.rainTrend.toFixed(2)+" mm/year"
 
-<div class="metric">
-<div class="metric-title">Average Seasonal Frost Days</div>
-<div class="metric-value">${r.avgFrost}</div>
-</div>
+document.getElementById("years").innerText =
+result.years
 
-<div class="metric">
-<div class="metric-title">Seasons Analysed</div>
-<div class="metric-value">${r.seasons}</div>
-</div>
-
-`
-
-panel.style.display="block"
+document.getElementById("analysisPanel").style.display="block"
 
 }
-
-/* ================================
-UTILITY
-================================ */
-
-function notify(msg){
-
-const n=document.getElementById("notification")
-
-n.innerText=msg
-n.style.display="block"
-
-setTimeout(()=>{n.style.display="none"},3000)
-
-}
-
-/* ================================
-START
-================================ */
-
-document.addEventListener("DOMContentLoaded",()=>{
-
-initMap()
-
-notify("PlaasRisk ready")
-
-})
 
 </script>
 
