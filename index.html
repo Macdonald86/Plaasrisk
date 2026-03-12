@@ -7,89 +7,54 @@
 
 <title>PlaasRisk Climate Intelligence</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 
-*{box-sizing:border-box;}
-
 body{
 margin:0;
 font-family:Arial;
-background:#f4f7f4;
+background:#f5f7f5;
 }
 
 .control-bar{
 display:flex;
-flex-wrap:wrap;
-gap:8px;
+gap:10px;
 padding:10px;
 background:white;
 border-bottom:1px solid #ddd;
-align-items:center;
+flex-wrap:wrap;
 }
 
 .control-bar input,select{
 padding:8px;
-border:1px solid #ccc;
 border-radius:6px;
+border:1px solid #ccc;
 }
 
 button{
 background:#2e7d32;
-border:none;
 color:white;
-padding:10px 14px;
+border:none;
+padding:9px 14px;
 border-radius:6px;
 cursor:pointer;
 }
 
-button:hover{
-background:#1b5e20;
-}
-
-.status-bar{
-margin-left:auto;
-font-size:13px;
-color:#555;
-}
-
 #map{
-height:calc(100vh - 60px);
+height:60vh;
 }
 
-.analysis-panel{
-position:absolute;
-top:100px;
-right:20px;
-width:380px;
-max-width:95vw;
-background:white;
-border-radius:10px;
-box-shadow:0 4px 20px rgba(0,0,0,0.25);
-display:none;
-z-index:10000;
-overflow:hidden;
-}
-
-.panel-header{
-background:#2e7d32;
-color:white;
-padding:10px;
-cursor:move;
-font-weight:bold;
-}
-
-.panel-body{
+.panel{
 padding:15px;
-max-height:65vh;
-overflow:auto;
+background:white;
 }
 
-.metric{margin-bottom:12px;}
+.metric{
+margin-bottom:10px;
+}
 
 .metric-title{
 font-size:13px;
@@ -97,7 +62,7 @@ color:#444;
 }
 
 .metric-value{
-font-size:20px;
+font-size:22px;
 font-weight:bold;
 color:#2e7d32;
 }
@@ -107,13 +72,14 @@ margin-top:20px;
 }
 
 </style>
+
 </head>
 
 <body>
 
 <div class="control-bar">
 
-<input id="searchInput" placeholder="Search location or lat,lon">
+<input id="searchBox" placeholder="Search location or lat,lon">
 
 <select id="seasonWindow">
 <option value="5">5 Years</option>
@@ -122,51 +88,37 @@ margin-top:20px;
 </select>
 
 <button onclick="searchLocation()">Search</button>
-<button onclick="activatePinMode()">Drop Pin</button>
-<button onclick="resetMap()">Clear</button>
+<button onclick="enablePin()">Drop Pin</button>
 <button onclick="runAnalysis()">Analyze</button>
-
-<div class="status-bar" id="statusBar">Ready</div>
 
 </div>
 
 <div id="map"></div>
 
-<div class="analysis-panel" id="analysisPanel">
-
-<div class="panel-header">
-Farm Climate Analysis
-</div>
-
-<div class="panel-body">
+<div class="panel">
 
 <div id="metrics"></div>
 
-<canvas id="rainChart"></canvas>
+<canvas id="annualChart"></canvas>
+
 <canvas id="seasonChart"></canvas>
 
 </div>
-</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
 
+/* ---------------- MAP ---------------- */
+
 let map
-let marker
-let drawnItems
+let marker=null
+let droughtCircle=null
+
+let annualChart=null
+let seasonChart=null
+
 let selectedPoint=null
-let droughtLayer=null
-
-let rainChart=null
-let seasonalChart=null
-
-function setStatus(t){
-document.getElementById("statusBar").innerText=t
-}
-
-/* MAP */
 
 function initMap(){
 
@@ -177,58 +129,40 @@ L.tileLayer(
 {maxZoom:19}
 ).addTo(map)
 
-drawnItems=new L.FeatureGroup()
-map.addLayer(drawnItems)
-
-const drawControl=new L.Control.Draw({
-draw:{polygon:true,rectangle:true,circle:false,polyline:false,marker:false},
-edit:{featureGroup:drawnItems}
-})
-
-map.addControl(drawControl)
-
-map.on(L.Draw.Event.CREATED,function(e){
-
-drawnItems.clearLayers()
-
-const layer=e.layer
-drawnItems.addLayer(layer)
-
-selectedPoint=layer.getBounds().getCenter()
-
-})
-
 }
 
-window.onload=initMap
+initMap()
 
-/* SEARCH */
+/* ------------ LOCATION SEARCH ------------ */
 
 async function searchLocation(){
 
-const q=document.getElementById("searchInput").value
+const q=document.getElementById("searchBox").value
 
 if(q.includes(",")){
+
 const p=q.split(",")
+
 setPoint(parseFloat(p[0]),parseFloat(p[1]))
+
 return
+
 }
 
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
 
 const r=await fetch(url)
-const d=await r.json()
+const data=await r.json()
 
-if(d.length>0){
-setPoint(d[0].lat,d[0].lon)
+if(data.length>0){
+
+setPoint(data[0].lat,data[0].lon)
+
 }
 
 }
 
 function setPoint(lat,lon){
-
-lat=Number(lat)
-lon=Number(lon)
 
 if(marker) map.removeLayer(marker)
 
@@ -240,37 +174,41 @@ selectedPoint={lat:lat,lng:lon}
 
 }
 
-function activatePinMode(){
+/* -------- DROP PIN -------- */
+
+function enablePin(){
 
 map.once("click",function(e){
+
 setPoint(e.latlng.lat,e.latlng.lng)
+
 })
 
 }
 
-function resetMap(){
-
-drawnItems.clearLayers()
-
-if(marker) map.removeLayer(marker)
-
-selectedPoint=null
-
-document.getElementById("analysisPanel").style.display="none"
-
-}
-
-/* FETCH CLIMATE */
+/* -------- FETCH CLIMATE -------- */
 
 async function fetchClimate(lat,lon){
 
-const endDate=new Date().toISOString().split("T")[0]
+const today=new Date()
 
-const startYear=new Date().getFullYear()-20
+const endDate=today.toISOString().split("T")[0]
 
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startYear}-01-01&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min,temperature_2m_mean&timezone=auto`
+const startYear=today.getFullYear()-20
+
+const startDate=startYear+"-01-01"
+
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=precipitation_sum,temperature_2m_min&timezone=auto`
 
 const r=await fetch(url)
+
+if(!r.ok){
+
+alert("Climate API error")
+
+return null
+
+}
 
 const data=await r.json()
 
@@ -278,41 +216,47 @@ return data.daily
 
 }
 
-/* ANNUAL */
+/* -------- ANNUAL RAIN -------- */
 
-function processClimate(daily){
+function annualRain(daily){
 
-let yearlyRain={}
-let yearlyDays={}
+let rain={}
+let days={}
 
 daily.time.forEach((d,i)=>{
 
 const y=new Date(d).getFullYear()
 
-if(!yearlyRain[y]){
-yearlyRain[y]=0
-yearlyDays[y]=0
+if(!rain[y]){
+
+rain[y]=0
+days[y]=0
+
 }
 
-yearlyRain[y]+=daily.precipitation_sum[i]||0
-yearlyDays[y]++
+rain[y]+=daily.precipitation_sum[i]||0
+
+days[y]++
 
 })
 
-const years=Object.keys(yearlyRain)
+const years=Object.keys(rain)
 
-const rain=years.map(y=>yearlyRain[y])
+const values=years.map(y=>rain[y])
 
-const avgRain=rain.reduce((a,b)=>a+b)/rain.length
+const avg=values.reduce((a,b)=>a+b)/values.length
 
 return{
-years,rain,
-avgRain:avgRain.toFixed(0)
-}
+
+years:years,
+values:values,
+avg:avg.toFixed(0)
 
 }
 
-/* SEASONAL */
+}
+
+/* -------- SEASONAL RAIN -------- */
 
 function seasonalRain(daily){
 
@@ -322,7 +266,9 @@ let days={}
 daily.time.forEach((d,i)=>{
 
 const date=new Date(d)
+
 const m=date.getMonth()+1
+
 const y=date.getFullYear()
 
 let s
@@ -334,20 +280,21 @@ else return
 const label=s+"/"+(s+1)
 
 if(!seasons[label]){
+
 seasons[label]=0
 days[label]=0
+
 }
 
 seasons[label]+=daily.precipitation_sum[i]||0
+
 days[label]++
 
 })
 
-let labels=Object.keys(seasons).filter(l=>days[l]>=170)
+let labels=Object.keys(seasons)
 
-labels.sort((a,b)=>{
-return parseInt(a)-parseInt(b)
-})
+labels.sort()
 
 const window=parseInt(document.getElementById("seasonWindow").value)
 
@@ -361,29 +308,45 @@ const drought=[]
 const wet=[]
 
 labels.forEach((l,i)=>{
-drought.push(values[i]<avg*0.75)
-wet.push(values[i]>avg*1.25)
+
+drought.push(values[i] < avg*0.75)
+
+wet.push(values[i] > avg*1.25)
+
 })
 
-return{labels,values,drought,wet}
+return{
+
+labels,
+values,
+drought,
+wet
 
 }
 
-function calculateDroughtProbability(season){
+}
+
+/* -------- DROUGHT PROBABILITY -------- */
+
+function droughtProbability(season){
 
 let d=0
 
 season.drought.forEach(x=>{
+
 if(x) d++
+
 })
 
 return ((d/season.labels.length)*100).toFixed(1)
 
 }
 
-function drawDroughtMap(lat,lon,prob){
+/* -------- DRAW DROUGHT MAP -------- */
 
-if(droughtLayer) map.removeLayer(droughtLayer)
+function drawDrought(lat,lon,prob){
+
+if(droughtCircle) map.removeLayer(droughtCircle)
 
 let color="#2e7d32"
 
@@ -391,118 +354,131 @@ if(prob>60) color="#c62828"
 else if(prob>40) color="#fb8c00"
 else if(prob>20) color="#fdd835"
 
-droughtLayer=L.circle([lat,lon],{
+droughtCircle=L.circle([lat,lon],{
+
 radius:40000,
 color:color,
 fillColor:color,
 fillOpacity:0.35
-}).addTo(map)
 
-droughtLayer.bindPopup("Drought Probability: "+prob+"%")
+}).addTo(map)
 
 }
 
-/* ANALYSIS */
+/* -------- CHARTS -------- */
+
+function drawAnnualChart(data){
+
+if(annualChart) annualChart.destroy()
+
+annualChart=new Chart(
+
+document.getElementById("annualChart"),
+
+{
+
+type:"bar",
+
+data:{
+labels:data.years,
+datasets:[{
+label:"Annual Rainfall (mm)",
+data:data.values,
+backgroundColor:"#4CAF50"
+}]
+}
+
+})
+
+}
+
+function drawSeasonChart(data){
+
+if(seasonChart) seasonChart.destroy()
+
+const colors=data.values.map((v,i)=>{
+
+if(data.drought[i]) return "#e53935"
+
+if(data.wet[i]) return "#1e88e5"
+
+return "#4CAF50"
+
+})
+
+seasonChart=new Chart(
+
+document.getElementById("seasonChart"),
+
+{
+
+type:"bar",
+
+data:{
+labels:data.labels,
+datasets:[{
+label:"Season Rainfall Oct–Mar",
+data:data.values,
+backgroundColor:colors
+}]
+}
+
+})
+
+}
+
+/* -------- ANALYSIS -------- */
 
 async function runAnalysis(){
 
-if(!selectedPoint) return
+if(!selectedPoint){
 
-setStatus("Loading climate")
+alert("Select farm location first")
 
-const daily=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
-
-const climate=processClimate(daily)
-const season=seasonalRain(daily)
-
-showMetrics(climate,season)
-
-drawRainChart(climate)
-drawSeasonChart(season)
-
-const prob=calculateDroughtProbability(season)
-
-drawDroughtMap(selectedPoint.lat,selectedPoint.lng,prob)
-
-document.getElementById("analysisPanel").style.display="block"
-
-setStatus("Complete")
+return
 
 }
 
-/* METRICS */
+const daily=await fetchClimate(
 
-function showMetrics(c,s){
+selectedPoint.lat,
+selectedPoint.lng
 
-const prob=calculateDroughtProbability(s)
+)
+
+if(!daily) return
+
+const annual=annualRain(daily)
+
+const season=seasonalRain(daily)
+
+const prob=droughtProbability(season)
+
+drawAnnualChart(annual)
+
+drawSeasonChart(season)
+
+drawDrought(selectedPoint.lat,selectedPoint.lng,prob)
 
 document.getElementById("metrics").innerHTML=`
 
 <div class="metric">
+
 <div class="metric-title">Average Annual Rainfall</div>
-<div class="metric-value">${c.avgRain} mm</div>
+
+<div class="metric-value">${annual.avg} mm</div>
+
 </div>
 
 <div class="metric">
+
 <div class="metric-title">Drought Probability</div>
+
 <div class="metric-value">${prob}%</div>
+
 </div>
 
 `
-
-}
-
-/* CHARTS */
-
-function drawRainChart(c){
-
-if(rainChart) rainChart.destroy()
-
-rainChart=new Chart(document.getElementById("rainChart"),{
-
-type:"bar",
-
-data:{
-labels:c.years,
-datasets:[{
-label:"Annual Rainfall",
-data:c.rain,
-backgroundColor:"#4CAF50"
-}]
-},
-
-options:{responsive:true}
-
-})
-
-}
-
-function drawSeasonChart(s){
-
-if(seasonalChart) seasonalChart.destroy()
-
-const colors=s.values.map((v,i)=>{
-if(s.drought[i]) return "#e53935"
-if(s.wet[i]) return "#1e88e5"
-return "#4CAF50"
-})
-
-seasonalChart=new Chart(document.getElementById("seasonChart"),{
-
-type:"bar",
-
-data:{
-labels:s.labels,
-datasets:[{
-label:"Seasonal Rainfall Oct-Mar",
-data:s.values,
-backgroundColor:colors
-}]
-},
-
-options:{responsive:true}
-
-})
 
 }
 
