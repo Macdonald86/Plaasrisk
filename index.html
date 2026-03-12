@@ -14,17 +14,13 @@
 
 <style>
 
-*{
-box-sizing:border-box;
-}
+*{box-sizing:border-box;}
 
 body{
 margin:0;
 font-family:Arial;
 background:#f4f7f4;
 }
-
-/* CONTROL BAR */
 
 .control-bar{
 display:flex;
@@ -51,7 +47,6 @@ color:white;
 padding:10px 14px;
 border-radius:6px;
 cursor:pointer;
-font-size:14px;
 }
 
 button:hover{
@@ -64,13 +59,9 @@ font-size:13px;
 color:#555;
 }
 
-/* MAP */
-
 #map{
 height:calc(100vh - 60px);
 }
-
-/* REPORT PANEL */
 
 .analysis-panel{
 position:absolute;
@@ -100,9 +91,7 @@ max-height:65vh;
 overflow:auto;
 }
 
-.metric{
-margin-bottom:12px;
-}
+.metric{margin-bottom:12px;}
 
 .metric-title{
 font-size:13px;
@@ -128,7 +117,9 @@ display:none;
 z-index:20000;
 }
 
-/* MOBILE PANEL */
+canvas{
+margin-top:20px;
+}
 
 @media(max-width:700px){
 
@@ -139,21 +130,8 @@ right:0;
 left:0;
 width:100%;
 border-radius:15px 15px 0 0;
-max-height:65vh;
 }
 
-.panel-body{
-max-height:55vh;
-}
-
-button{
-flex:1;
-}
-
-}
-
-canvas{
-margin-top:20px;
 }
 
 </style>
@@ -192,7 +170,6 @@ Farm Climate Analysis
 <canvas id="seasonChart"></canvas>
 
 </div>
-
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -200,12 +177,11 @@ Farm Climate Analysis
 
 <script>
 
-/* GLOBAL */
-
 let map
 let marker
 let drawnItems
 let selectedPoint=null
+let droughtLayer=null
 
 let rainChart=null
 let seasonalChart=null
@@ -215,16 +191,11 @@ document.getElementById("statusBar").innerText=t
 }
 
 function showError(msg){
-
 const box=document.getElementById("errorBox")
 box.innerText=msg
 box.style.display="block"
-
 setTimeout(()=>{box.style.display="none"},4000)
-
 }
-
-/* MAP */
 
 function initMap(){
 
@@ -250,7 +221,6 @@ map.on(L.Draw.Event.CREATED,function(e){
 drawnItems.clearLayers()
 
 const layer=e.layer
-
 drawnItems.addLayer(layer)
 
 selectedPoint=layer.getBounds().getCenter()
@@ -260,8 +230,6 @@ selectedPoint=layer.getBounds().getCenter()
 }
 
 window.onload=initMap
-
-/* SEARCH */
 
 async function searchLocation(){
 
@@ -307,8 +275,6 @@ selectedPoint={lat:lat,lng:lon}
 
 }
 
-/* PIN */
-
 function activatePinMode(){
 
 map.once("click",function(e){
@@ -316,8 +282,6 @@ setPoint(e.latlng.lat,e.latlng.lng)
 })
 
 }
-
-/* RESET */
 
 function resetMap(){
 
@@ -329,25 +293,48 @@ selectedPoint=null
 
 document.getElementById("analysisPanel").style.display="none"
 
-}
+if(droughtLayer) map.removeLayer(droughtLayer)
 
-/* CLIMATE API */
+}
 
 async function fetchClimate(lat,lon){
 
-const today=new Date().toISOString().split("T")[0]
+let combined={
+time:[],
+precipitation_sum:[],
+temperature_2m_min:[],
+temperature_2m_mean:[]
+}
 
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${today}&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
+const currentYear=new Date().getFullYear()
+
+for(let year=2000;year<=currentYear;year++){
+
+setStatus("Downloading "+year)
+
+const start=`${year}-01-01`
+const end=`${year}-12-31`
+
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${end}&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
 
 const r=await fetch(url)
 
-if(!r.ok) throw new Error("API error")
+if(!r.ok) continue
 
-return await r.json()
+const d=await r.json()
+
+if(!d.daily) continue
+
+combined.time.push(...d.daily.time)
+combined.precipitation_sum.push(...d.daily.precipitation_sum)
+combined.temperature_2m_min.push(...d.daily.temperature_2m_min)
+combined.temperature_2m_mean.push(...d.daily.temperature_2m_mean)
 
 }
 
-/* PROCESS ANNUAL */
+return combined
+
+}
 
 function processClimate(daily){
 
@@ -377,8 +364,8 @@ const years=Object.keys(yearlyRain).filter(y=>yearlyDays[y]>=360)
 const rain=years.map(y=>yearlyRain[y])
 const frost=years.map(y=>yearlyFrost[y])
 
-const avgRain=rain.reduce((a,b)=>a+b)/rain.length
-const avgFrost=frost.reduce((a,b)=>a+b)/frost.length
+const avgRain=rain.reduce((a,b)=>a+b,0)/rain.length
+const avgFrost=frost.reduce((a,b)=>a+b,0)/frost.length
 
 return{
 years,rain,frost,
@@ -388,12 +375,10 @@ avgFrost:avgFrost.toFixed(1)
 
 }
 
-/* SEASONAL */
-
 function seasonalRain(daily){
 
 let seasons={}
-let seasonDays={}
+let days={}
 
 daily.time.forEach((d,i)=>{
 
@@ -411,19 +396,18 @@ const label=s+"/"+(s+1)
 
 if(!seasons[label]){
 seasons[label]=0
-seasonDays[label]=0
+days[label]=0
 }
 
 seasons[label]+=daily.precipitation_sum[i]||0
-seasonDays[label]++
+days[label]++
 
 })
 
-const labels=Object.keys(seasons).filter(l=>seasonDays[l]>=170)
-
+const labels=Object.keys(seasons).filter(l=>days[l]>=170)
 const values=labels.map(l=>seasons[l])
 
-const avg=values.reduce((a,b)=>a+b)/values.length
+const avg=values.reduce((a,b)=>a+b,0)/values.length
 
 const drought=[]
 const wet=[]
@@ -437,51 +421,93 @@ return{labels,values,drought,wet}
 
 }
 
-/* ANALYSIS */
+function calculateDroughtProbability(season){
+
+let droughtCount=0
+
+season.values.forEach((v,i)=>{
+if(season.drought[i]) droughtCount++
+})
+
+const probability=(droughtCount/season.values.length)*100
+
+return probability.toFixed(1)
+
+}
+
+function drawDroughtMap(lat,lon,prob){
+
+if(droughtLayer) map.removeLayer(droughtLayer)
+
+let color
+
+if(prob<20) color="#2e7d32"
+else if(prob<40) color="#fdd835"
+else if(prob<60) color="#fb8c00"
+else color="#c62828"
+
+droughtLayer=L.circle([lat,lon],{
+radius:40000,
+color:color,
+fillColor:color,
+fillOpacity:0.35
+}).addTo(map)
+
+droughtLayer.bindPopup("Drought Probability: "+prob+"%")
+
+}
 
 async function runAnalysis(){
 
 if(!selectedPoint){
-showError("Select a farm location first")
+showError("Select location first")
 return
 }
 
 try{
 
-setStatus("Fetching climate data...")
+setStatus("Loading climate history")
 
-const data=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
+const daily=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
-setStatus("Processing climate data...")
+setStatus("Processing climate")
 
-const climate=processClimate(data.daily)
-const season=seasonalRain(data.daily)
+const climate=processClimate(daily)
+const season=seasonalRain(daily)
 
 showMetrics(climate,season)
 
 drawRainChart(climate)
 drawSeasonChart(season)
 
+const prob=calculateDroughtProbability(season)
+
+drawDroughtMap(
+selectedPoint.lat,
+selectedPoint.lng,
+prob
+)
+
 document.getElementById("analysisPanel").style.display="block"
 
-setStatus("Analysis complete")
+setStatus("Complete")
 
 }catch(e){
 
 console.error(e)
-showError("Climate data could not be loaded")
+showError("Climate loading failed")
 setStatus("Error")
 
 }
 
 }
 
-/* METRICS */
-
 function showMetrics(c,s){
 
 const droughtYears=s.labels.filter((l,i)=>s.drought[i])
 const wetYears=s.labels.filter((l,i)=>s.wet[i])
+
+const prob=calculateDroughtProbability(s)
 
 document.getElementById("metrics").innerHTML=`
 
@@ -491,8 +517,13 @@ document.getElementById("metrics").innerHTML=`
 </div>
 
 <div class="metric">
-<div class="metric-title">Average Frost Days / Year</div>
+<div class="metric-title">Average Frost Days</div>
 <div class="metric-value">${c.avgFrost}</div>
+</div>
+
+<div class="metric">
+<div class="metric-title">Drought Probability</div>
+<div class="metric-value">${prob}%</div>
 </div>
 
 <div class="metric">
@@ -509,14 +540,14 @@ document.getElementById("metrics").innerHTML=`
 
 }
 
-/* CHARTS */
-
 function drawRainChart(c){
 
 if(rainChart) rainChart.destroy()
 
 rainChart=new Chart(document.getElementById("rainChart"),{
+
 type:"bar",
+
 data:{
 labels:c.years,
 datasets:[{
@@ -525,7 +556,9 @@ data:c.rain,
 backgroundColor:"#4CAF50"
 }]
 },
+
 options:{responsive:true}
+
 })
 
 }
@@ -543,50 +576,21 @@ return "#4CAF50"
 seasonalChart=new Chart(document.getElementById("seasonChart"),{
 
 type:"bar",
+
 data:{
 labels:s.labels,
 datasets:[{
-label:"Seasonal Rainfall (Oct–Mar)",
+label:"Seasonal Rainfall Oct–Mar",
 data:s.values,
 backgroundColor:colors
 }]
 },
+
 options:{responsive:true}
 
 })
 
 }
-
-/* DRAG PANEL */
-
-const panel=document.getElementById("analysisPanel")
-const header=document.getElementById("panelHeader")
-
-let dragging=false
-let offsetX,offsetY
-
-header.addEventListener("mousedown",function(e){
-
-dragging=true
-
-offsetX=e.clientX-panel.offsetLeft
-offsetY=e.clientY-panel.offsetTop
-
-})
-
-document.addEventListener("mousemove",function(e){
-
-if(!dragging) return
-
-panel.style.left=(e.clientX-offsetX)+"px"
-panel.style.top=(e.clientY-offsetY)+"px"
-panel.style.right="auto"
-
-})
-
-document.addEventListener("mouseup",function(){
-dragging=false
-})
 
 </script>
 
