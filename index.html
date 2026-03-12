@@ -8,7 +8,6 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -19,12 +18,15 @@ font-family:Arial;
 background:#f4f7f4;
 }
 
+/* CONTROL BAR */
+
 .control-bar{
 display:flex;
 gap:10px;
 padding:10px;
 background:white;
 border-bottom:1px solid #ddd;
+align-items:center;
 }
 
 button{
@@ -46,23 +48,47 @@ border:1px solid #ccc;
 border-radius:6px;
 }
 
+/* STATUS BAR */
+
+.status-bar{
+margin-left:auto;
+font-size:13px;
+color:#555;
+}
+
+/* MAP */
+
 #map{
 height:80vh;
 }
 
+/* REPORT PANEL */
+
 .analysis-panel{
 position:absolute;
-top:90px;
+top:100px;
 right:20px;
 width:380px;
 background:white;
 border-radius:10px;
-padding:20px;
-box-shadow:0 4px 20px rgba(0,0,0,0.2);
+box-shadow:0 4px 20px rgba(0,0,0,0.25);
 display:none;
-max-height:80vh;
-overflow:auto;
 z-index:10000;
+overflow:hidden;
+}
+
+.panel-header{
+background:#2e7d32;
+color:white;
+padding:10px;
+cursor:move;
+font-weight:bold;
+}
+
+.panel-body{
+padding:15px;
+max-height:70vh;
+overflow:auto;
 }
 
 .metric{
@@ -80,6 +106,21 @@ font-weight:bold;
 color:#2e7d32;
 }
 
+/* ERROR MESSAGE */
+
+.error-box{
+position:absolute;
+top:80px;
+left:50%;
+transform:translateX(-50%);
+background:#e53935;
+color:white;
+padding:10px 20px;
+border-radius:6px;
+display:none;
+z-index:20000;
+}
+
 canvas{
 margin-top:20px;
 }
@@ -94,26 +135,32 @@ margin-top:20px;
 <input id="searchInput" placeholder="Search location or lat,lon">
 
 <button onclick="searchLocation()">Search</button>
-
 <button onclick="activatePinMode()">Drop Pin</button>
-
 <button onclick="resetMap()">Clear</button>
-
 <button onclick="runAnalysis()">Analyze</button>
+
+<div class="status-bar" id="statusBar">Ready</div>
 
 </div>
 
 <div id="map"></div>
 
+<div class="error-box" id="errorBox"></div>
+
 <div class="analysis-panel" id="analysisPanel">
 
-<h3>Farm Climate Analysis</h3>
+<div class="panel-header" id="panelHeader">
+Farm Climate Analysis
+</div>
+
+<div class="panel-body">
 
 <div id="metrics"></div>
 
 <canvas id="rainChart"></canvas>
-
 <canvas id="seasonChart"></canvas>
+
+</div>
 
 </div>
 
@@ -122,12 +169,35 @@ margin-top:20px;
 
 <script>
 
-/* ---------------- MAP ---------------- */
+/* GLOBAL */
 
 let map
 let marker
 let drawnItems
 let selectedPoint=null
+
+let rainChart=null
+let seasonalChart=null
+
+/* STATUS + ERROR */
+
+function setStatus(text){
+document.getElementById("statusBar").innerText=text
+}
+
+function showError(msg){
+
+const box=document.getElementById("errorBox")
+box.innerText=msg
+box.style.display="block"
+
+setTimeout(()=>{
+box.style.display="none"
+},4000)
+
+}
+
+/* MAP */
 
 function initMap(){
 
@@ -169,12 +239,13 @@ selectedPoint=layer.getBounds().getCenter()
 
 window.onload=initMap
 
-
-/* ---------------- SEARCH ---------------- */
+/* SEARCH */
 
 async function searchLocation(){
 
 const q=document.getElementById("searchInput").value
+
+try{
 
 if(q.includes(",")){
 
@@ -196,29 +267,32 @@ if(d.length>0){
 
 setPoint(d[0].lat,d[0].lon)
 
+}else{
+showError("Location not found")
+}
+
+}catch(e){
+showError("Search failed")
 }
 
 }
 
 function setPoint(lat,lon){
 
-lat = Number(lat)
-lon = Number(lon)
+lat=Number(lat)
+lon=Number(lon)
 
 if(marker) map.removeLayer(marker)
 
-marker = L.marker([lat,lon]).addTo(map)
+marker=L.marker([lat,lon]).addTo(map)
 
 map.setView([lat,lon],10)
 
-selectedPoint = {
-lat: lat,
-lng: lon
-}
+selectedPoint={lat:lat,lng:lon}
 
 }
 
-/* ---------------- PIN MODE ---------------- */
+/* PIN MODE */
 
 function activatePinMode(){
 
@@ -230,8 +304,7 @@ setPoint(e.latlng.lat,e.latlng.lng)
 
 }
 
-
-/* ---------------- RESET ---------------- */
+/* RESET */
 
 function resetMap(){
 
@@ -245,21 +318,21 @@ document.getElementById("analysisPanel").style.display="none"
 
 }
 
-
-/* ---------------- CLIMATE API ---------------- */
+/* CLIMATE API */
 
 async function fetchClimate(lat,lon){
 
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2025-12-31&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=2024-12-31&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
 
 const r=await fetch(url)
+
+if(!r.ok) throw new Error("API error")
 
 return await r.json()
 
 }
 
-
-/* ---------------- PROCESS DATA ---------------- */
+/* PROCESS DATA */
 
 function processClimate(daily){
 
@@ -269,7 +342,6 @@ let yearlyFrost={}
 daily.time.forEach((d,i)=>{
 
 const date=new Date(d)
-
 const year=date.getFullYear()
 
 if(!yearlyRain[year]){
@@ -286,11 +358,9 @@ if(daily.temperature_2m_min[i]<=0) yearlyFrost[year]++
 const years=Object.keys(yearlyRain)
 
 const rain=years.map(y=>yearlyRain[y])
-
 const frost=years.map(y=>yearlyFrost[y])
 
 const avgRain=rain.reduce((a,b)=>a+b)/rain.length
-
 const avgFrost=frost.reduce((a,b)=>a+b)/frost.length
 
 let drought=[]
@@ -298,26 +368,22 @@ let wet=[]
 
 years.forEach(y=>{
 
-if(yearlyRain[y] < avgRain*0.75) drought.push(y)
+if(yearlyRain[y]<avgRain*0.75) drought.push(y)
 
-if(yearlyRain[y] > avgRain*1.25) wet.push(y)
+if(yearlyRain[y]>avgRain*1.25) wet.push(y)
 
 })
 
 return{
-years,
-rain,
-frost,
+years,rain,frost,
 avgRain:avgRain.toFixed(0),
 avgFrost:avgFrost.toFixed(1),
-drought,
-wet
+drought,wet
 }
 
 }
 
-
-/* ---------------- SEASONAL ---------------- */
+/* SEASONAL */
 
 function seasonalRain(daily){
 
@@ -326,7 +392,6 @@ let seasons={}
 daily.time.forEach((d,i)=>{
 
 const date=new Date(d)
-
 const m=date.getMonth()+1
 const y=date.getFullYear()
 
@@ -345,44 +410,58 @@ seasons[label]+=daily.precipitation_sum[i]||0
 })
 
 const labels=Object.keys(seasons)
-
 const values=labels.map(l=>seasons[l])
 
 return{labels,values}
 
 }
 
-
-/* ---------------- ANALYSIS ---------------- */
+/* ANALYSIS */
 
 async function runAnalysis(){
-console.log("Selected point:", selectedPoint)
+
 if(!selectedPoint){
-
-alert("Select a field or point")
-
+showError("Select a farm location first")
 return
-
 }
+
+try{
+
+setStatus("Fetching climate data...")
 
 const data=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
-const climate=processClimate(data.daily)
+setStatus("Processing climate data...")
 
+if(!data.daily){
+throw new Error("No data returned")
+}
+
+const climate=processClimate(data.daily)
 const season=seasonalRain(data.daily)
 
 showMetrics(climate)
 
 drawRainChart(climate)
-
 drawSeasonChart(season)
 
 document.getElementById("analysisPanel").style.display="block"
 
+setStatus("Analysis complete")
+
+}catch(e){
+
+console.error(e)
+
+showError("Climate data could not be loaded")
+
+setStatus("Error")
+
 }
 
+}
 
-/* ---------------- METRICS ---------------- */
+/* METRICS */
 
 function showMetrics(c){
 
@@ -412,15 +491,13 @@ document.getElementById("metrics").innerHTML=`
 
 }
 
+/* CHARTS */
 
-/* ---------------- CHARTS ---------------- */
-let rainchart
 function drawRainChart(c){
-if(rainChart){
-rainChart.destroy()
-}
-  
-rainChat = new Chart(document.getElementById("rainChart"),{
+
+if(rainChart) rainChart.destroy()
+
+rainChart=new Chart(document.getElementById("rainChart"),{
 
 type:"bar",
 
@@ -436,14 +513,11 @@ data:c.rain
 
 }
 
-let seasonalChart
-  
 function drawSeasonChart(s){
 
-if(seasonalChart){
-seasonalChart.destroy()
-}
-seasonalChart = new Chart(document.getElementById("seasonChart"),{
+if(seasonalChart) seasonalChart.destroy()
+
+seasonalChart=new Chart(document.getElementById("seasonChart"),{
 
 type:"bar",
 
@@ -458,6 +532,37 @@ data:s.values
 })
 
 }
+
+/* DRAG PANEL */
+
+const panel=document.getElementById("analysisPanel")
+const header=document.getElementById("panelHeader")
+
+let dragging=false
+let offsetX,offsetY
+
+header.addEventListener("mousedown",function(e){
+
+dragging=true
+
+offsetX=e.clientX-panel.offsetLeft
+offsetY=e.clientY-panel.offsetTop
+
+})
+
+document.addEventListener("mousemove",function(e){
+
+if(!dragging) return
+
+panel.style.left=(e.clientX-offsetX)+"px"
+panel.style.top=(e.clientY-offsetY)+"px"
+panel.style.right="auto"
+
+})
+
+document.addEventListener("mouseup",function(){
+dragging=false
+})
 
 </script>
 
