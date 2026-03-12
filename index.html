@@ -66,9 +66,7 @@ overflow:auto;
 }
 
 .metric{margin-bottom:12px;}
-
 .metric-title{font-size:13px;color:#444;}
-
 .metric-value{font-size:20px;font-weight:bold;color:#2e7d32;}
 
 .error-box{
@@ -100,18 +98,15 @@ canvas{margin-top:20px;}
 </div>
 
 <div id="map"></div>
-
 <div class="error-box" id="errorBox"></div>
 
 <div class="analysis-panel" id="analysisPanel">
 <div class="panel-header" id="panelHeader">Farm Climate Analysis</div>
-
 <div class="panel-body">
 <div id="metrics"></div>
 <canvas id="rainChart"></canvas>
 <canvas id="seasonChart"></canvas>
 </div>
-
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -123,7 +118,6 @@ let map
 let marker
 let drawnItems
 let selectedPoint=null
-
 let rainChart=null
 let seasonalChart=null
 
@@ -160,14 +154,10 @@ edit:{featureGroup:drawnItems}
 map.addControl(drawControl)
 
 map.on(L.Draw.Event.CREATED,function(e){
-
 drawnItems.clearLayers()
-
 const layer=e.layer
 drawnItems.addLayer(layer)
-
 selectedPoint=layer.getBounds().getCenter()
-
 })
 
 }
@@ -212,7 +202,6 @@ lon=Number(lon)
 if(marker) map.removeLayer(marker)
 
 marker=L.marker([lat,lon]).addTo(map)
-
 map.setView([lat,lon],10)
 
 selectedPoint={lat:lat,lng:lon}
@@ -230,15 +219,10 @@ setPoint(e.latlng.lat,e.latlng.lng)
 /* RESET */
 
 function resetMap(){
-
 drawnItems.clearLayers()
-
 if(marker) map.removeLayer(marker)
-
 selectedPoint=null
-
 document.getElementById("analysisPanel").style.display="none"
-
 }
 
 /* CLIMATE API */
@@ -250,14 +234,13 @@ const today=new Date().toISOString().split("T")[0]
 const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${today}&daily=temperature_2m_min,temperature_2m_mean,precipitation_sum&timezone=auto`
 
 const r=await fetch(url)
-
 if(!r.ok) throw new Error("API error")
 
 return await r.json()
 
 }
 
-/* PROCESS CLIMATE */
+/* PROCESS ANNUAL */
 
 function processClimate(daily){
 
@@ -283,7 +266,7 @@ if(daily.temperature_2m_min[i]<=0) yearlyFrost[year]++
 
 })
 
-const years=Object.keys(yearlyRain).filter(y => yearlyDays[y]>=360)
+const years=Object.keys(yearlyRain).filter(y=>yearlyDays[y]>=360)
 
 const rain=years.map(y=>yearlyRain[y])
 const frost=years.map(y=>yearlyFrost[y])
@@ -330,7 +313,7 @@ seasonDays[label]++
 
 })
 
-const labels=Object.keys(seasons).filter(l => seasonDays[l]>=170)
+const labels=Object.keys(seasons).filter(l => seasonDays[l] >= 170)
 
 const values=labels.map(l=>seasons[l])
 
@@ -340,11 +323,11 @@ const drought=[]
 const wet=[]
 
 labels.forEach((l,i)=>{
-drought.push(values[i]<avg*0.75)
-wet.push(values[i]>avg*1.25)
+drought.push(values[i] < avg*0.75)
+wet.push(values[i] > avg*1.25)
 })
 
-return{labels,values,drought,wet,avg}
+return{labels,values,drought,wet}
 
 }
 
@@ -380,9 +363,7 @@ setStatus("Analysis complete")
 }catch(e){
 
 console.error(e)
-
 showError("Climate data could not be loaded")
-
 setStatus("Error")
 
 }
@@ -394,6 +375,7 @@ setStatus("Error")
 function showMetrics(c,s){
 
 const droughtYears=s.labels.filter((l,i)=>s.drought[i])
+const wetYears=s.labels.filter((l,i)=>s.wet[i])
 
 document.getElementById("metrics").innerHTML=`
 
@@ -412,6 +394,11 @@ document.getElementById("metrics").innerHTML=`
 <div>${droughtYears.join(", ") || "None detected"}</div>
 </div>
 
+<div class="metric">
+<div class="metric-title">Excess Rainfall Seasons</div>
+<div>${wetYears.join(", ") || "None detected"}</div>
+</div>
+
 `
 
 }
@@ -423,9 +410,7 @@ function drawRainChart(c){
 if(rainChart) rainChart.destroy()
 
 rainChart=new Chart(document.getElementById("rainChart"),{
-
 type:"bar",
-
 data:{
 labels:c.years,
 datasets:[{
@@ -434,7 +419,6 @@ data:c.rain,
 backgroundColor:"#4CAF50"
 }]
 }
-
 })
 
 }
@@ -452,24 +436,13 @@ return "#4CAF50"
 seasonalChart=new Chart(document.getElementById("seasonChart"),{
 
 type:"bar",
-
 data:{
 labels:s.labels,
-datasets:[
-{
+datasets:[{
 label:"Seasonal Rainfall (Oct–Mar)",
 data:s.values,
 backgroundColor:colors
-},
-{
-type:"line",
-label:"Long-term Average",
-data:new Array(s.values.length).fill(s.avg),
-borderColor:"black",
-borderDash:[5,5],
-fill:false
-}
-]
+}]
 }
 
 })
@@ -487,7 +460,6 @@ let offsetX,offsetY
 header.addEventListener("mousedown",function(e){
 
 dragging=true
-
 offsetX=e.clientX-panel.offsetLeft
 offsetY=e.clientY-panel.offsetTop
 
