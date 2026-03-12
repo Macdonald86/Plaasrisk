@@ -65,7 +65,6 @@ border-radius:10px;
 box-shadow:0 4px 20px rgba(0,0,0,0.25);
 display:none;
 z-index:10000;
-overflow:hidden;
 }
 
 .panel-header{
@@ -170,10 +169,14 @@ document.getElementById("statusBar").innerText=t
 }
 
 function showError(msg){
+
 const box=document.getElementById("errorBox")
+
 box.innerText=msg
 box.style.display="block"
+
 setTimeout(()=>{box.style.display="none"},4000)
+
 }
 
 /* MAP */
@@ -226,6 +229,7 @@ const p=q.split(",")
 setPoint(parseFloat(p[0]),parseFloat(p[1]))
 
 return
+
 }
 
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
@@ -264,67 +268,41 @@ selectedPoint={lat:lat,lng:lon}
 
 }
 
-/* PIN */
-
-function activatePinMode(){
-
-map.once("click",function(e){
-
-setPoint(e.latlng.lat,e.latlng.lng)
-
-})
-
-}
-
-/* RESET */
-
-function resetMap(){
-
-drawnItems.clearLayers()
-
-if(marker) map.removeLayer(marker)
-
-selectedPoint=null
-
-document.getElementById("analysisPanel").style.display="none"
-
-}
-
-/* CLIMATE FETCH (YEAR BY YEAR) */
+/* CLIMATE API */
 
 async function fetchClimate(lat,lon){
 
-const currentYear=new Date().getFullYear()
+const endYear=new Date().getFullYear()-1
 
-let allTime=[]
-let allRain=[]
-let allTemp=[]
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
 
-for(let y=2000;y<currentYear;y++){
+for(let attempt=0;attempt<3;attempt++){
 
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${y}-01-01&end_date=${y}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
+try{
 
 const r=await fetch(url)
 
-if(!r.ok) throw new Error("API Error")
+if(!r.ok) throw new Error("API")
 
 const data=await r.json()
 
-allTime.push(...data.daily.time)
-allRain.push(...data.daily.precipitation_sum)
-allTemp.push(...data.daily.temperature_2m_min)
+if(!data.daily || !data.daily.time) throw new Error("No data")
+
+return data.daily
+
+}catch(e){
+
+if(attempt===2) throw e
+
+await new Promise(r=>setTimeout(r,2000))
 
 }
 
-return{
-time:allTime,
-precipitation_sum:allRain,
-temperature_2m_min:allTemp
 }
 
 }
 
-/* PROCESS CLIMATE */
+/* PROCESS */
 
 function processClimate(daily){
 
@@ -371,7 +349,9 @@ let seasons={}
 daily.time.forEach((d,i)=>{
 
 const date=new Date(d)
+
 const m=date.getMonth()+1
+
 const y=date.getFullYear()
 
 let s
@@ -390,11 +370,14 @@ seasons[label]+=daily.precipitation_sum[i]||0
 
 const labels=Object.keys(seasons)
 
+labels.pop()
+
 const values=labels.map(l=>seasons[l])
 
 const avg=values.reduce((a,b)=>a+b)/values.length
 
 const drought=values.map(v=>v<avg*0.75)
+
 const wet=values.map(v=>v>avg*1.25)
 
 return{labels,values,drought,wet}
@@ -407,7 +390,7 @@ async function runAnalysis(){
 
 if(!selectedPoint){
 
-showError("Select a farm location first")
+showError("Select location")
 
 return
 
@@ -417,13 +400,13 @@ try{
 
 setStatus("Downloading climate data...")
 
-const data=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
+const daily=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
-setStatus("Processing climate data...")
+setStatus("Processing data...")
 
-const climate=processClimate(data)
+const climate=processClimate(daily)
 
-const season=seasonalRain(data)
+const season=seasonalRain(daily)
 
 showMetrics(climate)
 
@@ -439,7 +422,7 @@ setStatus("Analysis complete")
 
 console.error(e)
 
-showError("Climate API failed")
+showError("Climate API unavailable")
 
 setStatus("Error")
 
@@ -496,9 +479,13 @@ function drawSeasonChart(s){
 if(seasonalChart) seasonalChart.destroy()
 
 const colors=s.values.map((v,i)=>{
+
 if(s.drought[i]) return "#e53935"
+
 if(s.wet[i]) return "#1e88e5"
+
 return "#4CAF50"
+
 })
 
 seasonalChart=new Chart(document.getElementById("seasonChart"),{
@@ -519,39 +506,6 @@ options:{responsive:true}
 })
 
 }
-
-/* DRAG PANEL */
-
-const panel=document.getElementById("analysisPanel")
-const header=document.getElementById("panelHeader")
-
-let dragging=false
-let offsetX,offsetY
-
-header.addEventListener("mousedown",function(e){
-
-dragging=true
-
-offsetX=e.clientX-panel.offsetLeft
-offsetY=e.clientY-panel.offsetTop
-
-})
-
-document.addEventListener("mousemove",function(e){
-
-if(!dragging) return
-
-panel.style.left=(e.clientX-offsetX)+"px"
-panel.style.top=(e.clientY-offsetY)+"px"
-panel.style.right="auto"
-
-})
-
-document.addEventListener("mouseup",function(){
-
-dragging=false
-
-})
 
 </script>
 
