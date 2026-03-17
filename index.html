@@ -42,8 +42,7 @@ display:none;z-index:10000;
 }
 
 .panel-header{
-background:#2e7d32;color:white;padding:10px;
-font-weight:bold;
+background:#2e7d32;color:white;padding:10px;font-weight:bold;
 }
 
 .panel-body{padding:15px;max-height:70vh;overflow:auto;}
@@ -92,6 +91,7 @@ canvas{margin-top:20px;}
 <div id="metrics"></div>
 <canvas id="rainChart"></canvas>
 <canvas id="seasonChart"></canvas>
+<canvas id="frostChart"></canvas>
 </div>
 </div>
 
@@ -101,7 +101,7 @@ canvas{margin-top:20px;}
 <script>
 
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
-let rainChart=null, seasonalChart=null
+let rainChart=null, seasonalChart=null, frostChart=null
 
 function setStatus(t){
 document.getElementById("statusBar").innerText=t
@@ -217,21 +217,16 @@ map.setView([lat,lon],10)
 selectedPoint={lat:lat,lng:lon}
 }
 
-/* FILTER FUNCTION */
+/* FILTER */
 
 function filterByYearRange(daily, startYear, endYear){
 
 if(!startYear || !endYear) return daily
 
-let filtered = {
-time: [],
-precipitation_sum: [],
-temperature_2m_min: []
-}
+let filtered = {time:[], precipitation_sum:[], temperature_2m_min:[]}
 
 daily.time.forEach((date, i)=>{
 const y = new Date(date).getFullYear()
-
 if(y >= startYear && y <= endYear){
 filtered.time.push(date)
 filtered.precipitation_sum.push(daily.precipitation_sum[i])
@@ -242,7 +237,7 @@ filtered.temperature_2m_min.push(daily.temperature_2m_min[i])
 return filtered
 }
 
-/* CLIMATE API */
+/* CLIMATE */
 
 async function fetchClimate(lat,lon){
 
@@ -274,6 +269,7 @@ yearlyFrost[y]=0
 
 yearlyRain[y]+=daily.precipitation_sum[i]||0
 if(daily.temperature_2m_min[i]<=0) yearlyFrost[y]++
+
 })
 
 const years=Object.keys(yearlyRain)
@@ -354,9 +350,10 @@ setStatus("Processing data...")
 const climate=processClimate(filteredDaily)
 const season=seasonalRain(filteredDaily)
 
-showMetrics(climate)
+showMetrics(climate, season)
 drawRainChart(climate)
 drawSeasonChart(season)
+drawFrostChart(climate)
 
 document.getElementById("analysisPanel").style.display="block"
 
@@ -372,9 +369,13 @@ setStatus("Error")
 
 /* METRICS */
 
-function showMetrics(c){
+function showMetrics(c, s){
+
+const droughtYears = s.labels.filter((l,i)=>s.drought[i])
+const wetYears = s.labels.filter((l,i)=>s.wet[i])
 
 document.getElementById("metrics").innerHTML=`
+
 <div class="metric">
 <div class="metric-title">Average Annual Rainfall</div>
 <div class="metric-value">${c.avgRain} mm</div>
@@ -384,8 +385,21 @@ document.getElementById("metrics").innerHTML=`
 <div class="metric-title">Average Frost Days / Year</div>
 <div class="metric-value">${c.avgFrost}</div>
 </div>
-`
 
+<div class="metric">
+<div class="metric-title">Drought Years</div>
+<div class="metric-value" style="font-size:14px;color:#e53935">
+${droughtYears.length ? droughtYears.join(", ") : "None"}
+</div>
+</div>
+
+<div class="metric">
+<div class="metric-title">Excess Rainfall Years</div>
+<div class="metric-value" style="font-size:14px;color:#1e88e5">
+${wetYears.length ? wetYears.join(", ") : "None"}
+</div>
+</div>
+`
 }
 
 /* CHARTS */
@@ -429,6 +443,30 @@ backgroundColor:colors
 }]
 },
 options:{responsive:true}
+})
+
+}
+
+function drawFrostChart(c){
+
+if(frostChart) frostChart.destroy()
+
+frostChart=new Chart(document.getElementById("frostChart"),{
+
+type:"line",
+
+data:{
+labels:c.years,
+datasets:[{
+label:"Frost Days per Year",
+data:c.frost,
+fill:false,
+tension:0.3
+}]
+},
+
+options:{responsive:true}
+
 })
 
 }
