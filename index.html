@@ -13,88 +13,51 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#f4f7f4;
-}
+body{margin:0;font-family:Arial;background:#f4f7f4;}
 
 .control-bar{
-display:flex;
-gap:10px;
-padding:10px;
-background:white;
-border-bottom:1px solid #ddd;
-align-items:center;
-flex-wrap:wrap;
+display:flex;gap:10px;padding:10px;background:white;
+border-bottom:1px solid #ddd;align-items:center;flex-wrap:wrap;
 }
 
 button{
-background:#2e7d32;
-border:none;
-color:white;
-padding:8px 14px;
-border-radius:6px;
-cursor:pointer;
+background:#2e7d32;border:none;color:white;
+padding:8px 14px;border-radius:6px;cursor:pointer;
 }
-
 button:hover{background:#1b5e20;}
 
 input{
-padding:8px;
-border:1px solid #ccc;
-border-radius:6px;
+padding:8px;border:1px solid #ccc;border-radius:6px;
 }
 
-.status-bar{
-margin-left:auto;
-font-size:13px;
-color:#555;
-}
+.status-bar{margin-left:auto;font-size:13px;color:#555;}
 
 #map{height:80vh;}
 
 .analysis-panel{
-position:absolute;
-top:100px;
-right:20px;
-width:380px;
-background:white;
-border-radius:10px;
+position:absolute;top:100px;right:20px;width:380px;
+background:white;border-radius:10px;
 box-shadow:0 4px 20px rgba(0,0,0,0.25);
-display:none;
-z-index:10000;
+display:none;z-index:10000;
 }
 
 .panel-header{
-background:#2e7d32;
-color:white;
-padding:10px;
-cursor:move;
+background:#2e7d32;color:white;padding:10px;
 font-weight:bold;
 }
 
-.panel-body{
-padding:15px;
-max-height:70vh;
-overflow:auto;
-}
+.panel-body{padding:15px;max-height:70vh;overflow:auto;}
 
 .metric{margin-bottom:12px;}
 .metric-title{font-size:13px;color:#444;}
 .metric-value{font-size:20px;font-weight:bold;color:#2e7d32;}
 
 .error-box{
-position:absolute;
-top:80px;
-left:50%;
+position:absolute;top:80px;left:50%;
 transform:translateX(-50%);
-background:#e53935;
-color:white;
-padding:10px 20px;
-border-radius:6px;
-display:none;
-z-index:20000;
+background:#e53935;color:white;
+padding:10px 20px;border-radius:6px;
+display:none;z-index:20000;
 }
 
 canvas{margin-top:20px;}
@@ -104,12 +67,19 @@ canvas{margin-top:20px;}
 <body>
 
 <div class="control-bar">
+
 <input id="searchInput" placeholder="Search location or lat,lon">
+
+<input id="startYear" type="number" placeholder="Start Year (e.g. 2005)" style="width:160px;">
+<input id="endYear" type="number" placeholder="End Year (e.g. 2010)" style="width:160px;">
+
 <button onclick="searchLocation()">Search</button>
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
+
 <div class="status-bar" id="statusBar">Ready</div>
+
 </div>
 
 <div id="map"></div>
@@ -130,14 +100,8 @@ canvas{margin-top:20px;}
 
 <script>
 
-let map
-let marker
-let drawnItems
-let selectedPoint=null
-let pinMode=false
-
-let rainChart=null
-let seasonalChart=null
+let map, marker, drawnItems, selectedPoint=null, pinMode=false
+let rainChart=null, seasonalChart=null
 
 function setStatus(t){
 document.getElementById("statusBar").innerText=t
@@ -168,7 +132,6 @@ edit:{featureGroup:drawnItems}
 
 map.addControl(drawControl)
 
-/* DRAW EVENT */
 map.on(L.Draw.Event.CREATED,function(e){
 drawnItems.clearLayers()
 const layer=e.layer
@@ -176,7 +139,6 @@ drawnItems.addLayer(layer)
 selectedPoint=layer.getBounds().getCenter()
 })
 
-/* CLICK FOR PIN */
 map.on("click", function(e){
 
 if(!pinMode) return
@@ -249,14 +211,35 @@ showError("Search failed")
 }
 
 function setPoint(lat,lon){
-
 if(marker) map.removeLayer(marker)
-
 marker=L.marker([lat,lon]).addTo(map)
 map.setView([lat,lon],10)
-
 selectedPoint={lat:lat,lng:lon}
+}
 
+/* FILTER FUNCTION */
+
+function filterByYearRange(daily, startYear, endYear){
+
+if(!startYear || !endYear) return daily
+
+let filtered = {
+time: [],
+precipitation_sum: [],
+temperature_2m_min: []
+}
+
+daily.time.forEach((date, i)=>{
+const y = new Date(date).getFullYear()
+
+if(y >= startYear && y <= endYear){
+filtered.time.push(date)
+filtered.precipitation_sum.push(daily.precipitation_sum[i])
+filtered.temperature_2m_min.push(daily.temperature_2m_min[i])
+}
+})
+
+return filtered
 }
 
 /* CLIMATE API */
@@ -273,18 +256,15 @@ const data=await r.json()
 if(!data.daily || !data.daily.time) throw new Error("No data")
 
 return data.daily
-
 }
 
 /* PROCESS */
 
 function processClimate(daily){
 
-let yearlyRain={}
-let yearlyFrost={}
+let yearlyRain={}, yearlyFrost={}
 
 daily.time.forEach((d,i)=>{
-
 const y=new Date(d).getFullYear()
 
 if(!yearlyRain[y]){
@@ -293,13 +273,10 @@ yearlyFrost[y]=0
 }
 
 yearlyRain[y]+=daily.precipitation_sum[i]||0
-
 if(daily.temperature_2m_min[i]<=0) yearlyFrost[y]++
-
 })
 
 const years=Object.keys(yearlyRain)
-
 const rain=years.map(y=>yearlyRain[y])
 const frost=years.map(y=>yearlyFrost[y])
 
@@ -307,7 +284,6 @@ const avgRain=(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0)
 const avgFrost=(frost.reduce((a,b)=>a+b)/frost.length).toFixed(1)
 
 return{years,rain,frost,avgRain,avgFrost}
-
 }
 
 /* SEASONAL */
@@ -331,7 +307,6 @@ else return
 const label=s+"/"+(s+1)
 
 if(!seasons[label]) seasons[label]=0
-
 seasons[label]+=daily.precipitation_sum[i]||0
 
 })
@@ -347,7 +322,6 @@ const drought=values.map(v=>v<avg*0.75)
 const wet=values.map(v=>v>avg*1.25)
 
 return{labels,values,drought,wet}
-
 }
 
 /* ANALYSIS */
@@ -365,10 +339,20 @@ setStatus("Downloading climate data...")
 
 const daily=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
+const startYear = parseInt(document.getElementById("startYear").value)
+const endYear = parseInt(document.getElementById("endYear").value)
+
+const filteredDaily = filterByYearRange(daily, startYear, endYear)
+
+if(filteredDaily.time.length === 0){
+showError("No data in selected range")
+return
+}
+
 setStatus("Processing data...")
 
-const climate=processClimate(daily)
-const season=seasonalRain(daily)
+const climate=processClimate(filteredDaily)
+const season=seasonalRain(filteredDaily)
 
 showMetrics(climate)
 drawRainChart(climate)
@@ -379,11 +363,9 @@ document.getElementById("analysisPanel").style.display="block"
 setStatus("Analysis complete")
 
 }catch(e){
-
 console.error(e)
 showError("Climate API unavailable")
 setStatus("Error")
-
 }
 
 }
