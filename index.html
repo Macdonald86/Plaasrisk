@@ -13,7 +13,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-
 body{
 margin:0;
 font-family:Arial;
@@ -81,20 +80,9 @@ max-height:70vh;
 overflow:auto;
 }
 
-.metric{
-margin-bottom:12px;
-}
-
-.metric-title{
-font-size:13px;
-color:#444;
-}
-
-.metric-value{
-font-size:20px;
-font-weight:bold;
-color:#2e7d32;
-}
+.metric{margin-bottom:12px;}
+.metric-title{font-size:13px;color:#444;}
+.metric-value{font-size:20px;font-weight:bold;color:#2e7d32;}
 
 .error-box{
 position:absolute;
@@ -110,23 +98,18 @@ z-index:20000;
 }
 
 canvas{margin-top:20px;}
-
 </style>
 </head>
 
 <body>
 
 <div class="control-bar">
-
 <input id="searchInput" placeholder="Search location or lat,lon">
-
 <button onclick="searchLocation()">Search</button>
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
-
 <div class="status-bar" id="statusBar">Ready</div>
-
 </div>
 
 <div id="map"></div>
@@ -134,22 +117,13 @@ canvas{margin-top:20px;}
 <div class="error-box" id="errorBox"></div>
 
 <div class="analysis-panel" id="analysisPanel">
-
-<div class="panel-header" id="panelHeader">
-Farm Climate Analysis
-</div>
-
+<div class="panel-header">Farm Climate Analysis</div>
 <div class="panel-body">
-
 <div id="metrics"></div>
-
 <canvas id="rainChart"></canvas>
-
 <canvas id="seasonChart"></canvas>
-
 </div>
 </div>
-
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -160,6 +134,7 @@ let map
 let marker
 let drawnItems
 let selectedPoint=null
+let pinMode=false
 
 let rainChart=null
 let seasonalChart=null
@@ -169,14 +144,10 @@ document.getElementById("statusBar").innerText=t
 }
 
 function showError(msg){
-
 const box=document.getElementById("errorBox")
-
 box.innerText=msg
 box.style.display="block"
-
 setTimeout(()=>{box.style.display="none"},4000)
-
 }
 
 /* MAP */
@@ -188,7 +159,6 @@ map=L.map("map").setView([-25.7,28.2],6)
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map)
 
 drawnItems=new L.FeatureGroup()
-
 map.addLayer(drawnItems)
 
 const drawControl=new L.Control.Draw({
@@ -198,21 +168,55 @@ edit:{featureGroup:drawnItems}
 
 map.addControl(drawControl)
 
+/* DRAW EVENT */
 map.on(L.Draw.Event.CREATED,function(e){
-
 drawnItems.clearLayers()
-
 const layer=e.layer
-
 drawnItems.addLayer(layer)
-
 selectedPoint=layer.getBounds().getCenter()
+})
+
+/* CLICK FOR PIN */
+map.on("click", function(e){
+
+if(!pinMode) return
+
+const {lat, lng} = e.latlng
+
+if(marker) map.removeLayer(marker)
+
+marker = L.marker([lat, lng]).addTo(map)
+
+selectedPoint = {lat: lat, lng: lng}
+
+pinMode = false
+map.getContainer().style.cursor = ""
+
+setStatus("Pin dropped")
 
 })
 
 }
 
 window.onload=initMap
+
+/* PIN MODE */
+
+function activatePinMode(){
+pinMode = true
+map.getContainer().style.cursor = "crosshair"
+setStatus("Click on the map to drop a pin")
+}
+
+/* RESET */
+
+function resetMap(){
+if(marker) map.removeLayer(marker)
+drawnItems.clearLayers()
+selectedPoint=null
+document.getElementById("analysisPanel").style.display="none"
+setStatus("Cleared")
+}
 
 /* SEARCH */
 
@@ -223,35 +227,23 @@ const q=document.getElementById("searchInput").value
 try{
 
 if(q.includes(",")){
-
 const p=q.split(",")
-
 setPoint(parseFloat(p[0]),parseFloat(p[1]))
-
 return
-
 }
 
 const url=`https://nominatim.openstreetmap.org/search?format=json&q=${q}`
-
 const r=await fetch(url)
-
 const d=await r.json()
 
 if(d.length>0){
-
 setPoint(parseFloat(d[0].lat),parseFloat(d[0].lon))
-
 }else{
-
 showError("Location not found")
-
 }
 
 }catch(e){
-
 showError("Search failed")
-
 }
 
 }
@@ -261,7 +253,6 @@ function setPoint(lat,lon){
 if(marker) map.removeLayer(marker)
 
 marker=L.marker([lat,lon]).addTo(map)
-
 map.setView([lat,lon],10)
 
 selectedPoint={lat:lat,lng:lon}
@@ -276,29 +267,12 @@ const endYear=new Date().getFullYear()-1
 
 const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
 
-for(let attempt=0;attempt<3;attempt++){
-
-try{
-
 const r=await fetch(url)
-
-if(!r.ok) throw new Error("API")
-
 const data=await r.json()
 
 if(!data.daily || !data.daily.time) throw new Error("No data")
 
 return data.daily
-
-}catch(e){
-
-if(attempt===2) throw e
-
-await new Promise(r=>setTimeout(r,2000))
-
-}
-
-}
 
 }
 
@@ -314,10 +288,8 @@ daily.time.forEach((d,i)=>{
 const y=new Date(d).getFullYear()
 
 if(!yearlyRain[y]){
-
 yearlyRain[y]=0
 yearlyFrost[y]=0
-
 }
 
 yearlyRain[y]+=daily.precipitation_sum[i]||0
@@ -329,11 +301,9 @@ if(daily.temperature_2m_min[i]<=0) yearlyFrost[y]++
 const years=Object.keys(yearlyRain)
 
 const rain=years.map(y=>yearlyRain[y])
-
 const frost=years.map(y=>yearlyFrost[y])
 
 const avgRain=(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0)
-
 const avgFrost=(frost.reduce((a,b)=>a+b)/frost.length).toFixed(1)
 
 return{years,rain,frost,avgRain,avgFrost}
@@ -349,9 +319,7 @@ let seasons={}
 daily.time.forEach((d,i)=>{
 
 const date=new Date(d)
-
 const m=date.getMonth()+1
-
 const y=date.getFullYear()
 
 let s
@@ -369,7 +337,6 @@ seasons[label]+=daily.precipitation_sum[i]||0
 })
 
 const labels=Object.keys(seasons)
-
 labels.pop()
 
 const values=labels.map(l=>seasons[l])
@@ -377,7 +344,6 @@ const values=labels.map(l=>seasons[l])
 const avg=values.reduce((a,b)=>a+b)/values.length
 
 const drought=values.map(v=>v<avg*0.75)
-
 const wet=values.map(v=>v>avg*1.25)
 
 return{labels,values,drought,wet}
@@ -389,11 +355,8 @@ return{labels,values,drought,wet}
 async function runAnalysis(){
 
 if(!selectedPoint){
-
 showError("Select location")
-
 return
-
 }
 
 try{
@@ -405,13 +368,10 @@ const daily=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 setStatus("Processing data...")
 
 const climate=processClimate(daily)
-
 const season=seasonalRain(daily)
 
 showMetrics(climate)
-
 drawRainChart(climate)
-
 drawSeasonChart(season)
 
 document.getElementById("analysisPanel").style.display="block"
@@ -421,9 +381,7 @@ setStatus("Analysis complete")
 }catch(e){
 
 console.error(e)
-
 showError("Climate API unavailable")
-
 setStatus("Error")
 
 }
@@ -435,7 +393,6 @@ setStatus("Error")
 function showMetrics(c){
 
 document.getElementById("metrics").innerHTML=`
-
 <div class="metric">
 <div class="metric-title">Average Annual Rainfall</div>
 <div class="metric-value">${c.avgRain} mm</div>
@@ -445,7 +402,6 @@ document.getElementById("metrics").innerHTML=`
 <div class="metric-title">Average Frost Days / Year</div>
 <div class="metric-value">${c.avgFrost}</div>
 </div>
-
 `
 
 }
@@ -457,9 +413,7 @@ function drawRainChart(c){
 if(rainChart) rainChart.destroy()
 
 rainChart=new Chart(document.getElementById("rainChart"),{
-
 type:"bar",
-
 data:{
 labels:c.years,
 datasets:[{
@@ -467,9 +421,7 @@ label:"Annual Rainfall (mm)",
 data:c.rain
 }]
 },
-
 options:{responsive:true}
-
 })
 
 }
@@ -479,19 +431,13 @@ function drawSeasonChart(s){
 if(seasonalChart) seasonalChart.destroy()
 
 const colors=s.values.map((v,i)=>{
-
 if(s.drought[i]) return "#e53935"
-
 if(s.wet[i]) return "#1e88e5"
-
 return "#4CAF50"
-
 })
 
 seasonalChart=new Chart(document.getElementById("seasonChart"),{
-
 type:"bar",
-
 data:{
 labels:s.labels,
 datasets:[{
@@ -500,9 +446,7 @@ data:s.values,
 backgroundColor:colors
 }]
 },
-
 options:{responsive:true}
-
 })
 
 }
