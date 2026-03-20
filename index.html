@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{margin:0;font-family:Arial;background:#f4f7f4;}
@@ -29,25 +30,20 @@ input{
 padding:8px;border:1px solid #ccc;border-radius:6px;
 }
 
-.status-bar{margin-left:auto;font-size:13px;}
-
 #map{height:80vh;}
 
 .analysis-panel{
 position:absolute;top:80px;right:20px;width:520px;
 background:white;border-radius:12px;
 box-shadow:0 6px 25px rgba(0,0,0,0.3);
-display:none;z-index:10000;
+display:none;
 }
 
 .panel-header{
 background:#2e7d32;color:white;padding:12px;font-weight:bold;
-font-size:16px;
 }
 
-.panel-body{
-padding:20px;max-height:75vh;overflow:auto;
-}
+.panel-body{padding:20px;max-height:75vh;overflow:auto;}
 
 .metric{margin-bottom:14px;}
 .metric-title{font-size:13px;color:#555;}
@@ -62,7 +58,6 @@ canvas{margin-top:25px;}
 <div class="control-bar">
 
 <input id="searchInput" placeholder="Search location or lat,lon">
-
 <input id="startYear" type="number" placeholder="Start Year">
 <input id="endYear" type="number" placeholder="End Year">
 
@@ -70,8 +65,7 @@ canvas{margin-top:25px;}
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
-
-<div class="status-bar" id="statusBar">Ready</div>
+<button onclick="downloadPDF()">Download PDF</button>
 
 </div>
 
@@ -81,11 +75,8 @@ canvas{margin-top:25px;}
 <div class="panel-header">Climate Risk Report</div>
 <div class="panel-body">
 <div id="metrics"></div>
-
 <canvas id="rainChart"></canvas>
-<canvas id="seasonChart"></canvas>
 <canvas id="frostChart"></canvas>
-
 </div>
 </div>
 
@@ -94,17 +85,13 @@ canvas{margin-top:25px;}
 
 <script>
 
-// MAP SETUP (unchanged)
-
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
-let rainChart=null, seasonalChart=null, frostChart=null
+let rainChart=null, frostChart=null
 
-function setStatus(t){document.getElementById("statusBar").innerText=t}
+let reportData={} // store for PDF
 
 function initMap(){
-
 map=L.map("map").setView([-25.7,28.2],6)
-
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map)
 
 drawnItems=new L.FeatureGroup()
@@ -114,7 +101,6 @@ const drawControl=new L.Control.Draw({
 draw:{polygon:true,rectangle:true},
 edit:{featureGroup:drawnItems}
 })
-
 map.addControl(drawControl)
 
 map.on(L.Draw.Event.CREATED,function(e){
@@ -132,7 +118,6 @@ marker=L.marker([lat,lng]).addTo(map)
 selectedPoint={lat,lng}
 pinMode=false
 })
-
 }
 
 window.onload=initMap
@@ -181,25 +166,6 @@ const data=await r.json()
 return data.daily
 }
 
-/* FILTER */
-
-function filterByYearRange(daily,startYear,endYear){
-if(!startYear||!endYear) return daily
-
-let f={time:[],precipitation_sum:[],temperature_2m_min:[]}
-
-daily.time.forEach((d,i)=>{
-const y=new Date(d).getFullYear()
-if(y>=startYear&&y<=endYear){
-f.time.push(d)
-f.precipitation_sum.push(daily.precipitation_sum[i])
-f.temperature_2m_min.push(daily.temperature_2m_min[i])
-}
-})
-
-return f
-}
-
 /* PROCESS */
 
 function processClimate(daily){
@@ -228,12 +194,11 @@ const avgFrost=(frost.reduce((a,b)=>a+b)/frost.length).toFixed(1)
 return{years,rain,frost,avgRain,avgFrost}
 }
 
-/* DROUGHT + WET */
+/* DROUGHT + PROBABILITY */
 
 function classifyYears(c){
 
 const avg=c.avgRain
-
 let drought=[], wet=[]
 
 c.rain.forEach((v,i)=>{
@@ -241,7 +206,9 @@ if(v<avg*0.75) drought.push(c.years[i])
 if(v>avg*1.25) wet.push(c.years[i])
 })
 
-return{drought,wet}
+const droughtProb = ((drought.length / c.years.length) * 100).toFixed(1)
+
+return{drought,wet,droughtProb}
 }
 
 /* EVENTS */
@@ -319,14 +286,7 @@ alert("Select location")
 return
 }
 
-setStatus("Loading...")
-
-const raw=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
-
-const startYear=parseInt(document.getElementById("startYear").value)
-const endYear=parseInt(document.getElementById("endYear").value)
-
-const daily=filterByYearRange(raw,startYear,endYear)
+const daily=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
 const climate=processClimate(daily)
 const classif=classifyYears(climate)
@@ -340,15 +300,30 @@ const rainDate=rainDay?doyToDate(rainDay):"N/A"
 
 const scores=plantingScore(frostDay,rainDay)
 
+/* STORE FOR PDF */
+reportData={
+avgRain:climate.avgRain,
+avgFrost:climate.avgFrost,
+drought:classif.drought,
+wet:classif.wet,
+droughtProb:classif.droughtProb,
+frostDate,
+rainDate,
+summerScore:scores.summer,
+winterScore:scores.winter
+}
+
 document.getElementById("metrics").innerHTML=`
 
 <div class="metric"><div class="metric-title">Avg Annual Rainfall</div><div class="metric-value">${climate.avgRain} mm</div></div>
 
 <div class="metric"><div class="metric-title">Avg Frost Days / Year</div><div class="metric-value">${climate.avgFrost}</div></div>
 
-<div class="metric"><div class="metric-title">Drought Years</div><div class="metric-value" style="font-size:14px;color:#e53935">${classif.drought.join(", ")||"None"}</div></div>
+<div class="metric"><div class="metric-title">Drought Probability</div><div class="metric-value" style="color:#e53935">${classif.droughtProb}%</div></div>
 
-<div class="metric"><div class="metric-title">Excess Rainfall Years</div><div class="metric-value" style="font-size:14px;color:#1e88e5">${classif.wet.join(", ")||"None"}</div></div>
+<div class="metric"><div class="metric-title">Drought Years</div><div class="metric-value" style="font-size:14px">${classif.drought.join(", ")||"None"}</div></div>
+
+<div class="metric"><div class="metric-title">Excess Rainfall Years</div><div class="metric-value" style="font-size:14px">${classif.wet.join(", ")||"None"}</div></div>
 
 <hr>
 
@@ -366,9 +341,6 @@ document.getElementById("metrics").innerHTML=`
 drawCharts(climate)
 
 document.getElementById("analysisPanel").style.display="block"
-
-setStatus("Done")
-
 }
 
 /* CHARTS */
@@ -378,7 +350,7 @@ function drawCharts(c){
 if(rainChart) rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
 type:"bar",
-data:{labels:c.years,datasets:[{label:"Annual Rainfall",data:c.rain}]}
+data:{labels:c.years,datasets:[{label:"Rainfall",data:c.rain}]}
 })
 
 if(frostChart) frostChart.destroy()
@@ -386,7 +358,27 @@ frostChart=new Chart(document.getElementById("frostChart"),{
 type:"line",
 data:{labels:c.years,datasets:[{label:"Frost Days",data:c.frost}]}
 })
+}
 
+/* PDF */
+
+function downloadPDF(){
+
+const { jsPDF } = window.jspdf
+const doc = new jsPDF()
+
+doc.setFontSize(14)
+doc.text("PlaasRisk Climate Report", 20, 20)
+
+let y=40
+
+for(const [key,val] of Object.entries(reportData)){
+doc.setFontSize(10)
+doc.text(`${key}: ${Array.isArray(val)?val.join(", "):val}`,20,y)
+y+=8
+}
+
+doc.save("Climate_Report.pdf")
 }
 
 </script>
