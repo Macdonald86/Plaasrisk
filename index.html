@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>PlaasRisk Climate Intelligence</title>
+<title>PlaasRisk AI Underwriting Platform</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
@@ -16,99 +15,75 @@
 <style>
 body{margin:0;font-family:Arial;background:#f4f7f4;}
 
-.control-bar{
-display:flex;gap:10px;padding:10px;background:white;
-border-bottom:1px solid #ddd;flex-wrap:wrap;
-}
+.control-bar{display:flex;gap:10px;padding:10px;background:white;border-bottom:1px solid #ddd;flex-wrap:wrap;}
+button{background:#2e7d32;border:none;color:white;padding:8px 14px;border-radius:6px;cursor:pointer;}
+input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 
-button{
-background:#2e7d32;border:none;color:white;
-padding:8px 14px;border-radius:6px;cursor:pointer;
-}
-
-input{
-padding:8px;border:1px solid #ccc;border-radius:6px;
-}
-
-#map{height:80vh;}
+#map{height:70vh;}
 
 .analysis-panel{
 position:absolute;top:80px;right:20px;width:520px;
 background:white;border-radius:12px;
 box-shadow:0 6px 25px rgba(0,0,0,0.3);
-display:none;
+display:none;z-index:99999;
 }
 
-.panel-header{
-background:#2e7d32;color:white;padding:12px;font-weight:bold;
-}
-
+.panel-header{background:#2e7d32;color:white;padding:12px;font-weight:bold;}
 .panel-body{padding:20px;max-height:75vh;overflow:auto;}
 
 .metric{margin-bottom:14px;}
 .metric-title{font-size:13px;color:#555;}
 .metric-value{font-size:22px;font-weight:bold;}
 
-canvas{margin-top:25px;}
+#portfolioPanel{padding:15px;background:white;margin:10px;border-radius:10px;}
+canvas{margin-top:20px;}
 </style>
 </head>
 
 <body>
 
 <div class="control-bar">
-
-<input id="searchInput" placeholder="Search location or lat,lon">
-<input id="startYear" type="number" placeholder="Start Year">
-<input id="endYear" type="number" placeholder="End Year">
-
+<input id="searchInput" placeholder="Search or lat,lon">
 <button onclick="searchLocation()">Search</button>
 <button onclick="activatePinMode()">Drop Pin</button>
-<button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
 <button onclick="downloadPDF()">Download PDF</button>
-
 </div>
 
 <div id="map"></div>
 
+<div id="portfolioPanel">
+<h3>🌍 Portfolio Dashboard</h3>
+<table border="1" width="100%" style="border-collapse:collapse;font-size:13px">
+<thead>
+<tr>
+<th>Location</th><th>Risk</th><th>Yield</th><th>Drought%</th><th>Decision</th><th>Alert</th>
+</tr>
+</thead>
+<tbody id="portfolioTable"></tbody>
+</table>
+</div>
+
 <div class="analysis-panel" id="analysisPanel">
-<div class="panel-header">Climate Risk Report</div>
+<div class="panel-header">AI Climate Risk Report</div>
 <div class="panel-body">
 <div id="metrics"></div>
 <canvas id="rainChart"></canvas>
-<canvas id="frostChart"></canvas>
 </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
 <script>
 
-let map, marker, drawnItems, selectedPoint=null, pinMode=false
-let rainChart=null, frostChart=null
-
-let reportData={} // store for PDF
+let map, marker, selectedPoint=null, pinMode=false
+let rainChart=null
+let portfolio=[]
+let reportData={}
 
 function initMap(){
 map=L.map("map").setView([-25.7,28.2],6)
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map)
-
-drawnItems=new L.FeatureGroup()
-map.addLayer(drawnItems)
-
-const drawControl=new L.Control.Draw({
-draw:{polygon:true,rectangle:true},
-edit:{featureGroup:drawnItems}
-})
-map.addControl(drawControl)
-
-map.on(L.Draw.Event.CREATED,function(e){
-drawnItems.clearLayers()
-const layer=e.layer
-drawnItems.addLayer(layer)
-selectedPoint=layer.getBounds().getCenter()
-})
 
 map.on("click", function(e){
 if(!pinMode) return
@@ -119,266 +94,174 @@ selectedPoint={lat,lng}
 pinMode=false
 })
 }
-
 window.onload=initMap
 
 function activatePinMode(){pinMode=true}
-function resetMap(){
-if(marker) map.removeLayer(marker)
-drawnItems.clearLayers()
-selectedPoint=null
-document.getElementById("analysisPanel").style.display="none"
-}
 
 /* SEARCH */
-
 async function searchLocation(){
 const q=document.getElementById("searchInput").value
-
 if(q.includes(",")){
-const p=q.split(",")
-setPoint(parseFloat(p[0]),parseFloat(p[1]))
-return
-}
-
+const [lat,lon]=q.split(",")
+setPoint(lat,lon);return}
 const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
 const d=await r.json()
-
-if(d.length>0){
-setPoint(d[0].lat,d[0].lon)
+if(d.length)setPoint(d[0].lat,d[0].lon)
 }
-}
-
 function setPoint(lat,lon){
 if(marker) map.removeLayer(marker)
 marker=L.marker([lat,lon]).addTo(map)
 map.setView([lat,lon],10)
-selectedPoint={lat,lng:lon}
+selectedPoint={lat:parseFloat(lat),lng:parseFloat(lon)}
 }
 
 /* FETCH */
-
 async function fetchClimate(lat,lon){
 const endYear=new Date().getFullYear()-1
 const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
 const r=await fetch(url)
-const data=await r.json()
-return data.daily
+return (await r.json()).daily
 }
 
 /* PROCESS */
-
-function processClimate(daily){
-
-let rainY={}, frostY={}
-
-daily.time.forEach((d,i)=>{
-const y=new Date(d).getFullYear()
-
-if(!rainY[y]){
-rainY[y]=0
-frostY[y]=0
-}
-
-rainY[y]+=daily.precipitation_sum[i]||0
-if(daily.temperature_2m_min[i]<=0) frostY[y]++
+function processClimate(d){
+let rain={}, frost={}
+d.time.forEach((t,i)=>{
+const y=new Date(t).getFullYear()
+if(!rain[y]){rain[y]=0;frost[y]=0}
+rain[y]+=d.precipitation_sum[i]||0
+if(d.temperature_2m_min[i]<=0) frost[y]++
 })
-
-const years=Object.keys(rainY)
-const rain=years.map(y=>rainY[y])
-const frost=years.map(y=>frostY[y])
-
-const avgRain=(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0)
-const avgFrost=(frost.reduce((a,b)=>a+b)/frost.length).toFixed(1)
-
-return{years,rain,frost,avgRain,avgFrost}
+const years=Object.keys(rain)
+return{
+years,
+rain:Object.values(rain),
+frost:Object.values(frost),
+avgRain:(Object.values(rain).reduce((a,b)=>a+b)/years.length).toFixed(0),
+avgFrost:(Object.values(frost).reduce((a,b)=>a+b)/years.length).toFixed(1)
+}
 }
 
-/* DROUGHT + PROBABILITY */
-
-function classifyYears(c){
-
-const avg=c.avgRain
-let drought=[], wet=[]
-
-c.rain.forEach((v,i)=>{
-if(v<avg*0.75) drought.push(c.years[i])
-if(v>avg*1.25) wet.push(c.years[i])
+/* ADVANCED METRICS */
+function advanced(d){
+let seasons={},start={}
+d.time.forEach((t,i)=>{
+const dt=new Date(t),m=dt.getMonth()+1,y=dt.getFullYear()
+let s
+if(m>=10)s=y
+else if(m<=3)s=y-1
+else return
+const label=s+"/"+(s+1)
+if(!seasons[label])seasons[label]=0
+seasons[label]+=d.precipitation_sum[i]||0
+if(m==10||m==11){
+if(!start[label])start[label]=0
+start[label]+=d.precipitation_sum[i]||0
+}
 })
-
-const droughtProb = ((drought.length / c.years.length) * 100).toFixed(1)
-
-return{drought,wet,droughtProb}
+const vals=Object.values(seasons)
+const mean=vals.reduce((a,b)=>a+b)/vals.length
+const std=Math.sqrt(vals.reduce((a,b)=>a+Math.pow(b-mean,2),0)/vals.length)
+const cv=((std/mean)*100).toFixed(1)
+const dry=(Object.values(start).filter(v=>v<50).length/Object.keys(start).length*100).toFixed(1)
+let rel=100-cv; if(rel<0)rel=0
+return{cv,dry,rel}
 }
 
-/* EVENTS */
-
-function detectEvents(daily){
-
-let frost={}, rain10={}
-
-daily.time.forEach((d,i)=>{
-const y=new Date(d).getFullYear()
-const rain=daily.precipitation_sum[i]||0
-const temp=daily.temperature_2m_min[i]
-
-if(temp<=0&&!frost[y]) frost[y]=d
-if(rain>=10&&!rain10[y]) rain10[y]=d
-})
-
-return{frost,rain10}
-}
-
-/* HELPERS */
-
-function avgDOY(obj){
-
-let days=Object.values(obj).map(d=>{
-const date=new Date(d)
-const start=new Date(date.getFullYear(),0,0)
-return (date-start)/(1000*60*60*24)
-})
-
-if(days.length===0) return null
-
-return days.reduce((a,b)=>a+b)/days.length
-}
-
-function doyToDate(d){
-const date=new Date(2000,0)
-date.setDate(d)
-return date.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})
-}
-
-/* SCORE */
-
-function plantingScore(frostDay,rainDay){
-
-let summer=0,winter=0
-
-if(rainDay){
-if(rainDay<320) summer=95
-else if(rainDay<350) summer=75
-else summer=40
-}
-
-if(frostDay){
-if(frostDay<200) winter=95
-else if(frostDay<260) winter=70
-else winter=40
-}
-
-return{summer,winter}
-}
-
-function color(s){
-if(s>=80) return "#2e7d32"
-if(s>=60) return "#f9a825"
-return "#e53935"
+/* AI ENGINE */
+function aiEngine(droughtProb,reliability,yieldScore){
+let score=100
+score-=droughtProb*0.4
+score-=(100-reliability)*0.3
+score-=(100-yieldScore)*0.5
+if(score>100)score=100
+if(score<0)score=0
+let decision=score>80?"ACCEPT":score>60?"LOAD":"DECLINE"
+return{score:score.toFixed(0),decision}
 }
 
 /* ANALYSIS */
-
 async function runAnalysis(){
 
-if(!selectedPoint){
-alert("Select location")
-return
-}
+if(!selectedPoint){alert("Select location");return}
 
-const daily=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
+const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
+const c=processClimate(d)
+const adv=advanced(d)
 
-const climate=processClimate(daily)
-const classif=classifyYears(climate)
-const events=detectEvents(daily)
+const droughtProb=parseFloat(adv.dry)
+const yieldScore=(100-adv.cv).toFixed(0)
 
-const frostDay=avgDOY(events.frost)
-const rainDay=avgDOY(events.rain10)
+const ai=aiEngine(droughtProb,adv.rel,yieldScore)
 
-const frostDate=frostDay?doyToDate(frostDay):"N/A"
-const rainDate=rainDay?doyToDate(rainDay):"N/A"
-
-const scores=plantingScore(frostDay,rainDay)
-
-/* STORE FOR PDF */
-reportData={
-avgRain:climate.avgRain,
-avgFrost:climate.avgFrost,
-drought:classif.drought,
-wet:classif.wet,
-droughtProb:classif.droughtProb,
-frostDate,
-rainDate,
-summerScore:scores.summer,
-winterScore:scores.winter
-}
+portfolio.push({
+location:selectedPoint.lat.toFixed(2)+","+selectedPoint.lng.toFixed(2),
+risk:ai.score,
+yield:yieldScore,
+drought:droughtProb,
+decision:ai.decision
+})
+updateTable()
 
 document.getElementById("metrics").innerHTML=`
+<b>AI Risk Score:</b> ${ai.score}/100<br>
+<b>Decision:</b> ${ai.decision}<br><hr>
 
-<div class="metric"><div class="metric-title">Avg Annual Rainfall</div><div class="metric-value">${climate.avgRain} mm</div></div>
+Avg Rainfall: ${c.avgRain} mm<br>
+Avg Frost Days: ${c.avgFrost}<br>
 
-<div class="metric"><div class="metric-title">Avg Frost Days / Year</div><div class="metric-value">${climate.avgFrost}</div></div>
+Seasonal Variability: ${adv.cv}%<br>
+Dry Start Probability: ${adv.dry}%<br>
+Reliability Index: ${adv.rel}/100<br>
 
-<div class="metric"><div class="metric-title">Drought Probability</div><div class="metric-value" style="color:#e53935">${classif.droughtProb}%</div></div>
-
-<div class="metric"><div class="metric-title">Drought Years</div><div class="metric-value" style="font-size:14px">${classif.drought.join(", ")||"None"}</div></div>
-
-<div class="metric"><div class="metric-title">Excess Rainfall Years</div><div class="metric-value" style="font-size:14px">${classif.wet.join(", ")||"None"}</div></div>
-
-<hr>
-
-<div class="metric"><div class="metric-title">Avg First Frost</div><div class="metric-value">${frostDate}</div></div>
-
-<div class="metric"><div class="metric-title">Avg First Rain ≥10mm</div><div class="metric-value">${rainDate}</div></div>
-
-<hr>
-
-<div class="metric"><div class="metric-title">🌽 Summer Score</div><div class="metric-value" style="color:${color(scores.summer)}">${scores.summer}/100</div></div>
-
-<div class="metric"><div class="metric-title">🌾 Winter Score</div><div class="metric-value" style="color:${color(scores.winter)}">${scores.winter}/100</div></div>
+Yield Score: ${yieldScore}/100
 `
 
-drawCharts(climate)
+drawChart(c)
 
 document.getElementById("analysisPanel").style.display="block"
+
+reportData={...c,...adv,ai,yieldScore}
 }
 
-/* CHARTS */
+/* PORTFOLIO */
+function updateTable(){
+const t=document.getElementById("portfolioTable")
+portfolio.sort((a,b)=>b.risk-a.risk)
+t.innerHTML=portfolio.map(f=>{
+let alert="OK"
+if(f.drought>40)alert="⚠️"
+if(f.risk<60)alert="❌"
+return `<tr>
+<td>${f.location}</td>
+<td>${f.risk}</td>
+<td>${f.yield}</td>
+<td>${f.drought}%</td>
+<td>${f.decision}</td>
+<td>${alert}</td>
+</tr>`
+}).join("")
+}
 
-function drawCharts(c){
-
-if(rainChart) rainChart.destroy()
+/* CHART */
+function drawChart(c){
+if(rainChart)rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
 type:"bar",
 data:{labels:c.years,datasets:[{label:"Rainfall",data:c.rain}]}
 })
-
-if(frostChart) frostChart.destroy()
-frostChart=new Chart(document.getElementById("frostChart"),{
-type:"line",
-data:{labels:c.years,datasets:[{label:"Frost Days",data:c.frost}]}
-})
 }
 
 /* PDF */
-
 function downloadPDF(){
-
-const { jsPDF } = window.jspdf
-const doc = new jsPDF()
-
-doc.setFontSize(14)
-doc.text("PlaasRisk Climate Report", 20, 20)
-
+const {jsPDF}=window.jspdf
+const doc=new jsPDF()
+doc.text("Climate Risk Report",20,20)
 let y=40
-
-for(const [key,val] of Object.entries(reportData)){
-doc.setFontSize(10)
-doc.text(`${key}: ${Array.isArray(val)?val.join(", "):val}`,20,y)
-y+=8
-}
-
-doc.save("Climate_Report.pdf")
+Object.entries(reportData).forEach(([k,v])=>{
+doc.text(`${k}: ${v}`,20,y);y+=8
+})
+doc.save("report.pdf")
 }
 
 </script>
