@@ -18,14 +18,13 @@ body{margin:0;font-family:Arial;background:#f4f7f4;}
 button{background:#2e7d32;border:none;color:white;padding:8px 14px;border-radius:6px;cursor:pointer;}
 input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 #map{height:80vh;}
-.analysis-panel{position:absolute;top:80px;right:20px;width:520px;background:white;border-radius:12px;box-shadow:0 6px 25px rgba(0,0,0,0.3);display:none;z-index:99999;}
+.analysis-panel{position:absolute;top:80px;right:20px;width:520px;background:white;border-radius:12px;box-shadow:0 6px 25px rgba(0,0,0,0.3);display:none;}
 .panel-header{background:#2e7d32;color:white;padding:12px;font-weight:bold;}
 .panel-body{padding:20px;max-height:75vh;overflow:auto;}
-canvas{margin-top:20px;}
 
-.status-loading{background:#ff9800;color:white;padding:6px 12px;border-radius:6px;}
-.status-success{background:#4caf50;color:white;padding:6px 12px;border-radius:6px;}
-.status-error{background:#f44336;color:white;padding:6px 12px;border-radius:6px;}
+.status-loading{background:#ff9800;color:white;padding:6px;border-radius:6px;}
+.status-success{background:#4caf50;color:white;padding:6px;border-radius:6px;}
+.status-error{background:#f44336;color:white;padding:6px;border-radius:6px;}
 </style>
 </head>
 
@@ -79,10 +78,17 @@ if(type==="error")el.classList.add("status-error")
 /* MAP */
 function initMap(){
 map=L.map("map").setView([-25.7,28.2],6)
+
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map)
 
 drawnItems=new L.FeatureGroup()
 map.addLayer(drawnItems)
+
+const drawControl=new L.Control.Draw({
+draw:{polygon:true,rectangle:true},
+edit:{featureGroup:drawnItems}
+})
+map.addControl(drawControl)
 
 map.on(L.Draw.Event.CREATED,function(e){
 drawnItems.clearLayers()
@@ -94,8 +100,10 @@ selectedPoint=layer.getBounds().getCenter()
 map.on("click",function(e){
 if(!pinMode)return
 const {lat,lng}=e.latlng
+
 document.getElementById("latInput").value=lat.toFixed(4)
 document.getElementById("lonInput").value=lng.toFixed(4)
+
 if(marker)map.removeLayer(marker)
 marker=L.marker([lat,lng]).addTo(map)
 selectedPoint={lat,lng}
@@ -105,7 +113,12 @@ pinMode=false
 window.onload=initMap
 
 function activatePinMode(){pinMode=true}
-function resetMap(){if(marker)map.removeLayer(marker);selectedPoint=null}
+
+function resetMap(){
+if(marker)map.removeLayer(marker)
+drawnItems.clearLayers()
+selectedPoint=null
+}
 
 /* LOCATION */
 function setLatLon(){
@@ -129,7 +142,7 @@ const d=await r.json()
 if(d.length)setPoint(d[0].lat,d[0].lon)
 }
 
-/* DATA */
+/* FETCH */
 async function fetchClimate(lat,lon){
 const endYear=new Date().getFullYear()-1
 const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
@@ -148,6 +161,16 @@ if(!seasons[label])seasons[label]=0
 seasons[label]+=d.precipitation_sum[i]||0
 })
 return{years:Object.keys(seasons),values:Object.values(seasons)}
+}
+
+function frostAnalysis(d){
+let frostDays={}
+d.time.forEach((t,i)=>{
+const y=new Date(t).getFullYear()
+if(!frostDays[y])frostDays[y]=0
+if(d.temperature_2m_min[i]<=0)frostDays[y]++
+})
+return frostDays
 }
 
 function detectPlantingWindows(d){
@@ -177,15 +200,33 @@ const d=new Date(2000,0);d.setDate(doy)
 return d.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})
 }
 
-function last10Stats(seasonal,planting){
-const years=seasonal.years.slice(-10)
+/* 🌱 PLANTING WINDOW RANGE */
+function plantingWindowRange(planting){
+const days=Object.values(planting).map(d=>toDOY(d)).sort((a,b)=>a-b)
+
+if(days.length<5)return{start:"N/A",end:"N/A",length:"N/A"}
+
+const p20=days[Math.floor(days.length*0.2)]
+const p80=days[Math.floor(days.length*0.8)]
+
+return{
+start:doyToReadable(p20),
+end:doyToReadable(p80),
+length:Math.round(p80-p20)
+}
+}
+
+function last10Stats(seasonal,planting,frost){
 const rain=seasonal.values.slice(-10)
 const avgRain=(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0)
+
+const frostVals=Object.values(frost).slice(-10)
+const avgFrost=(frostVals.reduce((a,b)=>a+b,0)/frostVals.length).toFixed(1)
 
 const pYears=Object.keys(planting).slice(-10)
 const pDays=pYears.map(y=>toDOY(planting[y]))
 
-return{avgRain,pYears,pDays}
+return{avgRain,avgFrost,pYears,pDays}
 }
 
 /* CHART */
@@ -193,7 +234,7 @@ function drawChart(years,values){
 if(rainChart)rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
 type:"bar",
-data:{labels:years,datasets:[{label:"Seasonal Rainfall",data:values}]}
+data:{labels:years,datasets:[{label:"Seasonal Rainfall (Oct–Mar)",data:values}]}
 })
 }
 
@@ -204,24 +245,38 @@ if(!selectedPoint){alert("Select location");return}
 
 try{
 setStatus("loading","Fetching data...")
+
 const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
 setStatus("loading","Processing...")
+
 const seasonal=seasonalRainfall(d)
 const planting=detectPlantingWindows(d)
-const stats=last10Stats(seasonal,planting)
+const frost=frostAnalysis(d)
+
+const stats=last10Stats(seasonal,planting,frost)
+const windowRange=plantingWindowRange(planting)
 
 drawChart(seasonal.years,seasonal.values)
 
 document.getElementById("metrics").innerHTML=`
-<b>🌧️ Avg Rainfall (10 yrs):</b> ${stats.avgRain} mm<br><hr>
-<b>🌱 Planting Dates:</b><br>
+
+<b>🌧️ Avg Rainfall (10 yrs):</b> ${stats.avgRain} mm<br>
+<b>❄️ Avg Frost Days (10 yrs):</b> ${stats.avgFrost}<br><hr>
+
+<b>🌱 Planting Window (Area):</b><br>
+Start: ${windowRange.start}<br>
+End: ${windowRange.end}<br>
+Length: ${windowRange.length} days<br><hr>
+
+<b>🌱 Planting Dates (Last 10 Years):</b><br>
 ${stats.pYears.map((y,i)=>`${y}: ${doyToReadable(stats.pDays[i])}`).join("<br>")}
+
 `
 
 document.getElementById("analysisPanel").style.display="block"
 
-setStatus("success","Done")
+setStatus("success","Analysis complete")
 
 }catch(e){
 setStatus("error","Error fetching data")
@@ -232,16 +287,25 @@ setStatus("error","Error fetching data")
 function downloadPDF(){
 const {jsPDF}=window.jspdf
 const doc=new jsPDF()
+
 doc.text("Climate Risk Report",20,20)
-doc.text("Generated by PlaasRisk AI",20,30)
-doc.text("Disclaimer: Not financial advice",20,280,{maxWidth:170})
+
+let y=40
+Object.entries(reportData).forEach(([k,v])=>{
+doc.text(`${k}: ${v}`,20,y)
+y+=8
+})
+
+doc.setFontSize(8)
+doc.text("Disclaimer: Indicative analytics only. Not insurance advice.",20,280,{maxWidth:170})
+
 doc.save("report.pdf")
 }
 
 </script>
 
 <div style="font-size:11px;padding:10px;border-top:1px solid #ddd;background:#fafafa;">
-<b>Disclaimer:</b> Indicative analytics only. Not insurance advice.<br><br>
+<b>Disclaimer:</b> This tool provides indicative climate risk analytics and should not be relied upon as the sole basis for decision-making.<br><br>
 <b>Developed by:</b> Makoro Macdonald
 </div>
 
