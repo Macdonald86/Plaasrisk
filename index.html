@@ -1,4 +1,4 @@
-```html
+```html id="finalcode1"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +18,20 @@ body{margin:0;font-family:Arial;background:#f4f7f4;}
 button{background:#2e7d32;border:none;color:white;padding:8px 14px;border-radius:6px;cursor:pointer;}
 input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 #map{height:80vh;}
-.analysis-panel{position:absolute;top:80px;right:20px;width:520px;background:white;border-radius:12px;box-shadow:0 6px 25px rgba(0,0,0,0.3);display:none;}
+
+/* ✅ FIXED PANEL LAYER */
+.analysis-panel{
+position:absolute;
+top:80px;
+right:20px;
+width:520px;
+background:white;
+border-radius:12px;
+box-shadow:0 6px 25px rgba(0,0,0,0.3);
+display:none;
+z-index:99999;
+}
+
 .panel-header{background:#2e7d32;color:white;padding:12px;font-weight:bold;}
 .panel-body{padding:20px;max-height:75vh;overflow:auto;}
 
@@ -53,6 +66,7 @@ input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 <div class="panel-body">
 <div id="metrics"></div>
 <canvas id="rainChart"></canvas>
+<canvas id="frostChart"></canvas>
 </div>
 </div>
 
@@ -62,7 +76,7 @@ input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 <script>
 
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
-let rainChart=null
+let rainChart=null, frostChart=null
 let reportData={}
 let isLoading=false
 
@@ -123,7 +137,7 @@ function resetMap(){if(marker)map.removeLayer(marker);drawnItems.clearLayers();s
 function setLatLon(){
 const lat=parseFloat(latInput.value)
 const lon=parseFloat(lonInput.value)
-if(isNaN(lat)||isNaN(lon)){alert("Invalid coordinates");return}
+if(isNaN(lat)||isNaN(lon)){alert("Invalid");return}
 setPoint(lat,lon)
 }
 function setPoint(lat,lon){
@@ -134,11 +148,9 @@ selectedPoint={lat,lng:lon}
 }
 async function searchLocation(){
 const q=searchInput.value
-if(!q){alert("Enter location");return}
 const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
 const d=await r.json()
 if(d.length)setPoint(d[0].lat,d[0].lon)
-else alert("Location not found")
 }
 
 /* FETCH */
@@ -148,7 +160,6 @@ const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitu
 const r=await fetch(url)
 if(!r.ok)throw new Error("API error")
 const data=await r.json()
-if(!data.daily)throw new Error("No data")
 return data.daily
 }
 
@@ -166,13 +177,13 @@ return{years:Object.keys(seasons),values:Object.values(seasons)}
 }
 
 function frostAnalysis(d){
-let frostDays={}
+let frost={}
 d.time.forEach((t,i)=>{
 const y=new Date(t).getFullYear()
-if(!frostDays[y])frostDays[y]=0
-if(d.temperature_2m_min[i]<=0)frostDays[y]++
+if(!frost[y])frost[y]=0
+if(d.temperature_2m_min[i]<=0)frost[y]++
 })
-return frostDays
+return frost
 }
 
 function detectPlantingWindows(d){
@@ -218,12 +229,20 @@ if(s>50)return"MEDIUM RISK"
 return"LOW RISK"
 }
 
-/* CHART */
-function drawChart(y,v){
+/* CHARTS */
+function drawRainChart(y,v){
 if(rainChart)rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
 type:"bar",
-data:{labels:y,datasets:[{label:"Seasonal Rainfall (Oct–Mar)",data:v}]}
+data:{labels:y,datasets:[{label:"Seasonal Rainfall",data:v}]}
+})
+}
+
+function drawFrostChart(y,v){
+if(frostChart)frostChart.destroy()
+frostChart=new Chart(document.getElementById("frostChart"),{
+type:"line",
+data:{labels:y,datasets:[{label:"Frost Days",data:v,tension:0.3}]}
 })
 }
 
@@ -234,7 +253,7 @@ if(isLoading)return
 
 try{
 setLoading(true)
-setStatus("loading","Fetching climate data...")
+setStatus("loading","Fetching data...")
 
 const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
@@ -249,112 +268,46 @@ const risk=classifyRisk(stats.avgRain,stats.avgFrost,windowRange.length)
 reportData={
 lat:selectedPoint.lat.toFixed(4),
 lon:selectedPoint.lng.toFixed(4),
-avgRain:stats.avgRain,
-avgFrost:stats.avgFrost,
-start:windowRange.start,
-end:windowRange.end,
-length:windowRange.length,
+...stats,
+...windowRange,
 riskLevel:risk,
-plantingYears:stats.pYears,
 plantingDates:stats.pDays.map(d=>doyToReadable(d)),
-frostYears:Object.keys(frost).slice(-10),
-frostDays:Object.values(frost).slice(-10)
+frostYears:Object.keys(frost),
+frostDays:Object.values(frost)
 }
 
-drawChart(seasonal.years,seasonal.values)
+drawRainChart(seasonal.years,seasonal.values)
+drawFrostChart(reportData.frostYears,reportData.frostDays)
 
-document.getElementById("metrics").innerHTML=`
+metrics.innerHTML=`
 <h3>Climate Summary</h3>
-Avg Rainfall: ${reportData.avgRain} mm<br>
-Avg Frost Days: ${reportData.avgFrost}<br>
+Rainfall: ${reportData.avgRain} mm<br>
+Frost Avg: ${reportData.avgFrost}<br>
 
 <h3>Frost Analysis</h3>
-${reportData.frostYears.map((y,i)=>`${y}: ${reportData.frostDays[i]} days`).join("<br>")}
+${reportData.frostYears.slice(-10).map((y,i)=>`${y}: ${reportData.frostDays.slice(-10)[i]} days`).join("<br>")}
 
 <h3>Planting Window</h3>
-Start: ${reportData.start}<br>
-End: ${reportData.end}<br>
-Length: ${reportData.length} days<br>
+${reportData.start} → ${reportData.end} (${reportData.length} days)
 
 <h3>Risk: ${reportData.riskLevel}</h3>
-
-<h3>Planting Dates</h3>
-${reportData.plantingYears.map((y,i)=>`${y}: ${reportData.plantingDates[i]}`).join("<br>")}
 `
 
 analysisPanel.style.display="block"
-setStatus("success","Analysis complete")
+setStatus("success","Done")
 
 }catch(e){
-console.error(e)
-setStatus("error","Analysis failed")
-alert("Error: "+e.message)
+setStatus("error","Error")
+alert(e.message)
 }finally{
 setLoading(false)
 }
 }
 
-/* PDF */
-function downloadPDF(){
-if(!reportData.avgRain){alert("Run analysis first");return}
-const {jsPDF}=window.jspdf
-const doc=new jsPDF()
-
-let y=20
-doc.setFontSize(16)
-doc.text("PlaasRisk Climate Risk Report",20,y)
-
-y+=8
-doc.setFontSize(10)
-doc.text("Developed by Makoro Macdonald",20,y)
-
-y+=10
-doc.text(`Lat: ${reportData.lat} Lon: ${reportData.lon}`,20,y)
-
-y+=10
-doc.text(`Risk: ${reportData.riskLevel}`,20,y)
-
-y+=10
-doc.text(`Rainfall: ${reportData.avgRain} mm`,20,y)
-y+=6
-doc.text(`Frost: ${reportData.avgFrost}`,20,y)
-
-y+=10
-doc.text(`Planting Window: ${reportData.start} - ${reportData.end}`,20,y)
-
-y+=10
-const img=document.getElementById("rainChart").toDataURL("image/png")
-doc.addImage(img,"PNG",20,y,170,60)
-
-doc.addPage()
-y=20
-
-doc.text("Frost Analysis",20,y)
-y+=10
-reportData.frostYears.forEach((yr,i)=>{
-doc.text(`${yr}: ${reportData.frostDays[i]} days`,20,y)
-y+=6
-})
-
-y+=10
-doc.text("Planting Dates",20,y)
-y+=10
-
-reportData.plantingYears.forEach((yr,i)=>{
-doc.text(`${yr}: ${reportData.plantingDates[i]}`,20,y)
-y+=6
-})
-
-doc.setFontSize(8)
-doc.text("Disclaimer: Indicative analytics only. Not insurance advice.",20,280,{maxWidth:170})
-
-doc.save("PlaasRisk_Report.pdf")
-}
-
 </script>
 
 <div style="font-size:11px;padding:10px;border-top:1px solid #ddd;background:#fafafa;">
-<b>Disclaimer:</b> Indicative analytics only. Not insurance advice.<br><br>
+<b>Disclaimer:</b> Indicative only. Not insurance advice.<br>
 <b>Developed by:</b> Makoro Macdonald
 </div>
 
