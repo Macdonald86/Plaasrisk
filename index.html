@@ -1,10 +1,10 @@
-```html id="fullfinalgdu"
+```html id="ultimatefinal"
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PlaasRisk Advanced Climate Model</title>
+<title>PlaasRisk Ultimate Model</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
@@ -47,16 +47,16 @@ z-index:99999;
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
-<button onclick="downloadPDF()">PDF</button>
+<button onclick="downloadPDF()">Download PDF</button>
 </div>
 
 <div id="map"></div>
 
 <div class="analysis-panel" id="analysisPanel">
-<div class="panel-header">Advanced Climate Risk Report</div>
+<div class="panel-header">Ultimate Climate Report</div>
 <div class="panel-body">
 <div id="metrics"></div>
-<canvas id="rainChart"></canvas>
+<canvas id="seasonChart"></canvas>
 <canvas id="frostChart"></canvas>
 </div>
 </div>
@@ -67,7 +67,8 @@ z-index:99999;
 <script>
 
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
-let rainChart=null, frostChart=null
+let seasonChart=null, frostChart=null
+let globalStats=null
 
 /* MAP */
 function initMap(){
@@ -122,21 +123,54 @@ const data=await r.json()
 return data.daily
 }
 
-/* GDU */
-function GDU(tmin,tmax,base){
-return ((tmax+tmin)/2)-base
+/* SEASONAL RAIN */
+function seasonalRainfall(d){
+let seasons={}
+d.time.forEach((t,i)=>{
+const dt=new Date(t)
+const m=dt.getMonth()+1
+const y=dt.getFullYear()
+
+let s
+if(m>=10)s=y
+else if(m<=3)s=y-1
+else return
+
+const label=s+"/"+(s+1)
+if(!seasons[label])seasons[label]=0
+seasons[label]+=d.precipitation_sum[i]||0
+})
+return seasons
 }
 
-/* Rain proxy */
+function seasonalStats(seasons){
+const years=Object.keys(seasons)
+const values=Object.values(seasons)
+const avg=values.reduce((a,b)=>a+b)/values.length
+const percent=values.map(v=>(((v-avg)/avg)*100).toFixed(1))
+return{years,values,avg,percent}
+}
+
+/* FROST */
+function frostAnalysis(d){
+let frost={}
+d.time.forEach((t,i)=>{
+const y=new Date(t).getFullYear()
+if(!frost[y])frost[y]=0
+if(d.temperature_2m_min[i]<=0)frost[y]++
+})
+return frost
+}
+
+/* GDU MODEL */
+function GDU(tmin,tmax,base){return((tmax+tmin)/2)-base}
+
 function rain7(d,i){
 let s=0
-for(let j=0;j<7&&i-j>=0;j++){
-s+=d.precipitation_sum[i-j]||0
-}
+for(let j=0;j<7&&i-j>=0;j++)s+=d.precipitation_sum[i-j]||0
 return s
 }
 
-/* Frost-free */
 function frostFree(d,i){
 for(let j=0;j<7&&i+j<d.time.length;j++){
 if(d.temperature_2m_min[i+j]<=0)return false
@@ -144,21 +178,15 @@ if(d.temperature_2m_min[i+j]<=0)return false
 return true
 }
 
-/* Planting detection */
 function detectPlanting(d,crop){
-
-let base = crop==="maize"?10:8
+let base=crop==="maize"?10:8
 let dates=[]
-
 for(let i=0;i<d.time.length;i++){
-
-const date=new Date(d.time[i])
-const m=date.getMonth()+1
+const dt=new Date(d.time[i])
+const m=dt.getMonth()+1
 if(m<8||m>12)continue
 
-const gdu=GDU(d.temperature_2m_min[i],d.temperature_2m_max[i],base)
-if(gdu<5)continue
-
+if(GDU(d.temperature_2m_min[i],d.temperature_2m_max[i],base)<5)continue
 if(rain7(d,i)<20)continue
 if(!frostFree(d,i))continue
 
@@ -167,9 +195,7 @@ dates.push(d.time[i])
 return dates
 }
 
-/* Window */
 function windowCalc(dates){
-
 if(dates.length<5)return{start:"N/A",end:"N/A",length:"N/A"}
 
 const doy=dates.map(d=>{
@@ -189,70 +215,88 @@ return dt.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})
 return{start:f(p20),end:f(p80),length:p80-p20}
 }
 
-/* Frost */
-function frostAnalysis(d){
-let frost={}
-d.time.forEach((t,i)=>{
-const y=new Date(t).getFullYear()
-if(!frost[y])frost[y]=0
-if(d.temperature_2m_min[i]<=0)frost[y]++
-})
-return frost
-}
-
-/* Charts */
-function drawRain(y,v){
-if(rainChart)rainChart.destroy()
-rainChart=new Chart(document.getElementById("rainChart"),{
+/* CHARTS */
+function drawSeason(years,values,avg){
+if(seasonChart)seasonChart.destroy()
+seasonChart=new Chart(document.getElementById("seasonChart"),{
 type:"bar",
-data:{labels:y,datasets:[{label:"Rainfall",data:v}]}
+data:{
+labels:years,
+datasets:[
+{label:"Rainfall",data:values},
+{type:"line",label:"Avg",data:Array(years.length).fill(avg)}
+]
+}
 })
 }
 
-function drawFrost(y,v){
+function drawFrost(years,values){
 if(frostChart)frostChart.destroy()
 frostChart=new Chart(document.getElementById("frostChart"),{
 type:"line",
-data:{labels:y,datasets:[{label:"Frost Days",data:v}]}
+data:{labels:years,datasets:[{label:"Frost Days",data:values}]}
 })
 }
 
-/* Analysis */
+/* ANALYSIS */
 async function runAnalysis(){
 
 if(!selectedPoint)return alert("Select location")
 
 const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
-const maize=detectPlanting(d,"maize")
-const soy=detectPlanting(d,"soy")
-
-const maizeW=windowCalc(maize)
-const soyW=windowCalc(soy)
+const seasons=seasonalRainfall(d)
+const stats=seasonalStats(seasons)
+globalStats=stats
 
 const frost=frostAnalysis(d)
 
+const maizeW=windowCalc(detectPlanting(d,"maize"))
+const soyW=windowCalc(detectPlanting(d,"soy"))
+
+drawSeason(stats.years,stats.values,stats.avg)
 drawFrost(Object.keys(frost),Object.values(frost))
 
 metrics.innerHTML=`
+<h3>🌧️ Seasonal Rainfall</h3>
+Avg: ${stats.avg.toFixed(0)} mm<br><br>
+${stats.years.map((y,i)=>`${y}: ${stats.values[i].toFixed(0)} mm (${stats.percent[i]}%)`).join("<br>")}
+
 <h3>🌽 Maize Window</h3>
-${maizeW.start} → ${maizeW.end} (${maizeW.length} days)
+${maizeW.start} → ${maizeW.end}
 
 <h3>🌱 Soybean Window</h3>
-${soyW.start} → ${soyW.end} (${soyW.length} days)
-
-<h3>❄️ Frost</h3>
-${Object.keys(frost).slice(-10).map((y,i)=>`${y}: ${Object.values(frost).slice(-10)[i]} days`).join("<br>")}
+${soyW.start} → ${soyW.end}
 `
 
 analysisPanel.style.display="block"
 }
 
-</script>
+/* PDF */
+function downloadPDF(){
+if(!globalStats)return alert("Run analysis first")
 
-<div style="font-size:11px;padding:10px;border-top:1px solid #ddd;background:#fafafa;">
-<b>Disclaimer:</b> Advanced modelling output. Not insurance advice.
-</div>
+const {jsPDF}=window.jspdf
+const doc=new jsPDF()
+
+doc.text("Climate Report",20,20)
+
+const img=document.getElementById("seasonChart").toDataURL("image/png")
+doc.addImage(img,"PNG",20,30,170,80)
+
+let y=120
+doc.text(`Avg: ${globalStats.avg.toFixed(0)} mm`,20,y)
+y+=10
+
+globalStats.years.forEach((yr,i)=>{
+doc.text(`${yr}: ${globalStats.values[i].toFixed(0)} mm (${globalStats.percent[i]}%)`,20,y)
+y+=6
+})
+
+doc.save("PlaasRisk_Report.pdf")
+}
+
+</script>
 
 </body>
 </html>
