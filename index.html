@@ -1,4 +1,4 @@
-```html id="refinedcode"
+```html id="restorecode"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,12 +18,19 @@ body{margin:0;font-family:Arial;background:#f4f7f4;}
 button{background:#2e7d32;border:none;color:white;padding:8px 14px;border-radius:6px;cursor:pointer;}
 input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 #map{height:80vh;}
-.analysis-panel{position:absolute;top:80px;right:20px;width:520px;background:white;border-radius:12px;box-shadow:0 6px 25px rgba(0,0,0,0.3);display:none;z-index:99999;}
+.analysis-panel{
+position:absolute;
+top:80px;
+right:20px;
+width:520px;
+background:white;
+border-radius:12px;
+box-shadow:0 6px 25px rgba(0,0,0,0.3);
+display:none;
+z-index:99999;
+}
 .panel-header{background:#2e7d32;color:white;padding:12px;font-weight:bold;}
 .panel-body{padding:20px;max-height:75vh;overflow:auto;}
-.status-loading{background:#ff9800;color:white;padding:6px;border-radius:6px;}
-.status-success{background:#4caf50;color:white;padding:6px;border-radius:6px;}
-.status-error{background:#f44336;color:white;padding:6px;border-radius:6px;}
 </style>
 </head>
 
@@ -33,21 +40,18 @@ input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 <input id="latInput" placeholder="Latitude">
 <input id="lonInput" placeholder="Longitude">
 <button onclick="setLatLon()">Set Location</button>
-
 <input id="searchInput" placeholder="Search location">
 <button onclick="searchLocation()">Search</button>
-
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
-
-<span id="statusIndicator">Idle</span>
+<button onclick="downloadPDF()">PDF</button>
 </div>
 
 <div id="map"></div>
 
 <div class="analysis-panel" id="analysisPanel">
-<div class="panel-header">AI Climate Risk Report</div>
+<div class="panel-header">Climate Risk Report</div>
 <div class="panel-body">
 <div id="metrics"></div>
 <canvas id="rainChart"></canvas>
@@ -62,17 +66,9 @@ input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
 let rainChart=null, frostChart=null
-let isLoading=false
+let reportData={}
 
-function setStatus(type,msg){
-const el=document.getElementById("statusIndicator")
-el.className=""
-el.innerText=msg
-if(type==="loading")el.classList.add("status-loading")
-if(type==="success")el.classList.add("status-success")
-if(type==="error")el.classList.add("status-error")
-}
-
+/* MAP */
 function initMap(){
 map=L.map("map").setView([-25.7,28.2],6)
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map)
@@ -80,17 +76,15 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map)
 drawnItems=new L.FeatureGroup()
 map.addLayer(drawnItems)
 
-const drawControl=new L.Control.Draw({
+map.addControl(new L.Control.Draw({
 draw:{polygon:true,rectangle:true},
 edit:{featureGroup:drawnItems}
-})
-map.addControl(drawControl)
+}))
 
 map.on(L.Draw.Event.CREATED,function(e){
 drawnItems.clearLayers()
-const layer=e.layer
-drawnItems.addLayer(layer)
-selectedPoint=layer.getBounds().getCenter()
+drawnItems.addLayer(e.layer)
+selectedPoint=e.layer.getBounds().getCenter()
 })
 
 map.on("click",function(e){
@@ -109,6 +103,7 @@ window.onload=initMap
 function activatePinMode(){pinMode=true}
 function resetMap(){if(marker)map.removeLayer(marker);drawnItems.clearLayers();selectedPoint=null}
 
+/* LOCATION */
 function setLatLon(){
 const lat=parseFloat(latInput.value)
 const lon=parseFloat(lonInput.value)
@@ -123,41 +118,28 @@ const d=await r.json()
 if(d.length)selectedPoint={lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)}
 }
 
-/* FETCH LIMITED DATA */
+/* FETCH */
 async function fetchClimate(lat,lon){
-const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2020-07-01&end_date=2021-06-30&daily=temperature_2m_min,precipitation_sum&timezone=auto`
+const endYear=new Date().getFullYear()-1
+const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
 const r=await fetch(url)
 const data=await r.json()
 return data.daily
 }
 
-/* DRY SPELL */
-function isDry(data,i){
-let dry=0
-for(let j=i-1;j>=0&&dry<20;j--){
-if((data.precipitation_sum[j]||0)<1)dry++
-else break
-}
-return dry>=20
-}
-
-/* REFINED PLANTING */
-function detectPlanting(d){
-for(let i=20;i<d.time.length;i++){
-if(!isDry(d,i))continue
-
-if((d.precipitation_sum[i]||0)>=10)return d.time[i]
-
-let sum=0
-for(let j=0;j<10&&i+j<d.time.length;j++){
-sum+=d.precipitation_sum[i+j]||0
-}
-if(sum>=10)return d.time[i]
-}
-return null
+/* PROCESS */
+function seasonalRainfall(d){
+let seasons={}
+d.time.forEach((t,i)=>{
+const dt=new Date(t),m=dt.getMonth()+1,y=dt.getFullYear()
+let s;if(m>=10)s=y;else if(m<=3)s=y-1;else return
+const label=s+"/"+(s+1)
+if(!seasons[label])seasons[label]=0
+seasons[label]+=d.precipitation_sum[i]||0
+})
+return{years:Object.keys(seasons),values:Object.values(seasons)}
 }
 
-/* FROST */
 function frostAnalysis(d){
 let frost={}
 d.time.forEach((t,i)=>{
@@ -168,10 +150,32 @@ if(d.temperature_2m_min[i]<=0)frost[y]++
 return frost
 }
 
+function detectPlanting(d){
+let planting={}
+for(let i=0;i<d.time.length;i++){
+const y=new Date(d.time[i]).getFullYear()
+if(d.precipitation_sum[i]>=10&&!planting[y]){
+planting[y]=d.time[i]
+}
+}
+return planting
+}
+
+function toDOY(d){const dt=new Date(d);return Math.floor((dt-new Date(dt.getFullYear(),0,0))/(1000*60*60*24))}
+function doyToReadable(d){const dt=new Date(2000,0);dt.setDate(d);return dt.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})}
+
+function plantingWindow(p){
+const days=Object.values(p).map(d=>toDOY(d)).sort((a,b)=>a-b)
+if(days.length<5)return{start:"N/A",end:"N/A",length:"N/A"}
+const p20=days[Math.floor(days.length*0.2)]
+const p80=days[Math.floor(days.length*0.8)]
+return{start:doyToReadable(p20),end:doyToReadable(p80),length:p80-p20}
+}
+
 /* CHARTS */
 function drawRain(y,v){
 if(rainChart)rainChart.destroy()
-rainChart=new Chart(rainChart=document.getElementById("rainChart"),{
+rainChart=new Chart(document.getElementById("rainChart"),{
 type:"bar",
 data:{labels:y,datasets:[{label:"Rainfall",data:v}]}
 })
@@ -181,7 +185,7 @@ function drawFrost(y,v){
 if(frostChart)frostChart.destroy()
 frostChart=new Chart(document.getElementById("frostChart"),{
 type:"line",
-data:{labels:y,datasets:[{label:"Frost Days",data:v}]}
+data:{labels:y,datasets:[{label:"Frost Days",data:v,tension:0.3}]}
 })
 }
 
@@ -190,41 +194,48 @@ async function runAnalysis(){
 
 if(!selectedPoint)return alert("Select location")
 
-setStatus("loading","Analyzing...")
-
 const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
-const planting=detectPlanting(d)
-if(!planting)return alert("No planting trigger")
-
+const seasonal=seasonalRainfall(d)
 const frost=frostAnalysis(d)
+const planting=detectPlanting(d)
+const window=plantingWindow(planting)
 
-const startDOY=new Date(planting)
-const end=new Date(startDOY)
-end.setDate(startDOY.getDate()+30)
-
+drawRain(seasonal.years,seasonal.values)
 drawFrost(Object.keys(frost),Object.values(frost))
 
 document.getElementById("metrics").innerHTML=`
-<h3>🌱 Refined Planting Window (2020–2021)</h3>
-Start: ${startDOY.toDateString()}<br>
-End: ${end.toDateString()}<br>
-Length: 30 days<br>
+<h3>Rainfall</h3>
+Avg seasonal rainfall shown in graph
 
-<h3>❄️ Frost Analysis</h3>
-${Object.keys(frost).map((y,i)=>`${y}: ${Object.values(frost)[i]} days`).join("<br>")}
+<h3>Frost</h3>
+${Object.keys(frost).slice(-10).map((y,i)=>`${y}: ${Object.values(frost).slice(-10)[i]} days`).join("<br>")}
+
+<h3>Planting Window</h3>
+${window.start} → ${window.end} (${window.length} days)
 `
 
 document.getElementById("analysisPanel").style.display="block"
-setStatus("success","Done")
+}
 
+/* PDF */
+function downloadPDF(){
+const {jsPDF}=window.jspdf
+const doc=new jsPDF()
+
+doc.text("PlaasRisk Report",20,20)
+doc.text("Generated by Makoro Macdonald",20,30)
+
+const img=document.getElementById("rainChart").toDataURL("image/png")
+doc.addImage(img,"PNG",20,40,170,60)
+
+doc.save("report.pdf")
 }
 
 </script>
 
 <div style="font-size:11px;padding:10px;border-top:1px solid #ddd;background:#fafafa;">
-<b>Disclaimer:</b> Indicative only. Not insurance advice.<br>
-<b>Developed by:</b> Makoro Macdonald
+<b>Disclaimer:</b> Indicative only. Not insurance advice.
 </div>
 
 </body>
