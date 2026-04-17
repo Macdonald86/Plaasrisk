@@ -4,7 +4,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>PlaasRisk AI Underwriting Platform</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -18,39 +17,37 @@ body{margin:0;font-family:Arial;background:#f4f7f4;}
 .control-bar{display:flex;gap:10px;padding:10px;background:white;border-bottom:1px solid #ddd;flex-wrap:wrap;}
 button{background:#2e7d32;border:none;color:white;padding:8px 14px;border-radius:6px;cursor:pointer;}
 input{padding:8px;border:1px solid #ccc;border-radius:6px;}
-#map{height:70vh;}
+#map{height:80vh;}
 .analysis-panel{position:absolute;top:80px;right:20px;width:520px;background:white;border-radius:12px;box-shadow:0 6px 25px rgba(0,0,0,0.3);display:none;z-index:99999;}
 .panel-header{background:#2e7d32;color:white;padding:12px;font-weight:bold;}
 .panel-body{padding:20px;max-height:75vh;overflow:auto;}
-#portfolioPanel{padding:15px;background:white;margin:10px;border-radius:10px;}
 canvas{margin-top:20px;}
+
+.status-loading{background:#ff9800;color:white;padding:6px 12px;border-radius:6px;}
+.status-success{background:#4caf50;color:white;padding:6px 12px;border-radius:6px;}
+.status-error{background:#f44336;color:white;padding:6px 12px;border-radius:6px;}
 </style>
 </head>
 
 <body>
 
 <div class="control-bar">
-<input id="searchInput" placeholder="Search or lat,lon">
+<input id="latInput" placeholder="Latitude">
+<input id="lonInput" placeholder="Longitude">
+<button onclick="setLatLon()">Set Location</button>
+
+<input id="searchInput" placeholder="Search location">
 <button onclick="searchLocation()">Search</button>
+
 <button onclick="activatePinMode()">Drop Pin</button>
 <button onclick="resetMap()">Clear</button>
 <button onclick="runAnalysis()">Analyze</button>
 <button onclick="downloadPDF()">PDF</button>
+
+<span id="statusIndicator">Idle</span>
 </div>
 
 <div id="map"></div>
-
-<div id="portfolioPanel">
-<h3>🌍 Portfolio Dashboard</h3>
-<table border="1" width="100%" style="border-collapse:collapse;font-size:13px">
-<thead>
-<tr>
-<th>Location</th><th>Risk</th><th>Yield</th><th>Drought%</th><th>Decision</th><th>Alert</th>
-</tr>
-</thead>
-<tbody id="portfolioTable"></tbody>
-</table>
-</div>
 
 <div class="analysis-panel" id="analysisPanel">
 <div class="panel-header">AI Climate Risk Report</div>
@@ -67,8 +64,17 @@ canvas{margin-top:20px;}
 
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
 let rainChart=null
-let portfolio=[]
 let reportData={}
+
+/* STATUS */
+function setStatus(type,msg){
+const el=document.getElementById("statusIndicator")
+el.className=""
+el.innerText=msg
+if(type==="loading")el.classList.add("status-loading")
+if(type==="success")el.classList.add("status-success")
+if(type==="error")el.classList.add("status-error")
+}
 
 /* MAP */
 function initMap(){
@@ -77,12 +83,6 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map)
 
 drawnItems=new L.FeatureGroup()
 map.addLayer(drawnItems)
-
-const drawControl=new L.Control.Draw({
-draw:{polygon:true,rectangle:true},
-edit:{featureGroup:drawnItems}
-})
-map.addControl(drawControl)
 
 map.on(L.Draw.Event.CREATED,function(e){
 drawnItems.clearLayers()
@@ -94,6 +94,8 @@ selectedPoint=layer.getBounds().getCenter()
 map.on("click",function(e){
 if(!pinMode)return
 const {lat,lng}=e.latlng
+document.getElementById("latInput").value=lat.toFixed(4)
+document.getElementById("lonInput").value=lng.toFixed(4)
 if(marker)map.removeLayer(marker)
 marker=L.marker([lat,lng]).addTo(map)
 selectedPoint={lat,lng}
@@ -103,34 +105,31 @@ pinMode=false
 window.onload=initMap
 
 function activatePinMode(){pinMode=true}
+function resetMap(){if(marker)map.removeLayer(marker);selectedPoint=null}
 
-function resetMap(){
-if(marker) map.removeLayer(marker)
-drawnItems.clearLayers()
-selectedPoint=null
-document.getElementById("analysisPanel").style.display="none"
+/* LOCATION */
+function setLatLon(){
+const lat=parseFloat(latInput.value)
+const lon=parseFloat(lonInput.value)
+if(isNaN(lat)||isNaN(lon)){alert("Invalid coordinates");return}
+setPoint(lat,lon)
 }
 
-/* SEARCH */
+function setPoint(lat,lon){
+if(marker)map.removeLayer(marker)
+marker=L.marker([lat,lon]).addTo(map)
+map.setView([lat,lon],10)
+selectedPoint={lat,lng:lon}
+}
+
 async function searchLocation(){
-const q=document.getElementById("searchInput").value
-if(q.includes(",")){
-const [lat,lon]=q.split(",")
-setPoint(lat,lon);return
-}
+const q=searchInput.value
 const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
 const d=await r.json()
 if(d.length)setPoint(d[0].lat,d[0].lon)
 }
 
-function setPoint(lat,lon){
-if(marker) map.removeLayer(marker)
-marker=L.marker([lat,lon]).addTo(map)
-map.setView([lat,lon],10)
-selectedPoint={lat:parseFloat(lat),lng:parseFloat(lon)}
-}
-
-/* FETCH */
+/* DATA */
 async function fetchClimate(lat,lon){
 const endYear=new Date().getFullYear()-1
 const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
@@ -139,129 +138,62 @@ return (await r.json()).daily
 }
 
 /* PROCESS */
-function processClimate(d){
-let rain={}, frost={}
+function seasonalRainfall(d){
+let seasons={}
 d.time.forEach((t,i)=>{
-const y=new Date(t).getFullYear()
-if(!rain[y]){rain[y]=0;frost[y]=0}
-rain[y]+=d.precipitation_sum[i]||0
-if(d.temperature_2m_min[i]<=0) frost[y]++
+const dt=new Date(t),m=dt.getMonth()+1,y=dt.getFullYear()
+let s;if(m>=10)s=y;else if(m<=3)s=y-1;else return
+const label=s+"/"+(s+1)
+if(!seasons[label])seasons[label]=0
+seasons[label]+=d.precipitation_sum[i]||0
 })
-const years=Object.keys(rain)
-return{
-years,
-rain:Object.values(rain),
-frost:Object.values(frost),
-avgRain:(Object.values(rain).reduce((a,b)=>a+b)/years.length).toFixed(0),
-avgFrost:(Object.values(frost).reduce((a,b)=>a+b)/years.length).toFixed(1)
-}
+return{years:Object.keys(seasons),values:Object.values(seasons)}
 }
 
-/* EVENTS */
-function detectEvents(d){
-let frost={}, rain10={}
-d.time.forEach((t,i)=>{
-const y=new Date(t).getFullYear()
-if(d.temperature_2m_min[i]<=0&&!frost[y])frost[y]=t
-if(d.precipitation_sum[i]>=10&&!rain10[y])rain10[y]=t
-})
-return{frost,rain10}
+function detectPlantingWindows(d){
+let planting={}
+for(let i=0;i<d.time.length;i++){
+const y=new Date(d.time[i]).getFullYear()
+
+if(d.precipitation_sum[i]>=10 && !planting[y]){
+planting[y]=d.time[i];continue}
+
+let sum=0
+for(let j=0;j<10 && i+j<d.time.length;j++){
+sum+=d.precipitation_sum[i+j]||0}
+if(sum>=10 && !planting[y]){
+planting[y]=d.time[i]}
+}
+return planting
 }
 
-/* DOY */
 function toDOY(dateStr){
 const d=new Date(dateStr)
 return Math.floor((d-new Date(d.getFullYear(),0,0))/(1000*60*60*24))
 }
 
 function doyToReadable(doy){
-const date=new Date(2000,0)
-date.setDate(doy)
-return date.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})
+const d=new Date(2000,0);d.setDate(doy)
+return d.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})
 }
 
-/* ADVANCED */
-function advanced(d){
-let seasons={},start={}
-d.time.forEach((t,i)=>{
-const dt=new Date(t),m=dt.getMonth()+1,y=dt.getFullYear()
-let s
-if(m>=10)s=y
-else if(m<=3)s=y-1
-else return
-const label=s+"/"+(s+1)
-if(!seasons[label])seasons[label]=0
-seasons[label]+=d.precipitation_sum[i]||0
-if(m==10||m==11){
-if(!start[label])start[label]=0
-start[label]+=d.precipitation_sum[i]||0
-}
-})
-const vals=Object.values(seasons)
-const mean=vals.reduce((a,b)=>a+b)/vals.length
-const std=Math.sqrt(vals.reduce((a,b)=>a+Math.pow(b-mean,2),0)/vals.length)
-const cv=((std/mean)*100).toFixed(1)
-const dry=(Object.values(start).filter(v=>v<50).length/Object.keys(start).length*100).toFixed(1)
-let rel=100-cv;if(rel<0)rel=0
-return{cv,dry,rel}
+function last10Stats(seasonal,planting){
+const years=seasonal.years.slice(-10)
+const rain=seasonal.values.slice(-10)
+const avgRain=(rain.reduce((a,b)=>a+b)/rain.length).toFixed(0)
+
+const pYears=Object.keys(planting).slice(-10)
+const pDays=pYears.map(y=>toDOY(planting[y]))
+
+return{avgRain,pYears,pDays}
 }
 
-/* PLANTING WINDOW */
-function avgDOY(obj){
-let vals=Object.values(obj)
-if(vals.length===0)return null
-let days=vals.map(d=>{
-const dt=new Date(d)
-return (dt-new Date(dt.getFullYear(),0,0))/(1000*60*60*24)
-})
-return days.reduce((a,b)=>a+b)/days.length
-}
-
-function maizeWindow(rainDay,frostDay){
-if(!rainDay||!frostDay)return{plant:"N/A",frost:"N/A",days:"N/A"}
-const days=Math.round(frostDay-rainDay)
-return{
-plant:doyToReadable(rainDay),
-frost:doyToReadable(frostDay),
-days
-}
-}
-
-/* AI */
-function ai(frostScore,droughtScore,excessScore){
-let score=(frostScore*0.3+droughtScore*0.5+excessScore*0.2)
-let decision=score>80?"ACCEPT":score>60?"LOAD":"DECLINE"
-return{score:score.toFixed(0),decision}
-}
-
-/* CHART: PLANTING WINDOW */
-function drawPlantingChart(years,doyValues){
+/* CHART */
+function drawChart(years,values){
 if(rainChart)rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
-type:"line",
-data:{
-labels:years,
-datasets:[{
-label:"Planting Start (≥10mm Rainfall)",
-data:doyValues,
-tension:0.2
-}]
-},
-options:{
-plugins:{
-tooltip:{
-callbacks:{
-label:function(ctx){
-return "Planting: "+doyToReadable(ctx.raw)
-}
-}
-}
-},
-scales:{
-y:{title:{display:true,text:"Day of Year"}},
-x:{title:{display:true,text:"Year"}}
-}
-}
+type:"bar",
+data:{labels:years,datasets:[{label:"Seasonal Rainfall",data:values}]}
 })
 }
 
@@ -270,74 +202,30 @@ async function runAnalysis(){
 
 if(!selectedPoint){alert("Select location");return}
 
+try{
+setStatus("loading","Fetching data...")
 const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
-const c=processClimate(d)
-const ev=detectEvents(d)
-const adv=advanced(d)
 
-const plantingYears=Object.keys(ev.rain10)
-const plantingDOY=plantingYears.map(y=>toDOY(ev.rain10[y]))
+setStatus("loading","Processing...")
+const seasonal=seasonalRainfall(d)
+const planting=detectPlantingWindows(d)
+const stats=last10Stats(seasonal,planting)
 
-const rainDay=avgDOY(ev.rain10)
-const frostDay=avgDOY(ev.frost)
-
-const window=maizeWindow(rainDay,frostDay)
-
-const droughtScore=100-adv.dry
-const frostScore=100-c.avgFrost*2
-const excessScore=100-adv.cv
-
-const aiRes=ai(frostScore,droughtScore,excessScore)
-
-portfolio.push({
-location:selectedPoint.lat.toFixed(2)+","+selectedPoint.lng.toFixed(2),
-risk:aiRes.score,
-yield:excessScore,
-drought:adv.dry,
-decision:aiRes.decision
-})
-
-updateTable()
+drawChart(seasonal.years,seasonal.values)
 
 document.getElementById("metrics").innerHTML=`
-<b>AI Risk:</b> ${aiRes.score}/100 (${aiRes.decision})<br><hr>
-
-Avg Rainfall: ${c.avgRain} mm<br>
-Avg Frost Days: ${c.avgFrost}<br>
-
-Variability: ${adv.cv}%<br>
-Dry Start: ${adv.dry}%<br>
-Reliability: ${adv.rel}/100<br><hr>
-
-🌽 Plant Date: ${window.plant}<br>
-❄️ Frost Date: ${window.frost}<br>
-Growing Days: ${window.days}
+<b>🌧️ Avg Rainfall (10 yrs):</b> ${stats.avgRain} mm<br><hr>
+<b>🌱 Planting Dates:</b><br>
+${stats.pYears.map((y,i)=>`${y}: ${doyToReadable(stats.pDays[i])}`).join("<br>")}
 `
-
-drawPlantingChart(plantingYears,plantingDOY)
 
 document.getElementById("analysisPanel").style.display="block"
 
-reportData={...c,...adv,...window,...aiRes}
-}
+setStatus("success","Done")
 
-/* TABLE */
-function updateTable(){
-const t=document.getElementById("portfolioTable")
-portfolio.sort((a,b)=>b.risk-a.risk)
-t.innerHTML=portfolio.map(f=>{
-let alert="OK"
-if(f.drought>40)alert="⚠️"
-if(f.risk<60)alert="❌"
-return `<tr>
-<td>${f.location}</td>
-<td>${f.risk}</td>
-<td>${f.yield}</td>
-<td>${f.drought}%</td>
-<td>${f.decision}</td>
-<td>${alert}</td>
-</tr>`
-}).join("")
+}catch(e){
+setStatus("error","Error fetching data")
+}
 }
 
 /* PDF */
@@ -345,14 +233,17 @@ function downloadPDF(){
 const {jsPDF}=window.jspdf
 const doc=new jsPDF()
 doc.text("Climate Risk Report",20,20)
-let y=40
-Object.entries(reportData).forEach(([k,v])=>{
-doc.text(`${k}: ${v}`,20,y);y+=8
-})
+doc.text("Generated by PlaasRisk AI",20,30)
+doc.text("Disclaimer: Not financial advice",20,280,{maxWidth:170})
 doc.save("report.pdf")
 }
 
 </script>
+
+<div style="font-size:11px;padding:10px;border-top:1px solid #ddd;background:#fafafa;">
+<b>Disclaimer:</b> Indicative analytics only. Not insurance advice.<br><br>
+<b>Developed by:</b> Makoro Macdonald
+</div>
 
 </body>
 </html>
