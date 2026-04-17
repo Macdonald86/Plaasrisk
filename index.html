@@ -64,6 +64,7 @@ input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
 let rainChart=null
 let reportData={}
+let isLoading=false
 
 /* STATUS */
 function setStatus(type,msg){
@@ -73,6 +74,14 @@ el.innerText=msg
 if(type==="loading")el.classList.add("status-loading")
 if(type==="success")el.classList.add("status-success")
 if(type==="error")el.classList.add("status-error")
+}
+
+/* LOADING */
+function setLoading(state){
+isLoading=state
+const btn=document.querySelector("button[onclick='runAnalysis()']")
+btn.disabled=state
+btn.innerText=state?"Analyzing...":"Analyze"
 }
 
 /* MAP */
@@ -116,7 +125,7 @@ function resetMap(){if(marker)map.removeLayer(marker);drawnItems.clearLayers();s
 function setLatLon(){
 const lat=parseFloat(latInput.value)
 const lon=parseFloat(lonInput.value)
-if(isNaN(lat)||isNaN(lon)){alert("Invalid");return}
+if(isNaN(lat)||isNaN(lon)){alert("Invalid coordinates");return}
 setPoint(lat,lon)
 }
 function setPoint(lat,lon){
@@ -127,9 +136,11 @@ selectedPoint={lat,lng:lon}
 }
 async function searchLocation(){
 const q=searchInput.value
+if(!q){alert("Enter location");return}
 const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}`)
 const d=await r.json()
 if(d.length)setPoint(d[0].lat,d[0].lon)
+else alert("Location not found")
 }
 
 /* FETCH */
@@ -137,7 +148,10 @@ async function fetchClimate(lat,lon){
 const endYear=new Date().getFullYear()-1
 const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2000-01-01&end_date=${endYear}-12-31&daily=temperature_2m_min,precipitation_sum&timezone=auto`
 const r=await fetch(url)
-return (await r.json()).daily
+if(!r.ok)throw new Error("API error")
+const data=await r.json()
+if(!data.daily)throw new Error("No data")
+return data.daily
 }
 
 /* PROCESS */
@@ -211,18 +225,23 @@ function drawChart(y,v){
 if(rainChart)rainChart.destroy()
 rainChart=new Chart(document.getElementById("rainChart"),{
 type:"bar",
-data:{labels:y,datasets:[{label:"Seasonal Rainfall",data:v}]}
+data:{labels:y,datasets:[{label:"Seasonal Rainfall (Oct–Mar)",data:v}]}
 })
 }
 
 /* ANALYSIS */
 async function runAnalysis(){
 if(!selectedPoint){alert("Select location");return}
+if(isLoading)return
+
 try{
-setStatus("loading","Fetching...")
+setLoading(true)
+setStatus("loading","Fetching climate data...")
+
 const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
 setStatus("loading","Processing...")
+
 const seasonal=seasonalRainfall(d)
 const planting=detectPlantingWindows(d)
 const frost=frostAnalysis(d)
@@ -234,35 +253,44 @@ const risk=classifyRisk(stats.avgRain,stats.avgFrost,windowRange.length)
 reportData={
 lat:selectedPoint.lat.toFixed(4),
 lon:selectedPoint.lng.toFixed(4),
-...stats,
-...windowRange,
+avgRain:stats.avgRain,
+avgFrost:stats.avgFrost,
+start:windowRange.start,
+end:windowRange.end,
+length:windowRange.length,
 riskLevel:risk,
+plantingYears:stats.pYears,
 plantingDates:stats.pDays.map(d=>doyToReadable(d))
 }
 
 drawChart(seasonal.years,seasonal.values)
 
-metrics.innerHTML=`
+document.getElementById("metrics").innerHTML=`
 <h3>Climate Summary</h3>
-Avg Rainfall: ${stats.avgRain} mm<br>
-Avg Frost Days: ${stats.avgFrost}<br>
+Avg Rainfall: ${reportData.avgRain} mm<br>
+Avg Frost Days: ${reportData.avgFrost}<br>
 
 <h3>Planting Window</h3>
-Start: ${windowRange.start}<br>
-End: ${windowRange.end}<br>
-Length: ${windowRange.length} days<br>
+Start: ${reportData.start}<br>
+End: ${reportData.end}<br>
+Length: ${reportData.length} days<br>
 
-<h3>Risk: ${risk}</h3>
+<h3>Risk: ${reportData.riskLevel}</h3>
 
 <h3>Planting Dates</h3>
 ${reportData.plantingYears.map((y,i)=>`${y}: ${reportData.plantingDates[i]}`).join("<br>")}
 `
 
-analysisPanel.style.display="block"
-setStatus("success","Done")
+document.getElementById("analysisPanel").style.display="block"
+
+setStatus("success","Analysis complete")
 
 }catch(e){
-setStatus("error","Error")
+console.error(e)
+setStatus("error","Analysis failed")
+alert("Error: "+e.message)
+}finally{
+setLoading(false)
 }
 }
 
@@ -309,7 +337,7 @@ y+=6
 })
 
 doc.setFontSize(8)
-doc.text("Disclaimer: Indicative only. Not insurance advice.",20,280,{maxWidth:170})
+doc.text("Disclaimer: Indicative analytics only. Not insurance advice.",20,280,{maxWidth:170})
 
 doc.save("PlaasRisk_Report.pdf")
 }
@@ -324,3 +352,4 @@ doc.save("PlaasRisk_Report.pdf")
 </body>
 </html>
 ```
+
