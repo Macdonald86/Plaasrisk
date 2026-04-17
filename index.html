@@ -1,4 +1,4 @@
-```html id="ultimatefinal"
+```html id="finalfullcode"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,7 +68,7 @@ z-index:99999;
 
 let map, marker, drawnItems, selectedPoint=null, pinMode=false
 let seasonChart=null, frostChart=null
-let globalStats=null
+let globalStats=null, frostWindowData=null
 
 /* MAP */
 function initMap(){
@@ -123,7 +123,7 @@ const data=await r.json()
 return data.daily
 }
 
-/* SEASONAL RAIN */
+/* SEASONAL */
 function seasonalRainfall(d){
 let seasons={}
 d.time.forEach((t,i)=>{
@@ -162,7 +162,45 @@ if(d.temperature_2m_min[i]<=0)frost[y]++
 return frost
 }
 
-/* GDU MODEL */
+function frostWindowAnalysis(d){
+
+let lastFrost=null, onsetFrost=null
+
+for(let i=0;i<d.time.length;i++){
+const dt=new Date(d.time[i])
+const m=dt.getMonth()+1
+
+if(m<=6 && d.temperature_2m_min[i]<=0){
+lastFrost=d.time[i]
+}
+
+if(m>=7 && !onsetFrost && d.temperature_2m_min[i]<=0){
+onsetFrost=d.time[i]
+}
+}
+
+function doy(d){
+const dt=new Date(d)
+return Math.floor((dt-new Date(dt.getFullYear(),0,0))/(1000*60*60*24))
+}
+
+function format(d){
+return d?new Date(d).toLocaleDateString("en-ZA",{day:"numeric",month:"short"}):"N/A"
+}
+
+let window="N/A"
+if(lastFrost && onsetFrost){
+window=doy(onsetFrost)-doy(lastFrost)
+}
+
+return{
+lastFrost:format(lastFrost),
+onsetFrost:format(onsetFrost),
+window
+}
+}
+
+/* GDU */
 function GDU(tmin,tmax,base){return((tmax+tmin)/2)-base}
 
 function rain7(d,i){
@@ -250,6 +288,8 @@ const stats=seasonalStats(seasons)
 globalStats=stats
 
 const frost=frostAnalysis(d)
+const frostWindow=frostWindowAnalysis(d)
+frostWindowData=frostWindow
 
 const maizeW=windowCalc(detectPlanting(d,"maize"))
 const soyW=windowCalc(detectPlanting(d,"soy"))
@@ -267,6 +307,11 @@ ${maizeW.start} → ${maizeW.end}
 
 <h3>🌱 Soybean Window</h3>
 ${soyW.start} → ${soyW.end}
+
+<h3>❄️ Frost Window</h3>
+Last Frost: ${frostWindow.lastFrost}<br>
+Onset Frost: ${frostWindow.onsetFrost}<br>
+Frost-Free Period: ${frostWindow.window} days
 `
 
 analysisPanel.style.display="block"
@@ -274,6 +319,7 @@ analysisPanel.style.display="block"
 
 /* PDF */
 function downloadPDF(){
+
 if(!globalStats)return alert("Run analysis first")
 
 const {jsPDF}=window.jspdf
@@ -293,6 +339,15 @@ doc.text(`${yr}: ${globalStats.values[i].toFixed(0)} mm (${globalStats.percent[i
 y+=6
 })
 
+y+=10
+doc.text("Frost Window",20,y)
+y+=6
+doc.text(`Last Frost: ${frostWindowData.lastFrost}`,20,y)
+y+=6
+doc.text(`Onset Frost: ${frostWindowData.onsetFrost}`,20,y)
+y+=6
+doc.text(`Frost-Free Period: ${frostWindowData.window} days`,20,y)
+
 doc.save("PlaasRisk_Report.pdf")
 }
 
@@ -301,3 +356,4 @@ doc.save("PlaasRisk_Report.pdf")
 </body>
 </html>
 ```
+
