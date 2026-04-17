@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,46 +15,14 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#f4f7f4;}
-
-.control-bar{
-display:flex;gap:10px;padding:10px;background:white;
-border-bottom:1px solid #ddd;flex-wrap:wrap;
-}
-
-button{
-background:#2e7d32;border:none;color:white;
-padding:8px 14px;border-radius:6px;cursor:pointer;
-}
-
-input{
-padding:8px;border:1px solid #ccc;border-radius:6px;
-}
-
+.control-bar{display:flex;gap:10px;padding:10px;background:white;border-bottom:1px solid #ddd;flex-wrap:wrap;}
+button{background:#2e7d32;border:none;color:white;padding:8px 14px;border-radius:6px;cursor:pointer;}
+input{padding:8px;border:1px solid #ccc;border-radius:6px;}
 #map{height:70vh;}
-
-.analysis-panel{
-position:absolute;top:80px;right:20px;width:520px;
-background:white;border-radius:12px;
-box-shadow:0 6px 25px rgba(0,0,0,0.3);
-display:none;z-index:99999;
-}
-
-.panel-header{
-background:#2e7d32;color:white;padding:12px;font-weight:bold;
-}
-
-.panel-body{
-padding:20px;max-height:75vh;overflow:auto;
-}
-
-.metric{margin-bottom:14px;}
-.metric-title{font-size:13px;color:#555;}
-.metric-value{font-size:20px;font-weight:bold;}
-
-#portfolioPanel{
-padding:15px;background:white;margin:10px;border-radius:10px;
-}
-
+.analysis-panel{position:absolute;top:80px;right:20px;width:520px;background:white;border-radius:12px;box-shadow:0 6px 25px rgba(0,0,0,0.3);display:none;z-index:99999;}
+.panel-header{background:#2e7d32;color:white;padding:12px;font-weight:bold;}
+.panel-body{padding:20px;max-height:75vh;overflow:auto;}
+#portfolioPanel{padding:15px;background:white;margin:10px;border-radius:10px;}
 canvas{margin-top:20px;}
 </style>
 </head>
@@ -199,19 +168,15 @@ if(d.precipitation_sum[i]>=10&&!rain10[y])rain10[y]=t
 return{frost,rain10}
 }
 
-function avgDOY(obj){
-let vals=Object.values(obj)
-if(vals.length===0)return null
-let days=vals.map(d=>{
-const dt=new Date(d)
-return (dt-new Date(dt.getFullYear(),0,0))/(1000*60*60*24)
-})
-return days.reduce((a,b)=>a+b)/days.length
+/* DOY */
+function toDOY(dateStr){
+const d=new Date(dateStr)
+return Math.floor((d-new Date(d.getFullYear(),0,0))/(1000*60*60*24))
 }
 
-function doyToDate(d){
+function doyToReadable(doy){
 const date=new Date(2000,0)
-date.setDate(d)
+date.setDate(doy)
 return date.toLocaleDateString("en-ZA",{day:"numeric",month:"short"})
 }
 
@@ -241,13 +206,23 @@ let rel=100-cv;if(rel<0)rel=0
 return{cv,dry,rel}
 }
 
-/* PLANTING */
+/* PLANTING WINDOW */
+function avgDOY(obj){
+let vals=Object.values(obj)
+if(vals.length===0)return null
+let days=vals.map(d=>{
+const dt=new Date(d)
+return (dt-new Date(dt.getFullYear(),0,0))/(1000*60*60*24)
+})
+return days.reduce((a,b)=>a+b)/days.length
+}
+
 function maizeWindow(rainDay,frostDay){
 if(!rainDay||!frostDay)return{plant:"N/A",frost:"N/A",days:"N/A"}
 const days=Math.round(frostDay-rainDay)
 return{
-plant:doyToDate(rainDay),
-frost:doyToDate(frostDay),
+plant:doyToReadable(rainDay),
+frost:doyToReadable(frostDay),
 days
 }
 }
@@ -259,6 +234,37 @@ let decision=score>80?"ACCEPT":score>60?"LOAD":"DECLINE"
 return{score:score.toFixed(0),decision}
 }
 
+/* CHART: PLANTING WINDOW */
+function drawPlantingChart(years,doyValues){
+if(rainChart)rainChart.destroy()
+rainChart=new Chart(document.getElementById("rainChart"),{
+type:"line",
+data:{
+labels:years,
+datasets:[{
+label:"Planting Start (≥10mm Rainfall)",
+data:doyValues,
+tension:0.2
+}]
+},
+options:{
+plugins:{
+tooltip:{
+callbacks:{
+label:function(ctx){
+return "Planting: "+doyToReadable(ctx.raw)
+}
+}
+}
+},
+scales:{
+y:{title:{display:true,text:"Day of Year"}},
+x:{title:{display:true,text:"Year"}}
+}
+}
+})
+}
+
 /* ANALYSIS */
 async function runAnalysis(){
 
@@ -268,6 +274,9 @@ const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 const c=processClimate(d)
 const ev=detectEvents(d)
 const adv=advanced(d)
+
+const plantingYears=Object.keys(ev.rain10)
+const plantingDOY=plantingYears.map(y=>toDOY(ev.rain10[y]))
 
 const rainDay=avgDOY(ev.rain10)
 const frostDay=avgDOY(ev.frost)
@@ -287,6 +296,7 @@ yield:excessScore,
 drought:adv.dry,
 decision:aiRes.decision
 })
+
 updateTable()
 
 document.getElementById("metrics").innerHTML=`
@@ -304,7 +314,8 @@ Reliability: ${adv.rel}/100<br><hr>
 Growing Days: ${window.days}
 `
 
-drawChart(c)
+drawPlantingChart(plantingYears,plantingDOY)
+
 document.getElementById("analysisPanel").style.display="block"
 
 reportData={...c,...adv,...window,...aiRes}
@@ -329,15 +340,6 @@ return `<tr>
 }).join("")
 }
 
-/* CHART */
-function drawChart(c){
-if(rainChart)rainChart.destroy()
-rainChart=new Chart(document.getElementById("rainChart"),{
-type:"bar",
-data:{labels:c.years,datasets:[{label:"Rainfall",data:c.rain}]}
-})
-}
-
 /* PDF */
 function downloadPDF(){
 const {jsPDF}=window.jspdf
@@ -354,3 +356,4 @@ doc.save("report.pdf")
 
 </body>
 </html>
+```
