@@ -66,7 +66,6 @@ let rainChart=null
 let reportData={}
 let isLoading=false
 
-/* STATUS */
 function setStatus(type,msg){
 const el=document.getElementById("statusIndicator")
 el.className=""
@@ -76,7 +75,6 @@ if(type==="success")el.classList.add("status-success")
 if(type==="error")el.classList.add("status-error")
 }
 
-/* LOADING */
 function setLoading(state){
 isLoading=state
 const btn=document.querySelector("button[onclick='runAnalysis()']")
@@ -240,8 +238,6 @@ setStatus("loading","Fetching climate data...")
 
 const d=await fetchClimate(selectedPoint.lat,selectedPoint.lng)
 
-setStatus("loading","Processing...")
-
 const seasonal=seasonalRainfall(d)
 const planting=detectPlantingWindows(d)
 const frost=frostAnalysis(d)
@@ -260,7 +256,9 @@ end:windowRange.end,
 length:windowRange.length,
 riskLevel:risk,
 plantingYears:stats.pYears,
-plantingDates:stats.pDays.map(d=>doyToReadable(d))
+plantingDates:stats.pDays.map(d=>doyToReadable(d)),
+frostYears:Object.keys(frost).slice(-10),
+frostDays:Object.values(frost).slice(-10)
 }
 
 drawChart(seasonal.years,seasonal.values)
@@ -269,6 +267,9 @@ document.getElementById("metrics").innerHTML=`
 <h3>Climate Summary</h3>
 Avg Rainfall: ${reportData.avgRain} mm<br>
 Avg Frost Days: ${reportData.avgFrost}<br>
+
+<h3>Frost Analysis</h3>
+${reportData.frostYears.map((y,i)=>`${y}: ${reportData.frostDays[i]} days`).join("<br>")}
 
 <h3>Planting Window</h3>
 Start: ${reportData.start}<br>
@@ -281,8 +282,7 @@ Length: ${reportData.length} days<br>
 ${reportData.plantingYears.map((y,i)=>`${y}: ${reportData.plantingDates[i]}`).join("<br>")}
 `
 
-document.getElementById("analysisPanel").style.display="block"
-
+analysisPanel.style.display="block"
 setStatus("success","Analysis complete")
 
 }catch(e){
@@ -328,6 +328,15 @@ doc.addImage(img,"PNG",20,y,170,60)
 
 doc.addPage()
 y=20
+
+doc.text("Frost Analysis",20,y)
+y+=10
+reportData.frostYears.forEach((yr,i)=>{
+doc.text(`${yr}: ${reportData.frostDays[i]} days`,20,y)
+y+=6
+})
+
+y+=10
 doc.text("Planting Dates",20,y)
 y+=10
 
@@ -352,4 +361,3 @@ doc.save("PlaasRisk_Report.pdf")
 </body>
 </html>
 ```
-
